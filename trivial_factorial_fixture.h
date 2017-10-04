@@ -24,7 +24,9 @@ __kernel void TrivialFactorial(__global int* input, __global ulong* output)
     size_t id = get_global_id(0);
     output[id] = FactorialImplementation(input[id]);
 }
-)";
+)"; 
+
+    const std::string compilerOptions = "-w -Werror";
 }
 #if 0
 ulong FactorialImplementation(ulong val)
@@ -77,7 +79,8 @@ public:
             boost::compute::copy_async( inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue ).get_event() 
         } );
 
-        boost::compute::kernel kernel = boost::compute::kernel::create_with_source( trivialFactorialKernelCode, "TrivialFactorial", context );
+        boost::compute::program program = boost::compute::program::build_with_source( trivialFactorialKernelCode, context, compilerOptions );
+        boost::compute::kernel kernel( program, "TrivialFactorial" );
         boost::compute::vector<unsigned long long> output_device_vector( dataSize_, context );
         kernel.set_arg( 0, input_device_vector );
         kernel.set_arg( 1, output_device_vector );
