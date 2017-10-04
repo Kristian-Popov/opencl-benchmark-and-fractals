@@ -67,32 +67,35 @@ public:
             context, context.get_device(), boost::compute::command_queue::enable_profiling
         );
 
+        std::unordered_map<OperationId, boost::compute::event> events;
+
         // create a vector on the device
         boost::compute::vector<int> input_device_vector( dataSize_, context );
 
         // copy data from the host to the device
-        boost::compute::future<void> future = boost::compute::copy_async(
-            inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue
-        );
-
-        result.insert( std::make_pair( OperationId::CopyInputDataToDevice, 
-            ExecutionResult( OperationId::CopyInputDataToDevice, Utils::MeasureDuration<Duration>(future) )));
+        events.insert( { OperationId::CopyInputDataToDevice, 
+            boost::compute::copy_async( inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue ).get_event() 
+        } );
 
         boost::compute::kernel kernel = boost::compute::kernel::create_with_source( trivialFactorialKernelCode, "TrivialFactorial", context );
         boost::compute::vector<unsigned long long> output_device_vector( dataSize_, context );
         kernel.set_arg( 0, input_device_vector );
         kernel.set_arg( 1, output_device_vector );
 
-        result.insert( std::make_pair( OperationId::Calculate,
-            ExecutionResult( OperationId::Calculate, Utils::MeasureDuration<Duration>( queue.enqueue_1d_range_kernel( kernel, 0, dataSize_, 0 ) ) ) ) );
+        events.insert( { OperationId::Calculate,
+            queue.enqueue_1d_range_kernel( kernel, 0, dataSize_, 0 )
+        } );
 
         outputData_.resize( dataSize_ );
-        future = boost::compute::copy_async(
-            output_device_vector.begin(), output_device_vector.end(), outputData_.begin(), queue
-        );
+        boost::compute::event lastEvent = boost::compute::copy_async( output_device_vector.begin(), output_device_vector.end(), outputData_.begin(), queue ).get_event();
+        events.insert( { OperationId::CopyOutputDataFromDevice, lastEvent } );
 
-        result.insert( std::make_pair( OperationId::CopyOutputDataFromDevice,
-            ExecutionResult( OperationId::CopyOutputDataFromDevice, Utils::MeasureDuration<Duration>( future ) ) ) );
+        lastEvent.wait();
+
+        for ( const std::pair<OperationId, boost::compute::event>& v: events )
+        {
+            result.insert( std::make_pair( v.first, ExecutionResult( v.first, v.second.duration<Duration>() ) ) );
+        }
 
         VerifyOutput();
         return result;
