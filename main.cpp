@@ -8,6 +8,8 @@
 
 #include "trivial_factorial_fixture.h"
 #include "operation_id.h"
+#include "benchmark_fixture_html_builder.h"
+#include "html_document.h"
 
 #include "boost/compute/compute.hpp"
 
@@ -131,6 +133,7 @@ int main( int argc, char** argv )
     typedef double OutputNumericType;
     typedef std::chrono::duration<OutputNumericType, std::micro> OutputDurationType;
     auto targetFixtureExecutionTime = std::chrono::milliseconds(1); // Time how long fixture should execute, if larger than execution time than few iterations are done
+    const char* outputHTMLFileName = "output.html";
 
     std::vector<boost::compute::platform> platforms = boost::compute::system::platforms();
     for (std::unique_ptr<Fixture>& fixture: fixtures)
@@ -161,6 +164,25 @@ int main( int argc, char** argv )
                     for( int i = 0; i < iterationCount; ++i)
                     {
                         results.push_back(fixture->Execute( context ) );
+                    }
+
+                    for( OperationId id : OperationIdList::Build() )
+                    {
+                        std::vector<OutputDurationType> perOperationResults;
+                        std::transform( results.begin(), results.end(), std::back_inserter( perOperationResults ),
+                            [id]( const std::unordered_map<OperationId, Fixture::ExecutionResult>& d )
+                        {
+                            const Fixture::ExecutionResult& r = d.at( id );
+                            EXCEPTION_ASSERT( r.operationId == id );
+                            return std::chrono::duration_cast<OutputDurationType>( r.duration );
+                        } );
+
+                        //TODO "accumulate" can safely be changed to "reduce" here to increase performance
+                        OutputDurationType avg = std::accumulate( perOperationResults.begin(), perOperationResults.end(), OutputDurationType::zero() ) / perOperationResults.size();
+
+                        std::vector<BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForPlatform> data;
+                        HTMLDocument document = BenchmarkFixtureHTMLBuilder::Build(data, outputHTMLFileName);
+                        document.BuildAndWriteToDisk();
                     }
 
                     for ( OperationId id: OperationIdList::Build())

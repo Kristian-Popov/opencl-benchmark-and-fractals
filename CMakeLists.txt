@@ -7,7 +7,19 @@ find_package(OpenCL REQUIRED)
 include_directories(${OpenCL_INCLUDE_DIRS})
 link_directories(${OpenCL_LIBRARY} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost/stage/lib)
 
-add_executable (main main.cpp utils.h utils.cpp trivial_factorial_fixture.h fixture.h operation_id.h )
+add_executable (main 
+	main.cpp 
+	utils.cpp
+	html_document.cpp
+	benchmark_fixture_html_builder.cpp
+	
+	utils.h
+	fixture.h
+	trivial_factorial_fixture.h 
+	operation_id.h
+	html_document.h
+	benchmark_fixture_html_builder.h
+	)
 
 # target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/nonius/include )
 target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost/ )
