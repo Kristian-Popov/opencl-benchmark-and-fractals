@@ -24,6 +24,7 @@ public:
 
     HTMLDocument( const char* fileName );
 
+    void AddHeader( const std::string& text, int level = 1 );
     void AddTable( const std::vector<std::vector<CellDescription>>& rows );
 
     void BuildAndWriteToDisk();

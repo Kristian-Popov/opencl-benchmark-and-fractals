@@ -134,12 +134,15 @@ int main( int argc, char** argv )
     typedef std::chrono::duration<OutputNumericType, std::micro> OutputDurationType;
     auto targetFixtureExecutionTime = std::chrono::milliseconds(1); // Time how long fixture should execute, if larger than execution time than few iterations are done
     const char* outputHTMLFileName = "output.html";
+    BenchmarkFixtureHTMLBuilder htmlDocumentBuilder( outputHTMLFileName );
 
     std::vector<boost::compute::platform> platforms = boost::compute::system::platforms();
     for (std::unique_ptr<Fixture>& fixture: fixtures)
     {
         fixture->Init();
-        std::vector<BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForPlatform> dataForHTMLBuilder;
+        BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForFixture dataForHTMLBuilder;
+        dataForHTMLBuilder.fixtureName = fixture->Description();
+
         for( boost::compute::platform& platform: platforms )
         {
             BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForPlatform perPlatformResults;
@@ -221,14 +224,15 @@ int main( int argc, char** argv )
                 perPlatformResults.perDeviceResults.push_back(perDeviceResults);
             }
 
-            dataForHTMLBuilder.push_back(perPlatformResults);
+            dataForHTMLBuilder.perFixtureResults.push_back(perPlatformResults);
         }
-        HTMLDocument document = BenchmarkFixtureHTMLBuilder::Build( dataForHTMLBuilder, outputHTMLFileName );
-        document.BuildAndWriteToDisk();
+        htmlDocumentBuilder.AddFixtureResults( dataForHTMLBuilder );
 
         // Destroy fixture to release some memory sooner
         fixture.reset();
     }
+    htmlDocumentBuilder.GetHTMLDocument()->BuildAndWriteToDisk();
+
     return 0;
 }
 

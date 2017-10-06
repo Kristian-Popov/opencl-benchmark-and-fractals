@@ -58,7 +58,13 @@ void HTMLDocument::AddTable( const std::vector<std::vector<CellDescription>>& ro
         }
         stream_ << "</tr>" << std::endl;
     }
-    stream_ << "</table>";
+    stream_ << "</table>" << std::endl;
+}
+
+void HTMLDocument::AddHeader( const std::string& text, int level /* = 1 */ )
+{
+    EXCEPTION_ASSERT( level >= 1 && level <= 6 );
+    stream_ << "<h" << level << ">" << text << "</h" << level << ">" << std::endl;
 }
 
 void HTMLDocument::BuildAndWriteToDisk()

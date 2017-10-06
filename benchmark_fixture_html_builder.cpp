@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <iterator>
 
-#include "html_document.h"
+
 #include "utils.h"
 
 namespace
@@ -16,9 +16,14 @@ namespace
     };
 }
 
-HTMLDocument BenchmarkFixtureHTMLBuilder::Build( const std::vector<BenchmarkFixtureResultForPlatform>& results, const char* fileName )
+BenchmarkFixtureHTMLBuilder::BenchmarkFixtureHTMLBuilder( const char* fileName )
+    : document_( std::make_shared<HTMLDocument>( fileName ) )
+{}
+
+void BenchmarkFixtureHTMLBuilder::AddFixtureResults( const BenchmarkFixtureResultForFixture& results )
 {
-    HTMLDocument document(fileName);
+    document_->AddHeader( results.fixtureName );
+
     std::vector<std::vector<HTMLDocument::CellDescription>> rows;
     typedef HTMLDocument::CellDescription CellDescription;
     rows.push_back( { 
@@ -35,7 +40,7 @@ HTMLDocument BenchmarkFixtureHTMLBuilder::Build( const std::vector<BenchmarkFixt
             return CellDescription( v.second );
         } );
     rows.push_back( row );
-    for (const BenchmarkFixtureResultForPlatform& perPlatformResults: results)
+    for (const BenchmarkFixtureResultForPlatform& perPlatformResults: results.perFixtureResults)
     {
         // First row is a bit special since platform name should also be there
         EXCEPTION_ASSERT( perPlatformResults.perDeviceResults.size() >= 1 );
@@ -71,6 +76,5 @@ HTMLDocument BenchmarkFixtureHTMLBuilder::Build( const std::vector<BenchmarkFixt
         }
     }
 
-    document.AddTable(rows);
-    return document;
+    document_->AddTable(rows);
 }
