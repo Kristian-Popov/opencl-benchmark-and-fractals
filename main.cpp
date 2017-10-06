@@ -139,11 +139,18 @@ int main( int argc, char** argv )
     for (std::unique_ptr<Fixture>& fixture: fixtures)
     {
         fixture->Init();
+        std::vector<BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForPlatform> dataForHTMLBuilder;
         for( boost::compute::platform& platform: platforms )
         {
+            BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForPlatform perPlatformResults;
+            perPlatformResults.platformName = platform.name();
+
             std::vector<boost::compute::device> devices = platform.devices();
             for( boost::compute::device& device: devices )
             {
+                BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForDevice perDeviceResults;
+                perDeviceResults.deviceName = device.name();
+
                 try
                 {
                     std::cout << "\"" << platform.name() << "\", \"" << device.name() << "\", \"" << fixture->Description() << "\":" << std::endl;
@@ -180,9 +187,7 @@ int main( int argc, char** argv )
                         //TODO "accumulate" can safely be changed to "reduce" here to increase performance
                         OutputDurationType avg = std::accumulate( perOperationResults.begin(), perOperationResults.end(), OutputDurationType::zero() ) / perOperationResults.size();
 
-                        std::vector<BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForPlatform> data;
-                        HTMLDocument document = BenchmarkFixtureHTMLBuilder::Build(data, outputHTMLFileName);
-                        document.BuildAndWriteToDisk();
+                        perDeviceResults.perOperationResults.insert( { id, avg } );
                     }
 
                     for ( OperationId id: OperationIdList::Build())
@@ -212,8 +217,14 @@ int main( int argc, char** argv )
                 {
                     std::cout << "OpenCL error occured: " << e.what() << std::endl;
                 }
+
+                perPlatformResults.perDeviceResults.push_back(perDeviceResults);
             }
+
+            dataForHTMLBuilder.push_back(perPlatformResults);
         }
+        HTMLDocument document = BenchmarkFixtureHTMLBuilder::Build( dataForHTMLBuilder, outputHTMLFileName );
+        document.BuildAndWriteToDisk();
 
         // Destroy fixture to release some memory sooner
         fixture.reset();

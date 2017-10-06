@@ -3,6 +3,9 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <unordered_map>
+
+#include "operation_id.h"
 
 class HTMLDocument;
 
@@ -12,16 +15,12 @@ public:
     typedef double OutputNumericType;
     typedef std::chrono::duration<OutputNumericType, std::micro> OutputDurationType;
 
-    struct BenchmarkFixtureResultForOperation
-    {
-        std::string operationDescription;
-        OutputDurationType duration;
-    };
+    typedef std::unordered_map<OperationId, OutputDurationType> BenchmarkFixtureResultForOperation;
 
     struct BenchmarkFixtureResultForDevice
     {
         std::string deviceName;
-        std::vector<BenchmarkFixtureResultForOperation> perOperationResults;
+        BenchmarkFixtureResultForOperation perOperationResults;
     };
 
     struct BenchmarkFixtureResultForPlatform
