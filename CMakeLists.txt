@@ -12,11 +12,12 @@ add_executable (main
 	utils.cpp
 	html_document.cpp
 	benchmark_fixture_html_builder.cpp
+	operation_step.cpp
 	
 	utils.h
 	fixture.h
 	trivial_factorial_fixture.h 
-	operation_id.h
+	operation_step.h
 	html_document.h
 	benchmark_fixture_html_builder.h
 	)

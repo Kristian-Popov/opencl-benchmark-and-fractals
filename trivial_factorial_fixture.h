@@ -28,23 +28,6 @@ __kernel void TrivialFactorial(__global int* input, __global ulong* output)
 
     const std::string compilerOptions = "-w -Werror";
 }
-#if 0
-ulong FactorialImplementation(ulong val)
-{
-    ulong result = 1;
-    for(int i = 1; i <= val; i++)
-    {
-        result *= i;
-    }
-    return result;
-}
-
-__kernel void Factorial(__global ulong* input, __global ulong* output)
-{
-    size_t id = get_global_id(0);
-    output[id] = FactorialImplementation(input[id]);
-}
-#endif
 
 class TrivialFactorialFixture: public Fixture
 {
@@ -59,9 +42,18 @@ public:
         GenerateData();
     }
 
-    std::unordered_map<OperationId, ExecutionResult> Execute( boost::compute::context& context ) override
+    virtual std::vector<OperationStep> GetSteps() override
+    {
+        return {
+            OperationStep::CopyInputDataToDevice,
+            OperationStep::Calculate,
+            OperationStep::CopyOutputDataFromDevice
+        };
+    }
+
+    std::unordered_map<OperationStep, ExecutionResult> Execute( boost::compute::context& context ) override
 	{
-        std::unordered_map<OperationId, ExecutionResult> result;
+        std::unordered_map<OperationStep, ExecutionResult> result;
 
         EXCEPTION_ASSERT( context.get_devices().size() == 1 );
         // create command queue with profiling enabled
@@ -69,13 +61,13 @@ public:
             context, context.get_device(), boost::compute::command_queue::enable_profiling
         );
 
-        std::unordered_map<OperationId, boost::compute::event> events;
+        std::unordered_map<OperationStep, boost::compute::event> events;
 
         // create a vector on the device
         boost::compute::vector<int> input_device_vector( dataSize_, context );
 
         // copy data from the host to the device
-        events.insert( { OperationId::CopyInputDataToDevice, 
+        events.insert( { OperationStep::CopyInputDataToDevice, 
             boost::compute::copy_async( inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue ).get_event() 
         } );
 
@@ -87,17 +79,17 @@ public:
 
         unsigned computeUnitsCount = context.get_device().compute_units();
         size_t localWorkGroupSize = 0;
-        events.insert( { OperationId::Calculate,
+        events.insert( { OperationStep::Calculate,
             queue.enqueue_1d_range_kernel( kernel, 0, dataSize_, localWorkGroupSize )
         } );
 
         outputData_.resize( dataSize_ );
         boost::compute::event lastEvent = boost::compute::copy_async( output_device_vector.begin(), output_device_vector.end(), outputData_.begin(), queue ).get_event();
-        events.insert( { OperationId::CopyOutputDataFromDevice, lastEvent } );
+        events.insert( { OperationStep::CopyOutputDataFromDevice, lastEvent } );
 
         lastEvent.wait();
 
-        for ( const std::pair<OperationId, boost::compute::event>& v: events )
+        for ( const std::pair<OperationStep, boost::compute::event>& v: events )
         {
             result.insert( std::make_pair( v.first, ExecutionResult( v.first, v.second.duration<Duration>() ) ) );
         }

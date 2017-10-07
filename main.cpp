@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include "trivial_factorial_fixture.h"
-#include "operation_id.h"
+#include "operation_step.h"
 #include "benchmark_fixture_html_builder.h"
 #include "html_document.h"
 
@@ -124,12 +124,6 @@ int main( int argc, char** argv )
             return std::make_unique<TrivialFactorialFixture>(dataSize);
         } );
 
-    const std::unordered_map<OperationId, std::string> operationDescriptions = {
-        std::make_pair( OperationId::CopyInputDataToDevice, "Copy input data to device" ),
-        std::make_pair( OperationId::Calculate, "Calculation" ),
-        std::make_pair( OperationId::CopyOutputDataFromDevice, "Copy output data from device" ),
-    };
-
     typedef double OutputNumericType;
     typedef std::chrono::duration<OutputNumericType, std::micro> OutputDurationType;
     auto targetFixtureExecutionTime = std::chrono::milliseconds(10); // Time how long fixture should execute
@@ -142,6 +136,7 @@ int main( int argc, char** argv )
     {
         fixture->Init();
         BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForFixture dataForHTMLBuilder;
+        dataForHTMLBuilder.operationSteps = fixture->GetSteps();
         dataForHTMLBuilder.fixtureName = fixture->Description();
 
         for( boost::compute::platform& platform: platforms )
@@ -161,12 +156,12 @@ int main( int argc, char** argv )
 
                     boost::compute::context context( device );
 
-                    std::vector<std::unordered_map<OperationId, Fixture::ExecutionResult>> results;
+                    std::vector<std::unordered_map<OperationStep, Fixture::ExecutionResult>> results;
 
                     // Warm-up for one iteration to get estimation of execution time
-                    std::unordered_map<OperationId, Fixture::ExecutionResult> warmupResult = fixture->Execute( context );
+                    std::unordered_map<OperationStep, Fixture::ExecutionResult> warmupResult = fixture->Execute( context );
                     OutputDurationType totalOperationDuration = std::accumulate( warmupResult.begin(), warmupResult.end(), OutputDurationType::zero(),
-                        [] ( OutputDurationType acc, const std::pair<OperationId, Fixture::ExecutionResult>& r )
+                        [] ( OutputDurationType acc, const std::pair<OperationStep, Fixture::ExecutionResult>& r )
                         {
                             return acc + r.second.duration;
                         } );
@@ -178,11 +173,11 @@ int main( int argc, char** argv )
                         results.push_back(fixture->Execute( context ) );
                     }
 
-                    for( OperationId id : OperationIdList::Build() )
+                    for( OperationStep id : fixture->GetSteps() )
                     {
                         std::vector<OutputDurationType> perOperationResults;
                         std::transform( results.begin(), results.end(), std::back_inserter( perOperationResults ),
-                            [id]( const std::unordered_map<OperationId, Fixture::ExecutionResult>& d )
+                            [id]( const std::unordered_map<OperationStep, Fixture::ExecutionResult>& d )
                         {
                             const Fixture::ExecutionResult& r = d.at( id );
                             EXCEPTION_ASSERT( r.operationId == id );
@@ -195,11 +190,11 @@ int main( int argc, char** argv )
                         perDeviceResults.perOperationResults.insert( { id, avg } );
                     }
 
-                    for ( OperationId id: OperationIdList::Build())
+                    for ( OperationStep id : fixture->GetSteps() )
                     {
                         std::vector<double> perOperationResults;
                         std::transform(results.begin(), results.end(), std::back_inserter( perOperationResults ),
-                            [id] (const std::unordered_map<OperationId, Fixture::ExecutionResult>& d )
+                            [id] (const std::unordered_map<OperationStep, Fixture::ExecutionResult>& d )
                             {
                                 const Fixture::ExecutionResult& r = d.at(id);
                                 EXCEPTION_ASSERT( r.operationId == id );
@@ -213,7 +208,8 @@ int main( int argc, char** argv )
                         //TODO "accumulate" can safely be changed to "reduce" here to increase performance
                         OutputNumericType avg = std::accumulate( perOperationResults.begin(), perOperationResults.end(), 0.0) / perOperationResults.size();
 
-                        std::cout << "\t\"" << operationDescriptions.at(id) << "\": " << min << " - " << max << " (avg " << avg << ") microseconds" << std::endl;
+                        std::cout << "\t\"" << OperationStepDescriptionRepository::Get(id) << "\": " << 
+                            min << " - " << max << " (avg " << avg << ") microseconds" << std::endl;
                     }
 
                     std::cout << std::endl;

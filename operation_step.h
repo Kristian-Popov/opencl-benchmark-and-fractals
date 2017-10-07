@@ -1,29 +1,18 @@
 #pragma once
 
-#include <iterator>
+#include <unordered_map>
 
-class OperationIdList
+enum class OperationStep
+{ 
+    CopyInputDataToDevice,
+    Calculate,
+    CopyOutputDataFromDevice
+};
+
+class OperationStepDescriptionRepository
 {
 public:
-#define OPERATION_ID_LIST_VALUES { \
-        CopyInputDataToDevice, \
-        Calculate, \
-        CopyOutputDataFromDevice \
-        }
-    enum OperationIdEnum
-        OPERATION_ID_LIST_VALUES;
-    
-    static std::vector<OperationIdEnum> Build()
-    {
-        // TODO optimize?
-        //return std::vector<OperationIdEnum>( std::cbegin(OperationIdList::ValueList ), std::cend( OperationIdList::ValueList ) );
-        return std::vector<OperationIdEnum>( OPERATION_ID_LIST_VALUES );
-    }
+    static std::string Get( OperationStep step);
 private:
-    //static OperationIdEnum ValueList[];
+    static const std::unordered_map<OperationStep, std::string> operationDescriptions;
 };
-typedef OperationIdList::OperationIdEnum OperationId;
-
-//OperationId OperationIdList::ValueList[] = OPERATION_ID_LIST_VALUES;
-
-#undef OPERATION_ID_LIST_VALUES

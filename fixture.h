@@ -4,7 +4,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include "operation_id.h"
+#include "operation_step.h"
 
 #include "boost/compute/compute.hpp"
 
@@ -15,9 +15,9 @@ public:
     struct ExecutionResult
     {
         Duration duration;
-        OperationId operationId;
+        OperationStep operationId;
 
-        ExecutionResult( OperationId operationId_, Duration duration_ )
+        ExecutionResult( OperationStep operationId_, Duration duration_ )
             : operationId(operationId_)
             , duration(duration_)
         {}
@@ -25,7 +25,9 @@ public:
 
     virtual void Init() {}
 
-	virtual std::unordered_map<OperationId, ExecutionResult> Execute( boost::compute::context& context ) = 0;
+	virtual std::unordered_map<OperationStep, ExecutionResult> Execute( boost::compute::context& context ) = 0;
+
+    virtual std::vector<OperationStep> GetSteps() = 0;
 
     virtual std::string Description() = 0;
 
