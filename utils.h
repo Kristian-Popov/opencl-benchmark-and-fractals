@@ -46,6 +46,14 @@ namespace Utils
         event.wait();
         return event.duration<D>();
     }
+
+    /*
+        Formats text representation of large values:
+        - for 1-1000, returned as is
+        - for 1000-999000 when last three digits are zeroes - 1K, 999K
+        - for 1000000-999000000 when last six digits are zeroes - 1M, 999M
+    */
+    std::string FormatQuantityString(int value);
 }
 
 #define EXCEPTION_ASSERT(expr) { if(!(expr)) { throw std::logic_error("Assert \"" #expr "\" failed"); } }

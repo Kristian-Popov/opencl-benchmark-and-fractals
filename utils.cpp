@@ -16,4 +16,22 @@ namespace Utils
         stream.close();
         return buf.str();
     }
+
+    std::string FormatQuantityString( int value )
+    {
+        std::string result;
+        if (value % 1000000 == 0)
+        {
+            result = std::to_string(value / 1000000) + "M";
+        }
+        else if( value % 1000 == 0 )
+        {
+            result = std::to_string( value / 1000 ) + "K";
+        }
+        else
+        {
+            result = std::to_string( value);
+        }
+        return result;
+    }
 }

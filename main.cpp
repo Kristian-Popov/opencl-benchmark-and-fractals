@@ -132,7 +132,8 @@ int main( int argc, char** argv )
 
     typedef double OutputNumericType;
     typedef std::chrono::duration<OutputNumericType, std::micro> OutputDurationType;
-    auto targetFixtureExecutionTime = std::chrono::milliseconds(1); // Time how long fixture should execute, if larger than execution time than few iterations are done
+    auto targetFixtureExecutionTime = std::chrono::milliseconds(10); // Time how long fixture should execute
+    int minIterations = 10; // Minimal number of iterations
     const char* outputHTMLFileName = "output.html";
     BenchmarkFixtureHTMLBuilder htmlDocumentBuilder( outputHTMLFileName );
 
@@ -170,6 +171,7 @@ int main( int argc, char** argv )
                             return acc + r.second.duration;
                         } );
                     int iterationCount = static_cast<int>(std::ceil(targetFixtureExecutionTime / totalOperationDuration));
+                    iterationCount = std::max( iterationCount, minIterations );
                     EXCEPTION_ASSERT(iterationCount >= 1);
                     for( int i = 0; i < iterationCount; ++i)
                     {

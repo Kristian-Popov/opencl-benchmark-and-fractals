@@ -85,8 +85,10 @@ public:
         kernel.set_arg( 0, input_device_vector );
         kernel.set_arg( 1, output_device_vector );
 
+        unsigned computeUnitsCount = context.get_device().compute_units();
+        size_t localWorkGroupSize = 0;
         events.insert( { OperationId::Calculate,
-            queue.enqueue_1d_range_kernel( kernel, 0, dataSize_, 0 )
+            queue.enqueue_1d_range_kernel( kernel, 0, dataSize_, localWorkGroupSize )
         } );
 
         outputData_.resize( dataSize_ );
@@ -100,13 +102,15 @@ public:
             result.insert( std::make_pair( v.first, ExecutionResult( v.first, v.second.duration<Duration>() ) ) );
         }
 
-        VerifyOutput();
+        // TODO doesn't makes much sense since data are all the same every iteration. It should be either done only once
+        // or data should be randomized (this requires seeding RNG)
+        //VerifyOutput();
         return result;
 	}
 
     std::string Description() override
     {
-        return std::string("Trivial factorial, ") + std::to_string(dataSize_) + " elements";
+        return std::string("Trivial factorial, ") + Utils::FormatQuantityString(dataSize_) + " elements";
     }
 
     virtual ~TrivialFactorialFixture()
