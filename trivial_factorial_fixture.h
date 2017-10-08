@@ -37,7 +37,7 @@ public:
 	{
 	}
 
-    virtual void Init() override 
+    virtual void Initialize() override
     {
         GenerateData();
     }
@@ -117,6 +117,7 @@ private:
 
     void VerifyOutput()
     {
+        // TODO rewrite
         if( outputData_ != expectedOutputData_ )
         {
             std::string message = "TrivialFactorialFixture: results are different from expected. Expected: \n" +

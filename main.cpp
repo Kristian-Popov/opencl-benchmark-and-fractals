@@ -7,112 +7,13 @@
 #include <algorithm>
 
 #include "trivial_factorial_fixture.h"
+#include "damped_wave_fixture.h"
 #include "operation_step.h"
 #include "benchmark_fixture_html_builder.h"
 #include "html_document.h"
 
 #include "boost/compute/compute.hpp"
-
-#if 0
- int main(void)
- {
-    cl_int err = CL_SUCCESS;
-    try {
-      std::vector<cl::Platform> platforms;
-      cl::Platform::get(&platforms);
-      if (platforms.empty()) {
-          std::cout << "No OpenCL platforms found" << std::endl;
-          WaitForUserInput();
-          return EXIT_FAILURE;
-      }
-      for (cl::Platform& platform: platforms)
-      {
-          cl_context_properties properties[] =
-             { CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(), 0};
-          cl::Context context(CL_DEVICE_TYPE_ALL, properties);
-
-          std::string source = ReadFile("../kernel.cl");
-          std::cout << "Kernel: " << source << std::endl;
-
-          std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
-          cl::Program program = cl::Program(context, source);
-          program.build(devices); // TODO enable OpenCL compiler warnings
-          std::cout << "Kernel built successfully" << std::endl;
-
-          for (cl::Device& device: devices)
-          {
-            std::cout << "Device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
-
-              cl::Kernel kernel(program, "Factorial", &err);
-
-              int dataSize = 21;
-
-              std::vector<cl_ulong> inputData(dataSize, 0ull);
-              cl_ulong counter = 0;
-              std::generate(inputData.begin(), inputData.end(), [&counter] ()
-              {
-                return counter++;
-              });
-              //cl::Buffer inputBuffer(context, inputData.begin(), inputData.end(), true, true);
-              cl::Buffer inputBuffer(context, CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR, dataSize * sizeof(cl_ulong), &inputData[0]);
-
-              std::vector<cl_ulong> outputData(dataSize, 0ull);
-              // LOL processor OpenCL implementation ignores readonly flag in this config
-              //cl::Buffer outputBuffer(context, outputData.begin(), outputData.end(), false, true);
-              //cl::Buffer outputBuffer(context, outputData.begin(), outputData.end(), false, true);
-              cl::Buffer outputBuffer(context, CL_MEM_WRITE_ONLY|CL_MEM_USE_HOST_PTR, dataSize * sizeof(cl_ulong), &outputData[0]);
-
-              kernel.setArg(0, inputBuffer);
-              kernel.setArg(1, outputBuffer);
-
-              cl::Event event;
-              std::vector<cl::Event> events({event});
-              cl::CommandQueue queue(context, device, 0, &err);
-              queue.enqueueNDRangeKernel(
-                  kernel,
-                  cl::NullRange,
-                  cl::NDRange(dataSize),
-                  cl::NullRange,
-                  NULL,
-                  &event);
-              queue.enqueueReadBuffer(
-                  outputBuffer,
-                  false,
-                  0,
-                  dataSize * sizeof(cl_ulong),
-                  &outputData[0]
-                  //&events ); // TODO why don't we need to wait until event finishes?
-                  );
-
-              queue.finish();
-
-              std::cout << "Printing value of buffers:" << std::endl;
-              for (int i = 0; i < dataSize; ++i)
-              {
-                std::cout << inputData.at(i) << "\t" << outputData.at(i) << std::endl;
-              }
-
-              std::cout << "Kernel finished" << std::endl <<
-                    "--------------------------------------" << std::endl;
-            }
-      }
-
-      std::cout << "Done" << std::endl;
-    }
-    catch (cl::Error err) {
-       std::cerr
-          << "ERROR: "
-          << err.what()
-          << "("
-          << err.err()
-          << ")"
-          << std::endl;
-    }
-    
-    WaitForUserInput();
-   return EXIT_SUCCESS;
- }
-#endif
+#include <boost/math/constants/constants.hpp>
 
 int main( int argc, char** argv )
 {
@@ -123,6 +24,10 @@ int main( int argc, char** argv )
         {
             return std::make_unique<TrivialFactorialFixture>(dataSize);
         } );
+    cl_float frequency = 1.0f;
+    const cl_float pi = boost::math::constants::pi<cl_float>();
+    fixtures.push_back( std::make_unique<DampedWaveFixture<cl_float>>( 1000.0f, 0.001f, 2*pi*frequency, 0.0f, 0.0f, 1.0f, 
+        DampedWaveFixture<cl_float>::DataPattern::Linear, 0.001f ));
 
     typedef double OutputNumericType;
     typedef std::chrono::duration<OutputNumericType, std::micro> OutputDurationType;
@@ -134,7 +39,7 @@ int main( int argc, char** argv )
     std::vector<boost::compute::platform> platforms = boost::compute::system::platforms();
     for (std::unique_ptr<Fixture>& fixture: fixtures)
     {
-        fixture->Init();
+        fixture->Initialize(); // TODO initialize every iteration or not?
         BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForFixture dataForHTMLBuilder;
         dataForHTMLBuilder.operationSteps = fixture->GetSteps();
         dataForHTMLBuilder.fixtureName = fixture->Description();
@@ -224,6 +129,7 @@ int main( int argc, char** argv )
 
             dataForHTMLBuilder.perFixtureResults.push_back(perPlatformResults);
         }
+        fixture->Finalize(); // TODO finalize every iteration or not?
         htmlDocumentBuilder.AddFixtureResults( dataForHTMLBuilder );
 
         // Destroy fixture to release some memory sooner

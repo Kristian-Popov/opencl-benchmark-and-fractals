@@ -20,6 +20,7 @@ add_executable (main
 	operation_step.h
 	html_document.h
 	benchmark_fixture_html_builder.h
+	damped_wave_fixture.h
 	)
 
 # target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/nonius/include )

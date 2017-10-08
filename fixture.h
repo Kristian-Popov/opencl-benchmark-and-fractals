@@ -23,9 +23,19 @@ public:
         {}
     };
 
-    virtual void Init() {}
+    /*
+        Optional method to initialize a fixture.
+        TODO Call every iteration or not? For every platform/device?
+    */
+    virtual void Initialize() {}
 
 	virtual std::unordered_map<OperationStep, ExecutionResult> Execute( boost::compute::context& context ) = 0;
+
+    /*
+    Optional method to initialize a fixture.
+    TODO Call every iteration or not? For every platform/device?
+    */
+    virtual void Finalize() {}
 
     virtual std::vector<OperationStep> GetSteps() = 0;
 
