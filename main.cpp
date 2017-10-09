@@ -26,7 +26,9 @@ int main( int argc, char** argv )
         } );
     cl_float frequency = 1.0f;
     const cl_float pi = boost::math::constants::pi<cl_float>();
-    fixtures.push_back( std::make_unique<DampedWaveFixture<cl_float>>( 1000.0f, 0.001f, 2*pi*frequency, 0.0f, 0.0f, 1.0f, 
+
+    std::vector<DampedWaveFixture<cl_float>::Parameters> params = { DampedWaveFixture<cl_float>::Parameters( 1000.0f, 0.001f, 2 * pi*frequency, 0.0f, 1.0f ) };
+    fixtures.push_back( std::make_unique<DampedWaveFixture<cl_float>>( params, 0.0f, 1.0f, 
         DampedWaveFixture<cl_float>::DataPattern::Linear, 0.001f ));
 
     typedef double OutputNumericType;

@@ -14,18 +14,35 @@ namespace
     const char* kernelCode = R"(
 // Requires definition of REAL_T macro, it should be one of floating point types (either float or double)
 // TODO can half precision be used here?
-REAL_T DampedWave2DImplementation(REAL_T x, REAL_T amplitude, REAL_T dampingRatio, REAL_T angularFrequency, REAL_T phase)
+typedef struct Parameters
 {
-    x = fabs(x);
-    return amplitude * exp(-dampingRatio * x) * cos(angularFrequency * x + phase);
+    REAL_T amplitude;
+    REAL_T dampingRatio;
+    REAL_T angularFrequency;
+    REAL_T phase;
+    REAL_T shift;
+} Parameters;
+
+REAL_T DampedWave2DImplementation(REAL_T x, __global Parameters* params, size_t paramsCount)
+{
+    REAL_T result = 0;
+    // TODO copy parameters to faster memory?
+    for (size_t i = 0; i < paramsCount; ++i)
+    {
+        Parameters paramSet = params[i];
+        REAL_T t = fabs(x - paramSet.shift);
+        result += paramSet.amplitude * exp(-paramSet.dampingRatio * t) * 
+            cos(paramSet.angularFrequency * t + paramSet.phase);
+    }
+    return result;
 }
 
 __kernel void DampedWave2D(__global REAL_T* input,
-        REAL_T amplitude, REAL_T dampingRatio, REAL_T angularFrequency, REAL_T phase,
+        __global Parameters* params, size_t paramsCount,
         __global REAL_T* output)
 {
     size_t id = get_global_id(0);
-    output[id] = DampedWave2DImplementation(input[id], amplitude, dampingRatio, angularFrequency, phase);
+    output[id] = DampedWave2DImplementation(input[id], params, paramsCount);
 }
 )";
 
@@ -42,11 +59,26 @@ public:
         Random
     };
 
-    DampedWaveFixture( T amplitude, T dampingRatio, T angularFrequency, T phase, T min, T max, DataPattern dataPattern, T step = 0 )
-        : amplitude_(amplitude)
-        , dampingRatio_(dampingRatio)
-        , angularFrequency_( angularFrequency )
-        , phase_( angularFrequency )
+    struct Parameters
+    {
+        T amplitude = 0;
+        T dampingRatio = 0;
+        T angularFrequency = 0;
+        T phase = 0;
+        T shift = 0;
+
+        Parameters( T amplitude_, T dampingRatio_, T angularFrequency_, T phase_, T shift_ )
+            : amplitude( amplitude_ )
+            , dampingRatio( dampingRatio_ )
+            , angularFrequency( angularFrequency_ )
+            , phase( phase_ )
+            , shift( shift_ )
+        {
+        }
+    };
+
+    DampedWaveFixture( const std::vector<Parameters>& params, T min, T max, DataPattern dataPattern, T step = 0 )
+        : params_( params )
         , min_(min)
         , max_(max)
         , step_(step)
@@ -88,6 +120,10 @@ public:
             boost::compute::copy_async( inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue ).get_event()
         } );
 
+        // TODO measure time for copying parameters
+        boost::compute::vector<Parameters> input_params_vector( params_.size(), context );
+        boost::compute::copy( params_.begin(), params_.end(), input_params_vector.begin(), queue );
+
         std::string compilerOptions = baseCompilerOptions + std::string(" -DREAL_T=") + openCLTemplateTypeName;
         boost::compute::program program;
         try
@@ -121,11 +157,9 @@ public:
         boost::compute::vector<T> output_device_vector( inputData_.size(), context );
 
         kernel.set_arg( 0, input_device_vector );
-        kernel.set_arg( 1, amplitude_ );
-        kernel.set_arg( 2, dampingRatio_ );
-        kernel.set_arg( 3, angularFrequency_ );
-        kernel.set_arg( 4, phase_ );
-        kernel.set_arg( 5, output_device_vector );
+        kernel.set_arg( 1, input_params_vector );
+        kernel.set_arg( 2, params_.size() );
+        kernel.set_arg( 3, output_device_vector );
 
         unsigned computeUnitsCount = context.get_device().compute_units();
         size_t localWorkGroupSize = 0;
@@ -184,7 +218,10 @@ private:
     std::vector<T> expectedOutputData_;
     std::vector<T> outputData_;
     DataPattern dataPattern_;
-    T amplitude_ = 0, dampingRatio_ = 0, angularFrequency_ = 0, phase_ = 0, min_ = 0, max_ = 0, step_ = 0;
+    std::vector<Parameters> params_;
+    T min_ = 0;
+    T max_ = 0;
+    T step_ = 0;
     static const char* openCLTemplateTypeName;
     static const char* descriptionTypeName;
     static const T maxAcceptableRelError;
@@ -208,12 +245,10 @@ private:
         EXCEPTION_ASSERT( std::all_of( inputData_.begin(), inputData_.end(), [this]( T x ) { return x >= min_ && x <= max_; } ) );
 
         expectedOutputData_.reserve( dataSize );
-        std::transform( inputData_.begin(), inputData_.end(), std::back_inserter( expectedOutputData_ ),
-            [this]( T x )
-            {
-                x = std::abs(x); 
-                return amplitude_ * std::exp(-dampingRatio_ * x) * cos( angularFrequency_ * x + phase_ );
-            } );
+
+        using namespace std::placeholders;
+        std::transform( inputData_.begin(), inputData_.end(), std::back_inserter( expectedOutputData_ ), 
+            std::bind( &DampedWaveFixture<T>::CalcExpectedValue, this, _1 ) );
 #if 0
         // Specify the engine and distribution.
         std::mt19937 mersenne_engine;
@@ -232,6 +267,17 @@ private:
             return correctFactorialValues_.at( i );
         } );
 #endif
+    }
+
+    T CalcExpectedValue( T x ) const
+    {
+        return std::accumulate<decltype( params_.cbegin() ), T>( params_.cbegin(), params_.cend(), 0,
+            [x] (T accum, const Parameters& param)
+            {
+                T v = std::abs( x - param.shift );
+                T currentWave = param.amplitude * std::exp( -param.dampingRatio * v ) * cos( param.angularFrequency * v + param.phase );
+                return accum + currentWave;
+            } );
     }
 };
 
