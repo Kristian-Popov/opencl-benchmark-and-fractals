@@ -6,6 +6,8 @@
 #include "utils.h"
 #include "fixture.h"
 
+#include <boost/format.hpp>
+
 namespace
 {
     const char* trivialFactorialKernelCode = R"(
@@ -105,6 +107,24 @@ public:
         return std::string("Trivial factorial, ") + Utils::FormatQuantityString(dataSize_) + " elements";
     }
 
+    virtual void VerifyResults() override
+    {
+        if( outputData_.size() != expectedOutputData_.size() )
+        {
+            throw std::runtime_error( ( boost::format( "Result verification has failed for fixture \"%1%\". "
+                "Output data count is another from expected one." ) ).str() );
+        }
+        auto mismatchedValues = std::mismatch( outputData_.cbegin(), outputData_.cend(), expectedOutputData_.cbegin(), expectedOutputData_.cend() );
+        if( mismatchedValues.first != outputData_.cend() )
+        {
+            cl_ulong maxAbsError = *mismatchedValues.first - *mismatchedValues.second;
+            throw std::runtime_error( ( boost::format( "Result verification has failed for fixture \"%1%\". "
+                "Maximum absolute error is %2% for input value %3% "
+                "(exact equality is expected)" ) %
+                Description() % maxAbsError % *mismatchedValues.first ).str() );
+        }
+    }
+
     virtual ~TrivialFactorialFixture()
     {
     }
@@ -114,19 +134,6 @@ private:
     std::vector<cl_ulong> expectedOutputData_;
     static const std::unordered_map<int, cl_ulong> TrivialFactorialFixture::correctFactorialValues_;
     std::vector<cl_ulong> outputData_;
-
-    void VerifyOutput()
-    {
-        // TODO rewrite
-        if( outputData_ != expectedOutputData_ )
-        {
-            std::string message = "TrivialFactorialFixture: results are different from expected. Expected: \n" +
-                Utils::VectorToString( expectedOutputData_ ) + "\n" +
-                "Got:\n" +
-                Utils::VectorToString( outputData_ );
-            throw std::runtime_error( message );
-        }
-    }
 
     void GenerateData()
     {

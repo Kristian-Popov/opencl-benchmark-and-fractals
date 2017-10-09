@@ -7,6 +7,8 @@
 #include "utils.h"
 #include "fixture.h"
 
+#include <boost/format.hpp>
+
 namespace
 {
     const char* kernelCode = R"(
@@ -55,11 +57,6 @@ public:
     virtual void Initialize() override
     {
         GenerateData();
-    }
-
-    virtual void Finalize() override
-    {
-        VerifyOutput();
     }
 
     virtual std::vector<OperationStep> GetSteps() override
@@ -155,6 +152,30 @@ public:
         return std::string( "Damped wave, " ) + descriptionTypeName;
     }
 
+    void VerifyResults()
+    {
+        EXCEPTION_ASSERT( outputData_.size() == expectedOutputData_.size() );
+        std::vector<T> relError;
+        std::transform( outputData_.cbegin(), outputData_.cend(), expectedOutputData_.cbegin(), std::back_inserter( relError ),
+            []( T got, T expected )
+        {
+            return std::abs( ( got - expected ) / got );
+        } );
+        auto maxRelErrorIter = std::max_element( relError.cbegin(), relError.cend() );
+        T maxRelError = *maxRelErrorIter;
+        auto index = std::distance( relError.cbegin(), maxRelErrorIter );
+        EXCEPTION_ASSERT( index >= 0 && index < outputData_.size() );
+        T inputValueThatGivesMaxError = *( outputData_.cbegin() + index );
+
+        if( maxRelError > maxAcceptableRelError )
+        {
+            throw std::runtime_error( ( boost::format( "Result verification has failed for fixture \"%1%\". "
+                "Maximum relative error is %2% for input value %3% "
+                "(maximum acceptable error is %4%)" ) %
+                Description() % maxRelError % inputValueThatGivesMaxError % maxAcceptableRelError ).str() );
+        }
+    }
+
     virtual ~DampedWaveFixture()
     {
     }
@@ -166,7 +187,7 @@ private:
     T amplitude_ = 0, dampingRatio_ = 0, angularFrequency_ = 0, phase_ = 0, min_ = 0, max_ = 0, step_ = 0;
     static const char* openCLTemplateTypeName;
     static const char* descriptionTypeName;
-    static const T maxError;
+    static const T maxAcceptableRelError;
 
     void GenerateData()
     {
@@ -212,36 +233,14 @@ private:
         } );
 #endif
     }
-
-    void VerifyOutput()
-    {
-        EXCEPTION_ASSERT( outputData_.size() == expectedOutputData_.size() );
-        std::vector<T> difference;
-        std::transform( outputData_.cbegin(), outputData_.cend(), expectedOutputData_.cbegin(), std::back_inserter(difference), std::minus<T>());
-        T maxDiff = std::abs( *std::max_element( difference.cbegin(), difference.cend(), 
-            [] (T d1, T d2)
-            {
-                return std::abs(d1) < std::abs(d2);
-            } ) );
-        if( maxDiff > maxError )
-        {
-            // TODO rewrite
-            std::string message = Description() + ": results are different from expected. Expected: \n" +
-                Utils::VectorToString( expectedOutputData_ ) + "\n" +
-                "Got:\n" +
-                Utils::VectorToString( outputData_ ) + "\n" +
-                "Max error is " + std::to_string(maxDiff) + "\n";
-            throw std::runtime_error( message );
-        }
-    }
 };
 
 const char* DampedWaveFixture<cl_float>::openCLTemplateTypeName = "float";
-const char* DampedWaveFixture<cl_float>::descriptionTypeName = "Float";
-const cl_float DampedWaveFixture<cl_float>::maxError = 1e-3f; // TODO max error is quite large (0.00095). Investigate why
+const char* DampedWaveFixture<cl_float>::descriptionTypeName = "float";
+const cl_float DampedWaveFixture<cl_float>::maxAcceptableRelError = 1e-3f; // TODO max error is quite large (0.00095). Investigate why
 
 /*
 Not supported yet
 const char* DampledWaveFixture<cl_double>::openCLTemplateTypeName = "double";
-const char* DampledWaveFixture<cl_double>::descriptionTypeName = "Double";
+const char* DampledWaveFixture<cl_double>::descriptionTypeName = "double";
 */

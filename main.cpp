@@ -39,7 +39,7 @@ int main( int argc, char** argv )
     std::vector<boost::compute::platform> platforms = boost::compute::system::platforms();
     for (std::unique_ptr<Fixture>& fixture: fixtures)
     {
-        fixture->Initialize(); // TODO initialize every iteration or not?
+        fixture->Initialize();
         BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForFixture dataForHTMLBuilder;
         dataForHTMLBuilder.operationSteps = fixture->GetSteps();
         dataForHTMLBuilder.fixtureName = fixture->Description();
@@ -59,6 +59,7 @@ int main( int argc, char** argv )
                 {
                     std::cout << "\"" << platform.name() << "\", \"" << device.name() << "\", \"" << fixture->Description() << "\":" << std::endl;
 
+                    // TODO create context for every device only once
                     boost::compute::context context( device );
 
                     std::vector<std::unordered_map<OperationStep, Fixture::ExecutionResult>> results;
@@ -73,6 +74,9 @@ int main( int argc, char** argv )
                     int iterationCount = static_cast<int>(std::ceil(targetFixtureExecutionTime / totalOperationDuration));
                     iterationCount = std::max( iterationCount, minIterations );
                     EXCEPTION_ASSERT(iterationCount >= 1);
+
+                    fixture->VerifyResults();
+
                     for( int i = 0; i < iterationCount; ++i)
                     {
                         results.push_back(fixture->Execute( context ) );
@@ -123,13 +127,17 @@ int main( int argc, char** argv )
                 {
                     std::cout << "OpenCL error occured: " << e.what() << std::endl;
                 }
+                catch(std::exception& e)
+                {
+                    std::cout << "Exception occured: " << e.what() << std::endl;
+                }
 
                 perPlatformResults.perDeviceResults.push_back(perDeviceResults);
             }
 
             dataForHTMLBuilder.perFixtureResults.push_back(perPlatformResults);
         }
-        fixture->Finalize(); // TODO finalize every iteration or not?
+        fixture->Finalize();
         htmlDocumentBuilder.AddFixtureResults( dataForHTMLBuilder );
 
         // Destroy fixture to release some memory sooner
