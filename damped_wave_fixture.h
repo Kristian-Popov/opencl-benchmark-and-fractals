@@ -210,6 +210,29 @@ public:
         }
     }
 
+    /*
+        Return results in the following form:
+        {
+            { xmin, y1 },
+            { x2, y2 },
+            ...
+            { xmax, yn },
+        }
+    */
+    std::vector<std::vector<T>> GetResults() const
+    {
+        // Verify that output data are not empty to check if fixture was executed
+        EXCEPTION_ASSERT( !outputData_.empty() );
+        EXCEPTION_ASSERT( outputData_.size() == inputData_.size() );
+        std::vector<std::vector<T>> result;
+        std::transform( inputData_.cbegin(), inputData_.cend(), outputData_.cbegin(), std::back_inserter(result),
+            [] (T input, T output)
+            {
+                return std::vector<T>( { input, output } );
+            } );
+        return result;
+    }
+
     virtual ~DampedWaveFixture()
     {
     }
