@@ -9,7 +9,8 @@
 #include "trivial_factorial_fixture.h"
 #include "damped_wave_fixture.h"
 #include "operation_step.h"
-#include "benchmark_fixture_html_builder.h"
+#include "stdout_benchmark_time_writer.h"
+#include "html_benchmark_time_writer.h"
 #include "html_document.h"
 #include "csv_document.h"
 
@@ -38,42 +39,40 @@ int main( int argc, char** argv )
     auto targetFixtureExecutionTime = std::chrono::milliseconds(10); // Time how long fixture should execute
     int minIterations = 10; // Minimal number of iterations
     const char* outputHTMLFileName = "output.html";
-    BenchmarkFixtureHTMLBuilder htmlDocumentBuilder( outputHTMLFileName );
+    HTMLBenchmarkTimeWriter htmlDocumentBuilder( outputHTMLFileName );
 
     std::vector<boost::compute::platform> platforms = boost::compute::system::platforms();
     for (std::shared_ptr<Fixture>& fixture: fixtures)
     {
         fixture->Initialize();
-        BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForFixture dataForHTMLBuilder;
+        BenchmarkTimeWriterInterface::BenchmarkFixtureResultForFixture dataForHTMLBuilder;
         dataForHTMLBuilder.operationSteps = fixture->GetSteps();
         dataForHTMLBuilder.fixtureName = fixture->Description();
 
         for( boost::compute::platform& platform: platforms )
         {
-            BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForPlatform perPlatformResults;
+            BenchmarkTimeWriterInterface::BenchmarkFixtureResultForPlatform perPlatformResults;
             perPlatformResults.platformName = platform.name();
 
             std::vector<boost::compute::device> devices = platform.devices();
             for( boost::compute::device& device: devices )
             {
-                BenchmarkFixtureHTMLBuilder::BenchmarkFixtureResultForDevice perDeviceResults;
+                BenchmarkTimeWriterInterface::BenchmarkFixtureResultForDevice perDeviceResults;
                 perDeviceResults.deviceName = device.name();
 
                 try
                 {
-                    std::cout << "\"" << platform.name() << "\", \"" << device.name() << "\", \"" << fixture->Description() << "\":" << std::endl;
-
                     // TODO create context for every device only once
                     boost::compute::context context( device );
 
-                    std::vector<std::unordered_map<OperationStep, Fixture::ExecutionResult>> results;
+                    std::vector<std::unordered_map<OperationStep, Fixture::Duration>> results;
 
                     // Warm-up for one iteration to get estimation of execution time
-                    std::unordered_map<OperationStep, Fixture::ExecutionResult> warmupResult = fixture->Execute( context );
+                    std::unordered_map<OperationStep, Fixture::Duration> warmupResult = fixture->Execute( context );
                     OutputDurationType totalOperationDuration = std::accumulate( warmupResult.begin(), warmupResult.end(), OutputDurationType::zero(),
-                        [] ( OutputDurationType acc, const std::pair<OperationStep, Fixture::ExecutionResult>& r )
+                        [] ( OutputDurationType acc, const std::pair<OperationStep, Fixture::Duration>& r )
                         {
-                            return acc + r.second.duration;
+                            return acc + r.second;
                         } );
                     int iterationCount = static_cast<int>(std::ceil(targetFixtureExecutionTime / totalOperationDuration));
                     iterationCount = std::max( iterationCount, minIterations );
@@ -86,46 +85,18 @@ int main( int argc, char** argv )
                         results.push_back(fixture->Execute( context ) );
                     }
 
-                    for( OperationStep id : fixture->GetSteps() )
+                    std::vector<std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationType>> resultsForWriter;
+                    for (const auto& res: results )
                     {
-                        std::vector<OutputDurationType> perOperationResults;
-                        std::transform( results.begin(), results.end(), std::back_inserter( perOperationResults ),
-                            [id]( const std::unordered_map<OperationStep, Fixture::ExecutionResult>& d )
+                        std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationType> m;
+                        for (const std::pair<OperationStep, Fixture::Duration>& p: res)
                         {
-                            const Fixture::ExecutionResult& r = d.at( id );
-                            EXCEPTION_ASSERT( r.operationId == id );
-                            return std::chrono::duration_cast<OutputDurationType>( r.duration );
-                        } );
-
-                        //TODO "accumulate" can safely be changed to "reduce" here to increase performance
-                        OutputDurationType avg = std::accumulate( perOperationResults.begin(), perOperationResults.end(), OutputDurationType::zero() ) / perOperationResults.size();
-
-                        perDeviceResults.perOperationResults.insert( { id, avg } );
+                            m.insert( std::make_pair( p.first, 
+                                std::chrono::duration_cast<BenchmarkTimeWriterInterface::OutputDurationType>( p.second ) ) );
+                        }
+                        resultsForWriter.push_back( m );
                     }
-
-                    for ( OperationStep id : fixture->GetSteps() )
-                    {
-                        std::vector<double> perOperationResults;
-                        std::transform(results.begin(), results.end(), std::back_inserter( perOperationResults ),
-                            [id] (const std::unordered_map<OperationStep, Fixture::ExecutionResult>& d )
-                            {
-                                const Fixture::ExecutionResult& r = d.at(id);
-                                EXCEPTION_ASSERT( r.operationId == id );
-                                return std::chrono::duration_cast<OutputDurationType>(r.duration).count();
-                            } );
-
-                        auto minmax = std::minmax_element( perOperationResults.begin(), perOperationResults.end() );
-                        OutputNumericType min = *minmax.first;
-                        OutputNumericType max = *minmax.second;
-
-                        //TODO "accumulate" can safely be changed to "reduce" here to increase performance
-                        OutputNumericType avg = std::accumulate( perOperationResults.begin(), perOperationResults.end(), 0.0) / perOperationResults.size();
-
-                        std::cout << "\t\"" << OperationStepDescriptionRepository::Get(id) << "\": " << 
-                            min << " - " << max << " (avg " << avg << ") microseconds" << std::endl;
-                    }
-
-                    std::cout << std::endl;
+                    perDeviceResults.perOperationResults = resultsForWriter;
                 }
                 catch(boost::compute::opencl_error& e)
                 {
@@ -142,7 +113,7 @@ int main( int argc, char** argv )
             dataForHTMLBuilder.perFixtureResults.push_back(perPlatformResults);
         }
         fixture->Finalize();
-        htmlDocumentBuilder.AddFixtureResults( dataForHTMLBuilder );
+        htmlDocumentBuilder.WriteResultsForFixture( dataForHTMLBuilder );
 
         // Destroy fixture to release some memory sooner
         fixture.reset();

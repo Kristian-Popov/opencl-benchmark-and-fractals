@@ -100,9 +100,9 @@ public:
         };
     }
 
-    std::unordered_map<OperationStep, ExecutionResult> Execute( boost::compute::context& context ) override
+    std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) override
     {
-        std::unordered_map<OperationStep, ExecutionResult> result;
+        std::unordered_map<OperationStep, Duration> result;
 
         EXCEPTION_ASSERT( context.get_devices().size() == 1 );
         // create command queue with profiling enabled
@@ -175,7 +175,7 @@ public:
 
         for( const std::pair<OperationStep, boost::compute::event>& v : events )
         {
-            result.insert( std::make_pair( v.first, ExecutionResult( v.first, v.second.duration<Duration>() ) ) );
+            result.insert( std::make_pair( v.first, v.second.duration<Duration>() ) );
         }
 
         return result;

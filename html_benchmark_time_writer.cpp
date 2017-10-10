@@ -1,4 +1,4 @@
-#include "benchmark_fixture_html_builder.h"
+#include "html_benchmark_time_writer.h"
 
 #include <unordered_map>
 #include <algorithm>
@@ -6,11 +6,11 @@
 
 #include "utils.h"
 
-BenchmarkFixtureHTMLBuilder::BenchmarkFixtureHTMLBuilder( const char* fileName )
+HTMLBenchmarkTimeWriter::HTMLBenchmarkTimeWriter( const char* fileName )
     : document_( std::make_shared<HTMLDocument>( fileName ) )
 {}
 
-void BenchmarkFixtureHTMLBuilder::AddFixtureResults( const BenchmarkFixtureResultForFixture& results )
+void HTMLBenchmarkTimeWriter::WriteResultsForFixture( const BenchmarkFixtureResultForFixture& results )
 {
     EXCEPTION_ASSERT( !results.operationSteps.empty() );
     document_->AddHeader( results.fixtureName );
@@ -43,11 +43,22 @@ void BenchmarkFixtureHTMLBuilder::AddFixtureResults( const BenchmarkFixtureResul
                 HTMLDocument::CellDescription( perPlatformResults.platformName, false, static_cast<int>(perPlatformResults.perDeviceResults.size()) ),
                 HTMLDocument::CellDescription( firstDeviceResults.deviceName ),
             };
-            std::transform( firstDeviceResults.perOperationResults.cbegin(), firstDeviceResults.perOperationResults.cend(), std::back_inserter( row ),
-                []( const std::pair<OperationStep, OutputDurationType>& perOperationResult )
+            if ( firstDeviceResults.perOperationResults.empty() )
+            {
+                // If results are absent for particular device, add empty cells
+                for( OperationStep step : results.operationSteps )
                 {
-                    return HTMLDocument::CellDescription( std::to_string( perOperationResult.second.count() ) );
-                } );
+                    row.push_back( HTMLDocument::CellDescription( std::string() ) );
+                }
+            }
+            else
+            {
+                auto avgDurations = CalcAverage( firstDeviceResults.perOperationResults, results.operationSteps );
+                for (OperationStep step: results.operationSteps )
+                {
+                    row.push_back( HTMLDocument::CellDescription( std::to_string( avgDurations.at( step ).count() ) ) );
+                }
+            }
             rows.push_back( row );
         }
 
@@ -58,15 +69,48 @@ void BenchmarkFixtureHTMLBuilder::AddFixtureResults( const BenchmarkFixtureResul
                 HTMLDocument::CellDescription( perDeviceResult.deviceName ),
             };
             
-            // TODO make sure that we're writing data in a right order
-            std::transform( perDeviceResult.perOperationResults.cbegin(), perDeviceResult.perOperationResults.cend(), std::back_inserter( row ),
-                []( const std::pair<OperationStep, OutputDurationType>& perOperationResult )
+            if ( perDeviceResult.perOperationResults.empty())
+            {
+                // If results are absent for particular device, add empty cells
+                for( OperationStep step : results.operationSteps )
                 {
-                    return HTMLDocument::CellDescription( std::to_string( perOperationResult.second.count() ) );
-                } );
+                    row.push_back( HTMLDocument::CellDescription( std::string() ) );
+                }
+            }
+            else
+            {
+                auto avgDurations = CalcAverage( perDeviceResult.perOperationResults, results.operationSteps );
+                for( OperationStep step : results.operationSteps )
+                {
+                    row.push_back( HTMLDocument::CellDescription( std::to_string( avgDurations.at( step ).count() ) ) );
+                }
+            }
             rows.push_back( row );
         }
     }
 
     document_->AddTable(rows);
+}
+
+std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationType> HTMLBenchmarkTimeWriter::CalcAverage(
+    const BenchmarkTimeWriterInterface::BenchmarkFixtureResultForOperation& perOperationData,
+    const std::vector<OperationStep>& steps )
+{
+    std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationType> perOperationAvg;
+    for( OperationStep id : steps )
+    {
+        std::vector<BenchmarkTimeWriterInterface::OutputDurationType> perOperationResults;
+        EXCEPTION_ASSERT( !perOperationData.empty() );
+        std::transform( perOperationData.cbegin(), perOperationData.cend(), std::back_inserter( perOperationResults ),
+            [id]( const std::unordered_map<OperationStep, OutputDurationType>& d )
+        {
+            return std::chrono::duration_cast<OutputDurationType>( d.at( id ) );
+        } );
+
+        //TODO "accumulate" can safely be changed to "reduce" here to increase performance
+        OutputDurationType avg = std::accumulate( perOperationResults.begin(), perOperationResults.end(), OutputDurationType::zero() ) / perOperationResults.size();
+
+        perOperationAvg.insert( {id, avg} );
+    }
+    return perOperationAvg;
 }
