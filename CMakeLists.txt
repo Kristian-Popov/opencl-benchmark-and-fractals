@@ -14,6 +14,7 @@ add_executable (main
 	html_benchmark_time_writer.cpp
 	stdout_benchmark_time_writer.cpp
 	operation_step.cpp
+	fixture_runner.cpp
 	
 	utils.h
 	fixture.h
@@ -25,6 +26,7 @@ add_executable (main
 	csv_document.h
 	benchmark_time_writer_interface.h
 	stdout_benchmark_time_writer.h
+	fixture_runner.h
 	)
 
 # target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/nonius/include )

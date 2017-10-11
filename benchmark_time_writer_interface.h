@@ -35,4 +35,9 @@ public:
     };
 
     virtual void WriteResultsForFixture( const BenchmarkFixtureResultForFixture& results ) = 0;
+
+    /*
+        Optional method to flush all contents to output
+    */
+    virtual void Flush() {}
 };

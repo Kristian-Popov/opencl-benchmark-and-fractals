@@ -114,3 +114,8 @@ std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationTy
     }
     return perOperationAvg;
 }
+
+void HTMLBenchmarkTimeWriter::Flush()
+{
+    document_->BuildAndWriteToDisk();
+}

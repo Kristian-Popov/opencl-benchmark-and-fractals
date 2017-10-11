@@ -11,6 +11,7 @@ void StdoutBenchmarkTimeWriter::WriteResultsForFixture( const BenchmarkFixtureRe
     {
         for( const auto& perDeviceResults : perFixtureResults.perDeviceResults )
         {
+            // TODO this code causes an assert when no data for particular device are not available, fix this
             std::unordered_map<OperationStep, OutputDurationType> avg = CalcAverage( perDeviceResults.perOperationResults, operationSteps );
             std::unordered_map<OperationStep, std::pair<OutputDurationType, OutputDurationType>> minmax = CalcMinMax( perDeviceResults.perOperationResults, operationSteps );
 

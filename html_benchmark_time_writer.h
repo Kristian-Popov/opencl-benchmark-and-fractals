@@ -11,6 +11,9 @@ public:
     HTMLBenchmarkTimeWriter( const char* fileName );
 
     virtual void WriteResultsForFixture( const BenchmarkFixtureResultForFixture& results ) override;
+
+    virtual void Flush() override;
+
     std::shared_ptr<HTMLDocument> GetHTMLDocument()
     {
         return document_;
