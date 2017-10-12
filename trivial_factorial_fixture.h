@@ -31,11 +31,13 @@ __kernel void TrivialFactorial(__global int* input, __global ulong* output)
     const std::string compilerOptions = "-w -Werror";
 }
 
+template<typename I>
 class TrivialFactorialFixture: public Fixture
 {
 public:
-    TrivialFactorialFixture( int dataSize )
-        : dataSize_(dataSize)
+    TrivialFactorialFixture( const I& inputDataIter, int dataSize )
+        : inputDataIter_( inputDataIter )
+        , dataSize_(dataSize)
 	{
 	}
 
@@ -96,9 +98,6 @@ public:
             result.insert( std::make_pair( v.first, v.second.duration<Duration>() ) );
         }
 
-        // TODO doesn't makes much sense since data are all the same every iteration. It should be either done only once
-        // or data should be randomized (this requires seeding RNG)
-        //VerifyOutput();
         return result;
 	}
 
@@ -134,16 +133,12 @@ private:
     std::vector<cl_ulong> expectedOutputData_;
     static const std::unordered_map<int, cl_ulong> TrivialFactorialFixture::correctFactorialValues_;
     std::vector<cl_ulong> outputData_;
+    I inputDataIter_;
 
     void GenerateData()
     {
         inputData_.resize(dataSize_);
-        // Specify the engine and distribution.
-        std::mt19937 mersenne_engine;
-        std::uniform_int_distribution<int> dist( 0, 20 );
-
-        auto gen = std::bind( dist, mersenne_engine );
-        std::generate( begin( inputData_ ), end( inputData_ ), gen );
+        std::copy_n( inputDataIter_, dataSize_, inputData_.begin() );
 
         // Verify that all input values are in range [0, 20]
         EXCEPTION_ASSERT(std::all_of( inputData_.begin(), inputData_.end(), [] (int i) { return i >= 0 && i <= 20; } ));
@@ -157,7 +152,8 @@ private:
     }
 };
 
-const std::unordered_map<int, cl_ulong> TrivialFactorialFixture::correctFactorialValues_ = {
+template<typename I>
+const std::unordered_map<int, cl_ulong> TrivialFactorialFixture<I>::correctFactorialValues_ = {
     {0, 1ull},
     {1,  1ull},
     {2,  2ull},

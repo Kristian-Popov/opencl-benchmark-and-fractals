@@ -27,6 +27,8 @@ add_executable (main
 	benchmark_time_writer_interface.h
 	stdout_benchmark_time_writer.h
 	fixture_runner.h
+	sequential_values_iterator.h
+	random_values_iterator.h
 	)
 
 # target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/nonius/include )

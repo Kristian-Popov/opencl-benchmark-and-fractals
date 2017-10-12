@@ -12,6 +12,8 @@
 #include "damped_wave_fixture.h"
 #include "operation_step.h"
 #include "csv_document.h"
+#include "sequential_values_iterator.h"
+#include "random_values_iterator.h"
 
 #include <boost/compute/compute.hpp>
 #include <boost/math/constants/constants.hpp>
@@ -24,14 +26,24 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     std::transform( dataSizesForTrivialFactorial.begin(), dataSizesForTrivialFactorial.end(), std::back_inserter( fixtures ),
         []( int dataSize )
     {
-        return std::make_shared<TrivialFactorialFixture>( dataSize );
+        typedef std::uniform_int_distribution<int> Distribution;
+        typedef RandomValuesIterator<int, Distribution> Iterator;
+        return std::make_shared<TrivialFactorialFixture<Iterator>>(
+            Iterator( Distribution( 0, 20 ) ),
+            dataSize );
     } );
     cl_float frequency = 1.0f;
     const cl_float pi = boost::math::constants::pi<cl_float>();
 
-    std::vector<DampedWaveFixture<cl_float>::Parameters> params = {DampedWaveFixture<cl_float>::Parameters( 1000.0f, 0.001f, 2 * pi*frequency, 0.0f, 1.0f )};
-    auto dampedWaveFixture = std::make_shared<DampedWaveFixture<cl_float>>( params, 0.0f, 1.0f,
-        DampedWaveFixture<cl_float>::DataPattern::Linear, 0.001f );
+    std::vector<DampedWaveFixtureParameters<cl_float>> params = 
+        {DampedWaveFixtureParameters<cl_float>( 1000.0f, 0.001f, 2 * pi*frequency, 0.0f, 1.0f )};
+    
+    cl_float min = -10.0f;
+    cl_float max = 10.0f;
+    cl_float step = 0.001f;
+    size_t dataSize = static_cast<size_t>( ( max - min ) / step ); // TODO something similar can be useful in Utils
+    auto dampedWaveFixture = std::make_shared<DampedWaveFixture<cl_float, SequentialValuesIterator<cl_float>>>( params,
+        SequentialValuesIterator<cl_float>( min, step ), dataSize );
     fixtures.push_back( dampedWaveFixture );
 
     typedef double OutputNumericType;

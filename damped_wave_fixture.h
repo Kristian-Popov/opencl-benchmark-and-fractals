@@ -50,39 +50,33 @@ __kernel void DampedWave2D(__global REAL_T* input,
 }
 
 template<typename T>
+struct DampedWaveFixtureParameters
+{
+    T amplitude = 0;
+    T dampingRatio = 0;
+    T angularFrequency = 0;
+    T phase = 0;
+    T shift = 0;
+
+    DampedWaveFixtureParameters( T amplitude_, T dampingRatio_, T angularFrequency_, T phase_, T shift_ )
+        : amplitude( amplitude_ )
+        , dampingRatio( dampingRatio_ )
+        , angularFrequency( angularFrequency_ )
+        , phase( phase_ )
+        , shift( shift_ )
+    {
+    }
+};
+
+template<typename T, typename I>
 class DampedWaveFixture : public Fixture
 {
 public:
-    enum class DataPattern
-    {
-        Linear,
-        Random
-    };
-
-    struct Parameters
-    {
-        T amplitude = 0;
-        T dampingRatio = 0;
-        T angularFrequency = 0;
-        T phase = 0;
-        T shift = 0;
-
-        Parameters( T amplitude_, T dampingRatio_, T angularFrequency_, T phase_, T shift_ )
-            : amplitude( amplitude_ )
-            , dampingRatio( dampingRatio_ )
-            , angularFrequency( angularFrequency_ )
-            , phase( phase_ )
-            , shift( shift_ )
-        {
-        }
-    };
-
-    DampedWaveFixture( const std::vector<Parameters>& params, T min, T max, DataPattern dataPattern, T step = 0 )
+    DampedWaveFixture( const std::vector<DampedWaveFixtureParameters<T>>& params,
+        const I& inputDataIter, size_t dataSize )
         : params_( params )
-        , min_(min)
-        , max_(max)
-        , step_(step)
-        , dataPattern_( dataPattern )
+        , inputDataIter_( inputDataIter )
+        , dataSize_( dataSize )
     {
     }
 
@@ -237,59 +231,28 @@ public:
     {
     }
 private:
+    typedef DampedWaveFixtureParameters<T> Parameters;
+
     std::vector<T> inputData_;
     std::vector<T> expectedOutputData_;
     std::vector<T> outputData_;
-    DataPattern dataPattern_;
     std::vector<Parameters> params_;
-    T min_ = 0;
-    T max_ = 0;
-    T step_ = 0;
+    I inputDataIter_;
+    size_t dataSize_;
     static const char* openCLTemplateTypeName;
     static const char* descriptionTypeName;
     static const T maxAcceptableRelError;
 
     void GenerateData()
     {
-        EXCEPTION_ASSERT( dataPattern_ == DataPattern::Linear ); // Random is not supported yet
-        size_t dataSize = static_cast<size_t>(std::ceil((max_ - min_) / step_));
-        inputData_.resize( dataSize );
+        inputData_.resize( dataSize_ );
+        std::copy_n( inputDataIter_, dataSize_, inputData_.begin() ); 
 
-        T val = min_;
-        std::generate( inputData_.begin(), inputData_.end(), 
-            [&val, this] ()
-            {
-                T temp = val;
-                val += step_;
-                return temp;
-            } );
-
-        // Verify that all input values are in range [min, max]
-        EXCEPTION_ASSERT( std::all_of( inputData_.begin(), inputData_.end(), [this]( T x ) { return x >= min_ && x <= max_; } ) );
-
-        expectedOutputData_.reserve( dataSize );
+        expectedOutputData_.reserve( dataSize_ );
 
         using namespace std::placeholders;
         std::transform( inputData_.begin(), inputData_.end(), std::back_inserter( expectedOutputData_ ), 
-            std::bind( &DampedWaveFixture<T>::CalcExpectedValue, this, _1 ) );
-#if 0
-        // Specify the engine and distribution.
-        std::mt19937 mersenne_engine;
-        std::uniform_int_distribution<int> dist( 0, 20 );
-
-        auto gen = std::bind( dist, mersenne_engine );
-        std::generate( begin( inputData_ ), end( inputData_ ), gen );
-
-        // Verify that all input values are in range [0, 20]
-        EXCEPTION_ASSERT( std::all_of( inputData_.begin(), inputData_.end(), []( int i ) { return i >= 0 && i <= 20; } ) );
-
-        expectedOutputData_.reserve( dataSize_ );
-        std::transform( inputData_.begin(), inputData_.end(), std::back_inserter( expectedOutputData_ ),
-            [this]( int i )
-        {
-            return correctFactorialValues_.at( i );
-        } );
-#endif
+            std::bind( &DampedWaveFixture<T, I>::CalcExpectedValue, this, _1 ) );
     }
 
     T CalcExpectedValue( T x ) const
@@ -304,9 +267,12 @@ private:
     }
 };
 
-const char* DampedWaveFixture<cl_float>::openCLTemplateTypeName = "float";
-const char* DampedWaveFixture<cl_float>::descriptionTypeName = "float";
-const cl_float DampedWaveFixture<cl_float>::maxAcceptableRelError = 1e-3f; // TODO max error is quite large (0.00095). Investigate why
+template<typename T = cl_float, typename I>
+const char* DampedWaveFixture<T, I>::openCLTemplateTypeName = "float";
+template<typename T = cl_float, typename I>
+const char* DampedWaveFixture<T, I>::descriptionTypeName = "float";
+template<typename T = cl_float, typename I>
+const cl_float DampedWaveFixture<T, I>::maxAcceptableRelError = 1e-3f; // TODO max error is quite large (0.00095). Investigate why
 
 /*
 Not supported yet
