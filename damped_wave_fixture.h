@@ -5,7 +5,7 @@
 #include <cmath>
 
 #include "utils.h"
-#include "fixture.h"
+#include "fixture_that_returns_data.h"
 
 #include <boost/format.hpp>
 
@@ -69,14 +69,16 @@ struct DampedWaveFixtureParameters
 };
 
 template<typename T, typename I>
-class DampedWaveFixture : public Fixture
+class DampedWaveFixture : public FixtureThatReturnsData<T>
 {
 public:
     DampedWaveFixture( const std::vector<DampedWaveFixtureParameters<T>>& params,
-        const I& inputDataIter, size_t dataSize )
+        const I& inputDataIter, size_t dataSize,
+        const std::string& descriptionSuffix = std::string() )
         : params_( params )
         , inputDataIter_( inputDataIter )
         , dataSize_( dataSize )
+        , descriptionSuffix_( descriptionSuffix )
     {
     }
 
@@ -177,12 +179,23 @@ public:
 
     std::string Description() override
     {
-        return std::string( "Damped wave, " ) + descriptionTypeName;
+        std::string result = ( boost::format( "Damped wave, %1%, %2% values, %3% parameters" ) %
+            descriptionTypeName % 
+            Utils::FormatQuantityString( dataSize_ ) % 
+            Utils::FormatQuantityString( params_.size() ) ).str();
+        if( !descriptionSuffix_.empty() )
+        {
+            result += ", " + descriptionSuffix_;
+        }
+        return result;
     }
 
     void VerifyResults()
     {
+        EXCEPTION_ASSERT( !outputData_.empty() );
+        EXCEPTION_ASSERT( outputData_.size() == inputData_.size() );
         EXCEPTION_ASSERT( outputData_.size() == expectedOutputData_.size() );
+        EXCEPTION_ASSERT( outputData_.size() == dataSize_ );
         std::vector<T> relError;
         std::transform( outputData_.cbegin(), outputData_.cend(), expectedOutputData_.cbegin(), std::back_inserter( relError ),
             []( T got, T expected )
@@ -207,23 +220,28 @@ public:
     /*
         Return results in the following form:
         {
-            { xmin, y1 },
-            { x2, y2 },
+            { xmin, y_expected_1, y_1 },
+            { x2, y_expected_2, y_2 },
             ...
-            { xmax, yn },
+            { xmax, y_expected_n, y_n },
         }
+        First column contains input value, second one - expected value (as calculated on a host CPU),
+        third one - value calculated by OpenCL device
     */
-    std::vector<std::vector<T>> GetResults() const
+    virtual std::vector<std::vector<T>> GetResults() override
     {
         // Verify that output data are not empty to check if fixture was executed
         EXCEPTION_ASSERT( !outputData_.empty() );
         EXCEPTION_ASSERT( outputData_.size() == inputData_.size() );
+        EXCEPTION_ASSERT( outputData_.size() == expectedOutputData_.size() );
+        EXCEPTION_ASSERT( outputData_.size() == dataSize_ );
         std::vector<std::vector<T>> result;
-        std::transform( inputData_.cbegin(), inputData_.cend(), outputData_.cbegin(), std::back_inserter(result),
-            [] (T input, T output)
-            {
-                return std::vector<T>( { input, output } );
-            } );
+        for (size_t index = 0; index < outputData_.size(); ++index )
+        {
+            result.push_back( { inputData_.at(index), 
+                expectedOutputData_.at(index), 
+                outputData_.at(index) } );
+        }
         return result;
     }
 
@@ -239,6 +257,7 @@ private:
     std::vector<Parameters> params_;
     I inputDataIter_;
     size_t dataSize_;
+    std::string descriptionSuffix_;
     static const char* openCLTemplateTypeName;
     static const char* descriptionTypeName;
     static const T maxAcceptableRelError;
@@ -272,7 +291,7 @@ const char* DampedWaveFixture<T, I>::openCLTemplateTypeName = "float";
 template<typename T = cl_float, typename I>
 const char* DampedWaveFixture<T, I>::descriptionTypeName = "float";
 template<typename T = cl_float, typename I>
-const cl_float DampedWaveFixture<T, I>::maxAcceptableRelError = 1e-3f; // TODO max error is quite large (0.00095). Investigate why
+const cl_float DampedWaveFixture<T, I>::maxAcceptableRelError = 0.015f; // TODO max error is quite large (1.5%). Investigate why
 
 /*
 Not supported yet

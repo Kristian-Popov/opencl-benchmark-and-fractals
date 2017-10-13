@@ -7,6 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <algorithm>
+#include <random>
 
 #include "trivial_factorial_fixture.h"
 #include "damped_wave_fixture.h"
@@ -22,6 +23,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
 {
     // TODO add progress logging
     std::vector<std::shared_ptr<Fixture>> fixtures;
+    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>> fixturesWithData;
     const std::vector<int> dataSizesForTrivialFactorial = {100, 1000, 100000, 1000000, 100000000};
     std::transform( dataSizesForTrivialFactorial.begin(), dataSizesForTrivialFactorial.end(), std::back_inserter( fixtures ),
         []( int dataSize )
@@ -35,16 +37,48 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     cl_float frequency = 1.0f;
     const cl_float pi = boost::math::constants::pi<cl_float>();
 
-    std::vector<DampedWaveFixtureParameters<cl_float>> params = 
-        {DampedWaveFixtureParameters<cl_float>( 1000.0f, 0.001f, 2 * pi*frequency, 0.0f, 1.0f )};
-    
     cl_float min = -10.0f;
     cl_float max = 10.0f;
     cl_float step = 0.001f;
     size_t dataSize = static_cast<size_t>( ( max - min ) / step ); // TODO something similar can be useful in Utils
-    auto dampedWaveFixture = std::make_shared<DampedWaveFixture<cl_float, SequentialValuesIterator<cl_float>>>( params,
-        SequentialValuesIterator<cl_float>( min, step ), dataSize );
-    fixtures.push_back( dampedWaveFixture );
+    {
+        std::vector<DampedWaveFixtureParameters<cl_float>> params =
+            {DampedWaveFixtureParameters<cl_float>( 1000.0f, 0.1f, 2 * pi*frequency, 0.0f, 1.0f )};
+        auto dampedWaveFixture = std::make_shared<DampedWaveFixture<cl_float, SequentialValuesIterator<cl_float>>>( params,
+            SequentialValuesIterator<cl_float>( min, step ), dataSize, "sequential input values" );
+        fixtures.push_back( dampedWaveFixture );
+        fixturesWithData.push_back( dampedWaveFixture );
+    }
+    
+    {
+        const size_t paramsCount = 1000;
+
+        std::vector<DampedWaveFixtureParameters<cl_float>> params;
+        std::mt19937 randomValueGenerator;
+        auto rand = std::bind( std::uniform_real_distribution<cl_float>( 0.0f, 10.0f ), randomValueGenerator );
+        std::generate_n( std::back_inserter(params), paramsCount, 
+            [&rand] ()
+            {
+                return DampedWaveFixtureParameters<cl_float>( rand(), 0.01f, rand(), rand() - 5.0f, rand() - 5.0f );
+            } );
+
+        {
+            typedef std::normal_distribution<cl_float> Distribution;
+            typedef RandomValuesIterator<cl_float, Distribution> Iterator;
+            auto fixture = std::make_shared<DampedWaveFixture<cl_float, Iterator>>( params,
+                Iterator( Distribution( 0.0f, 50.0f ) ), dataSize, "random input values" );
+            fixtures.push_back( fixture );
+            fixturesWithData.push_back( fixture );
+        }
+        {
+            typedef std::normal_distribution<cl_float> Distribution;
+            typedef RandomValuesIterator<cl_float, Distribution> Iterator;
+            auto fixture = std::make_shared<DampedWaveFixture<cl_float, SequentialValuesIterator<cl_float>>>( params,
+                SequentialValuesIterator<cl_float>( min, step ), dataSize, "sequential input values" );
+            fixtures.push_back( fixture );
+            fixturesWithData.push_back( fixture );
+        }
+    }
 
     typedef double OutputNumericType;
     typedef std::chrono::duration<OutputNumericType, std::micro> OutputDurationType;
@@ -130,7 +164,10 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     }
     timeWriter->Flush();
 
-    CSVDocument csvDocument( "damped_wave.csv" );
-    csvDocument.AddValues( dampedWaveFixture->GetResults() );
-    csvDocument.BuildAndWriteToDisk();
+    for (auto& fixtureWithData: fixturesWithData)
+    {
+        CSVDocument csvDocument( ( fixtureWithData->Description() + ".csv" ).c_str() );
+        csvDocument.AddValues( fixtureWithData->GetResults() );
+        csvDocument.BuildAndWriteToDisk();
+    }
 }

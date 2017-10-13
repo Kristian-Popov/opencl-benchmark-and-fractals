@@ -18,6 +18,7 @@ add_executable (main
 	
 	utils.h
 	fixture.h
+	fixture_that_returns_data.h
 	trivial_factorial_fixture.h 
 	operation_step.h
 	html_document.h
@@ -49,6 +50,11 @@ endif (UNIX)
 
 set_property(TARGET main PROPERTY CXX_STANDARD 14)
 set_property(TARGET main PROPERTY CXX_STANDARD_REQUIRED ON)
+
+# Many compilers use implicit promotion of single and double precision floating point values to extended precision ones by default
+# This may cause issues with data verification since OpenCL doesn't perform this promotion implicitly
+# TODO investigate if it works with particular compilers (e.g. VC++ 2015 by default uses /fp:precise option that may override this one)
+target_compile_definitions(main PRIVATE FLT_EVAL_METHOD=0)
 
 if (UNIX)
     # SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fext-numeric-literals" )

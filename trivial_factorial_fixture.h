@@ -35,9 +35,12 @@ template<typename I>
 class TrivialFactorialFixture: public Fixture
 {
 public:
-    TrivialFactorialFixture( const I& inputDataIter, int dataSize )
+    TrivialFactorialFixture( const I& inputDataIter, 
+        int dataSize, 
+        const std::string& descriptionSuffix = std::string() )
         : inputDataIter_( inputDataIter )
         , dataSize_(dataSize)
+        , descriptionSuffix_( descriptionSuffix )
 	{
 	}
 
@@ -103,7 +106,12 @@ public:
 
     std::string Description() override
     {
-        return std::string("Trivial factorial, ") + Utils::FormatQuantityString(dataSize_) + " elements";
+        std::string result = "Trivial factorial, " + Utils::FormatQuantityString(dataSize_) + " elements";
+        if (!descriptionSuffix_.empty())
+        {
+            result += ", " + descriptionSuffix_;
+        }
+        return result;
     }
 
     virtual void VerifyResults() override
@@ -134,6 +142,7 @@ private:
     static const std::unordered_map<int, cl_ulong> TrivialFactorialFixture::correctFactorialValues_;
     std::vector<cl_ulong> outputData_;
     I inputDataIter_;
+    std::string descriptionSuffix_;
 
     void GenerateData()
     {
