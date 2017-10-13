@@ -13,7 +13,7 @@ namespace
 {
     const char* kernelCode = R"(
 // Requires definition of REAL_T macro, it should be one of floating point types (either float or double)
-// TODO can half precision be used here?
+// TODO add unit test to check if size of this structure is the same as in host size.
 typedef struct Parameters
 {
     REAL_T amplitude;
@@ -23,11 +23,11 @@ typedef struct Parameters
     REAL_T shift;
 } Parameters;
 
-REAL_T DampedWave2DImplementation(REAL_T x, __global Parameters* params, size_t paramsCount)
+REAL_T DampedWave2DImplementation(REAL_T x, __global Parameters* params, int paramsCount)
 {
     REAL_T result = 0;
     // TODO copy parameters to faster memory?
-    for (size_t i = 0; i < paramsCount; ++i)
+    for (int i = 0; i < paramsCount; ++i)
     {
         Parameters paramSet = params[i];
         REAL_T t = fabs(x - paramSet.shift);
@@ -38,7 +38,7 @@ REAL_T DampedWave2DImplementation(REAL_T x, __global Parameters* params, size_t 
 }
 
 __kernel void DampedWave2D(__global REAL_T* input,
-        __global Parameters* params, size_t paramsCount,
+        __global Parameters* params, int paramsCount,
         __global REAL_T* output)
 {
     size_t id = get_global_id(0);
@@ -158,7 +158,7 @@ public:
 
         kernel.set_arg( 0, input_device_vector );
         kernel.set_arg( 1, input_params_vector );
-        kernel.set_arg( 2, params_.size() );
+        kernel.set_arg( 2, static_cast<cl_int>( params_.size() ) );
         kernel.set_arg( 3, output_device_vector );
 
         unsigned computeUnitsCount = context.get_device().compute_units();
