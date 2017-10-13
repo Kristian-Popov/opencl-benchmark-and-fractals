@@ -2,6 +2,8 @@
 
 #include "fixture.h"
 
+#include <type_traits>
+
 namespace Utils
 {
     std::string ReadFile( const std::string& fileName )
@@ -33,5 +35,27 @@ namespace Utils
             result = std::to_string( value);
         }
         return result;
+    }
+
+    // Based on this article
+    // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+    template<typename T>
+    bool AreFloatValuesClose( T A, T B,
+        T maxAbsDiff, T maxRelDiff ) // TODO not sure about of these differences - T or e.g. long double?
+    {
+        static_assert( std::is_floating_point<T>::value, "AreFloatValuesClose function works only for floating point types" );
+        // Check if the numbers are really close -- needed
+        // when comparing numbers near zero.
+        long double diff = fabs( A - B );
+        if( diff <= maxAbsDiff )
+        {
+            return true;
+        }
+
+        A = fabs( A );
+        B = fabs( B );
+        T largest = std::max( A, B );
+
+        return diff <= largest * maxRelDiff;
     }
 }

@@ -54,6 +54,13 @@ namespace Utils
         - for 1000000-999000000 when last six digits are zeroes - 1M, 999M
     */
     std::string FormatQuantityString(int value);
+
+    template<typename T>
+    bool AreFloatValuesClose( T A, T B,
+        T maxAbsDiff, T maxRelDiff ); // TODO not sure about of these differences - T or e.g. long double?
+
+    template bool AreFloatValuesClose<float>( float A, float B, float maxAbsDiff, float maxRelDiff );
+    template bool AreFloatValuesClose<double>( double A, double B, double maxAbsDiff, double maxRelDiff );
 }
 
 #define EXCEPTION_ASSERT(expr) { if(!(expr)) { throw std::logic_error("Assert \"" #expr "\" failed"); } }

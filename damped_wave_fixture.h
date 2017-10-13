@@ -49,6 +49,7 @@ __kernel void DampedWave2D(__global REAL_T* input,
     const char* baseCompilerOptions = "-w -Werror";
 }
 
+#pragma pack(push, 1)
 template<typename T>
 struct DampedWaveFixtureParameters
 {
@@ -67,6 +68,7 @@ struct DampedWaveFixtureParameters
     {
     }
 };
+#pragma pack(pop)
 
 template<typename T, typename I>
 class DampedWaveFixture : public FixtureThatReturnsData<T>
@@ -80,6 +82,8 @@ public:
         , dataSize_( dataSize )
         , descriptionSuffix_( descriptionSuffix )
     {
+        static_assert( std::is_floating_point<T>::value, "DampedWaveFixture fixture works only for floating point types" );
+        static_assert( FLT_EVAL_METHOD == 0, "Promotion of floating point values is enabled, please disable it using compiler options" );
     }
 
     virtual void Initialize() override
@@ -196,24 +200,18 @@ public:
         EXCEPTION_ASSERT( outputData_.size() == inputData_.size() );
         EXCEPTION_ASSERT( outputData_.size() == expectedOutputData_.size() );
         EXCEPTION_ASSERT( outputData_.size() == dataSize_ );
-        std::vector<T> relError;
-        std::transform( outputData_.cbegin(), outputData_.cend(), expectedOutputData_.cbegin(), std::back_inserter( relError ),
-            []( T got, T expected )
-        {
-            return std::abs( ( got - expected ) / got );
-        } );
-        auto maxRelErrorIter = std::max_element( relError.cbegin(), relError.cend() );
-        T maxRelError = *maxRelErrorIter;
-        auto index = std::distance( relError.cbegin(), maxRelErrorIter );
-        EXCEPTION_ASSERT( index >= 0 && index < outputData_.size() );
-        T inputValueThatGivesMaxError = *( outputData_.cbegin() + index );
 
-        if( maxRelError > maxAcceptableRelError )
+        for (size_t i = 0; i < outputData_.size(); ++i )
         {
-            throw std::runtime_error( ( boost::format( "Result verification has failed for fixture \"%1%\". "
-                "Maximum relative error is %2% for input value %3% "
-                "(maximum acceptable error is %4%)" ) %
-                Description() % maxRelError % inputValueThatGivesMaxError % maxAcceptableRelError ).str() );
+            bool areClose = Utils::AreFloatValuesClose( 
+                outputData_.at(i), expectedOutputData_.at(i),
+                maxAcceptableAbsError, maxAcceptableRelError );
+            if (!areClose)
+            {
+                throw std::runtime_error( ( boost::format( "Result verification has failed for fixture \"%1%\". "
+                    "Found error for input value %2% (value index %3%).") %
+                    Description() % inputData_.at(i) % i ).str() );
+            }
         }
     }
 
@@ -261,6 +259,7 @@ private:
     static const char* openCLTemplateTypeName;
     static const char* descriptionTypeName;
     static const T maxAcceptableRelError;
+    static const T maxAcceptableAbsError;
 
     void GenerateData()
     {
@@ -291,7 +290,9 @@ const char* DampedWaveFixture<T, I>::openCLTemplateTypeName = "float";
 template<typename T = cl_float, typename I>
 const char* DampedWaveFixture<T, I>::descriptionTypeName = "float";
 template<typename T = cl_float, typename I>
-const cl_float DampedWaveFixture<T, I>::maxAcceptableRelError = 0.015f; // TODO max error is quite large (1.5%). Investigate why
+const cl_float DampedWaveFixture<T, I>::maxAcceptableRelError = 0.015f; // TODO errors is quite large. Investigate why
+template<typename T = cl_float, typename I>
+const cl_float DampedWaveFixture<T, I>::maxAcceptableAbsError = 0.003f;
 
 /*
 Not supported yet
