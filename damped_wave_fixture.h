@@ -245,6 +245,11 @@ public:
         return result;
     }
 
+    virtual boost::optional<size_t> GetElementsCount() override
+    {
+        return dataSize_;
+    }
+
     virtual ~DampedWaveFixture()
     {
     }

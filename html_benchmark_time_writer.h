@@ -21,9 +21,13 @@ public:
 private:
     std::shared_ptr<HTMLDocument> document_;
 
+    std::vector<HTMLDocument::CellDescription> PrepareFirstRow( 
+        const BenchmarkFixtureResultForFixture& results );
+    std::vector<HTMLDocument::CellDescription> PrepareSecondRow(
+        const BenchmarkFixtureResultForFixture& results );
     void AddOperationsResultsToRow(
         const BenchmarkFixtureResultForDevice& deviceData,
-        const std::vector<OperationStep>& steps,
+        const BenchmarkFixtureResultForFixture& allResults,
         std::vector<HTMLDocument::CellDescription>& row );
     std::unordered_map<OperationStep, OutputDurationType> CalcAverage(
         const BenchmarkFixtureResultForOperation& perOperationData,

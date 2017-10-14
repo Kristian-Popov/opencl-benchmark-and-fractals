@@ -93,6 +93,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
         BenchmarkTimeWriterInterface::BenchmarkFixtureResultForFixture dataForTimeWriter;
         dataForTimeWriter.operationSteps = fixture->GetSteps();
         dataForTimeWriter.fixtureName = fixture->Description();
+        dataForTimeWriter.elementsCount = fixture->GetElementsCount();
 
         for( boost::compute::platform& platform : platforms )
         {

@@ -34,6 +34,7 @@ public:
     {
         std::string fixtureName;
         std::vector<OperationStep> operationSteps;
+        boost::optional<size_t> elementsCount;
         std::vector<BenchmarkFixtureResultForPlatform> perFixtureResults;
     };
 

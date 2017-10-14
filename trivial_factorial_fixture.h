@@ -134,6 +134,11 @@ public:
         }
     }
 
+    virtual boost::optional<size_t> GetElementsCount() override
+    {
+        return dataSize_;
+    }
+
     virtual ~TrivialFactorialFixture()
     {
     }

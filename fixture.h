@@ -6,6 +6,7 @@
 
 #include "operation_step.h"
 
+#include <boost/optional.hpp>
 #include "boost/compute/compute.hpp"
 
 class Fixture
@@ -38,6 +39,17 @@ public:
     virtual std::vector<OperationStep> GetSteps() = 0;
 
     virtual std::string Description() = 0;
+
+    /*
+        Ask a fixture for a number of input values.
+        If not applicable to a particular fixture, they may leave this implementation as is
+        or return an empty optional value, that would mean that number of input values
+        doesn't make sense for this particular fixture.
+    */
+    virtual boost::optional<size_t> GetElementsCount()
+    {
+        return boost::optional<size_t>();
+    }
 
     virtual ~Fixture() {}
 };
