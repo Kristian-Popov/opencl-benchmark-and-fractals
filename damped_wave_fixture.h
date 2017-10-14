@@ -4,6 +4,7 @@
 #include <random>
 #include <cmath>
 
+#include "data_verification_failed_exception.h"
 #include "utils.h"
 #include "fixture_that_returns_data.h"
 
@@ -208,7 +209,8 @@ public:
                 maxAcceptableAbsError, maxAcceptableRelError );
             if (!areClose)
             {
-                throw std::runtime_error( ( boost::format( "Result verification has failed for fixture \"%1%\". "
+                throw DataVerificationFailedException( ( boost::format( 
+                    "Result verification has failed for fixture \"%1%\". "
                     "Found error for input value %2% (value index %3%).") %
                     Description() % inputData_.at(i) % i ).str() );
             }

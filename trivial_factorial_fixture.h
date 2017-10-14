@@ -5,6 +5,7 @@
 
 #include "utils.h"
 #include "fixture.h"
+#include "data_verification_failed_exception.h"
 
 #include <boost/format.hpp>
 
@@ -125,9 +126,10 @@ public:
         if( mismatchedValues.first != outputData_.cend() )
         {
             cl_ulong maxAbsError = *mismatchedValues.first - *mismatchedValues.second;
-            throw std::runtime_error( ( boost::format( "Result verification has failed for fixture \"%1%\". "
+            throw DataVerificationFailedException( ( boost::format( 
+                "Result verification has failed for fixture \"%1%\". "
                 "Maximum absolute error is %2% for input value %3% "
-                "(exact equality is expected)" ) %
+                "(exact equality is expected)." ) %
                 Description() % maxAbsError % *mismatchedValues.first ).str() );
         }
     }

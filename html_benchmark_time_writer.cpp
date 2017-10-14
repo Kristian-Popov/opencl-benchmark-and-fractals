@@ -10,6 +10,28 @@ HTMLBenchmarkTimeWriter::HTMLBenchmarkTimeWriter( const char* fileName )
     : document_( std::make_shared<HTMLDocument>( fileName ) )
 {}
 
+void HTMLBenchmarkTimeWriter::AddOperationsResultsToRow( 
+    const BenchmarkFixtureResultForDevice& deviceData,
+    const std::vector<OperationStep>& steps,
+    std::vector<HTMLDocument::CellDescription>& row )
+{
+    if( deviceData.perOperationResults.empty() )
+    {
+        // If results are absent for particular device, add a wide cell with a failure description
+        row.push_back( HTMLDocument::CellDescription( 
+            deviceData.failureReason.get_value_or( std::string() ),
+            false, 1, steps.size() ) );
+    }
+    else
+    {
+        auto avgDurations = CalcAverage( deviceData.perOperationResults, steps );
+        for( OperationStep step : steps )
+        {
+            row.push_back( HTMLDocument::CellDescription( std::to_string( avgDurations.at( step ).count() ) ) );
+        }
+    }
+}
+
 void HTMLBenchmarkTimeWriter::WriteResultsForFixture( const BenchmarkFixtureResultForFixture& results )
 {
     EXCEPTION_ASSERT( !results.operationSteps.empty() );
@@ -43,22 +65,7 @@ void HTMLBenchmarkTimeWriter::WriteResultsForFixture( const BenchmarkFixtureResu
                 HTMLDocument::CellDescription( perPlatformResults.platformName, false, static_cast<int>(perPlatformResults.perDeviceResults.size()) ),
                 HTMLDocument::CellDescription( firstDeviceResults.deviceName ),
             };
-            if ( firstDeviceResults.perOperationResults.empty() )
-            {
-                // If results are absent for particular device, add empty cells
-                for( OperationStep step : results.operationSteps )
-                {
-                    row.push_back( HTMLDocument::CellDescription( std::string() ) );
-                }
-            }
-            else
-            {
-                auto avgDurations = CalcAverage( firstDeviceResults.perOperationResults, results.operationSteps );
-                for (OperationStep step: results.operationSteps )
-                {
-                    row.push_back( HTMLDocument::CellDescription( std::to_string( avgDurations.at( step ).count() ) ) );
-                }
-            }
+            AddOperationsResultsToRow(firstDeviceResults, results.operationSteps, row);
             rows.push_back( row );
         }
 
@@ -68,23 +75,7 @@ void HTMLBenchmarkTimeWriter::WriteResultsForFixture( const BenchmarkFixtureResu
             std::vector<HTMLDocument::CellDescription> row = {
                 HTMLDocument::CellDescription( perDeviceResult.deviceName ),
             };
-            
-            if ( perDeviceResult.perOperationResults.empty())
-            {
-                // If results are absent for particular device, add empty cells
-                for( OperationStep step : results.operationSteps )
-                {
-                    row.push_back( HTMLDocument::CellDescription( std::string() ) );
-                }
-            }
-            else
-            {
-                auto avgDurations = CalcAverage( perDeviceResult.perOperationResults, results.operationSteps );
-                for( OperationStep step : results.operationSteps )
-                {
-                    row.push_back( HTMLDocument::CellDescription( std::to_string( avgDurations.at( step ).count() ) ) );
-                }
-            }
+            AddOperationsResultsToRow( perDeviceResult, results.operationSteps, row );
             rows.push_back( row );
         }
     }

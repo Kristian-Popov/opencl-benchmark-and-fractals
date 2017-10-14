@@ -5,6 +5,8 @@
 #include <vector>
 #include <unordered_map>
 
+#include <boost/optional.hpp>
+
 #include "operation_step.h"
 
 class BenchmarkTimeWriterInterface
@@ -18,6 +20,7 @@ public:
     struct BenchmarkFixtureResultForDevice
     {
         std::string deviceName;
+        boost::optional<std::string> failureReason;
         BenchmarkFixtureResultForOperation perOperationResults;
     };
 

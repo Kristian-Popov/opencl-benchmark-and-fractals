@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <random>
 
+#include "data_verification_failed_exception.h"
 #include "trivial_factorial_fixture.h"
 #include "damped_wave_fixture.h"
 #include "operation_step.h"
@@ -144,7 +145,17 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
                 }
                 catch( boost::compute::opencl_error& e )
                 {
+                    // TODO replace with logging
                     std::cout << "OpenCL error occured: " << e.what() << std::endl;
+                    if( e.error_code() == CL_BUILD_PROGRAM_FAILURE )
+                    {
+                        perDeviceResults.failureReason = "Kernel build failed";
+                    }
+                }
+                catch( DataVerificationFailedException& e )
+                {
+                    std::cout << "Data verification failed: " << e.what() << std::endl;
+                    perDeviceResults.failureReason = "Data verification failed";
                 }
                 catch( std::exception& e )
                 {

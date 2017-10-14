@@ -21,6 +21,10 @@ public:
 private:
     std::shared_ptr<HTMLDocument> document_;
 
+    void AddOperationsResultsToRow(
+        const BenchmarkFixtureResultForDevice& deviceData,
+        const std::vector<OperationStep>& steps,
+        std::vector<HTMLDocument::CellDescription>& row );
     std::unordered_map<OperationStep, OutputDurationType> CalcAverage(
         const BenchmarkFixtureResultForOperation& perOperationData,
         const std::vector<OperationStep>& steps );
