@@ -61,6 +61,60 @@ namespace Utils
 
     template bool AreFloatValuesClose<float>( float A, float B, float maxAbsDiff, float maxRelDiff );
     template bool AreFloatValuesClose<double>( double A, double B, double maxAbsDiff, double maxRelDiff );
+
+    /*
+    Choose a unit for value from a supplied list convenient for output.
+    Preferred range of values suitable for output starts at 1, as small as possible.
+    "units" range must be sorted and must not be empty
+    */
+    long double ChooseConvenientUnit(long double value, 
+        const std::vector<long double>& units);
+
+    /*
+    Choose a unit for a list of values from a supplied list convenient for output.
+    Preferred range of values suitable for output starts at 1, as small as possible.
+    "units" range must be sorted and must not be empty.
+    Values may have different suitable units, function selects a unit
+    that is convenient for as many values as possible.
+    */
+    long double ChooseConvenientUnit( const std::vector<long double>& values,
+        const std::vector<long double>& units );
+
+    /*
+        Compare functor that performs comparison of two pairs by first element
+    */
+    template<typename T, typename U>
+    bool CompareFirst(const std::pair<T, U>& lhs, const std::pair<T, U>& rhs)
+    {
+        return lhs.first < rhs.first;
+    }
+
+    /*
+    Compare functor that performs comparison of two pairs by second element
+    */
+    template<typename T, typename U>
+    bool CompareSecond( const std::pair<T, U>& lhs, const std::pair<T, U>& rhs )
+    {
+        return lhs.second < rhs.second;
+    }
+
+    /*
+        A functor that returns first element of a pair
+    */
+    template<typename T, typename U>
+    T SelectFirst( const std::pair<T, U>& p )
+    {
+        return p.first;
+    }
+
+    /*
+        A functor that returns second element of a pair
+    */
+    template<typename T, typename U>
+    U SelectSecond( const std::pair<T, U>& p )
+    {
+        return p.second;
+    }
 }
 
 #define EXCEPTION_ASSERT(expr) { if(!(expr)) { throw std::logic_error("Assert \"" #expr "\" failed"); } }

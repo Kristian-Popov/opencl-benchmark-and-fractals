@@ -58,4 +58,52 @@ namespace Utils
 
         return diff <= largest * maxRelDiff;
     }
+
+    long double ChooseConvenientUnit( long double value, 
+        const std::vector<long double>& units )
+    {
+        EXCEPTION_ASSERT( !units.empty() );
+        EXCEPTION_ASSERT( std::is_sorted( units.begin(), units.end() ) );
+        // First the biggest unit that is smaller than input value
+        auto resultIter = std::find_if( units.crbegin(), units.crend(),
+            [value] (long double unit )
+            {
+                return unit < value;
+            } );
+        long double result = 1.0f;
+        if ( resultIter == units.crend() )
+        {
+            result = *units.begin();
+        }
+        else
+        {
+            result = *resultIter;
+        }
+        return result;
+    }
+
+    long double ChooseConvenientUnit( const std::vector<long double>& values,
+        const std::vector<long double>& units )
+    {
+        std::vector<long double> convUnits;
+        convUnits.reserve( values.size() );
+
+        std::transform( values.begin(), values.end(), std::back_inserter( convUnits ),
+            [&units] (long double value)
+            {
+                return ChooseConvenientUnit(value, units);
+            } );
+
+        // Count how many times every unit occurs
+        std::unordered_map<long double, int> counts;
+        for( long double unit: convUnits )
+        {
+            ++counts[unit];
+        }
+        EXCEPTION_ASSERT( !counts.empty() );
+        // TODO find a unit that occurs most frequently
+		auto resultIter = std::max_element( counts.begin(), counts.end(), 
+            CompareSecond<long double, int> );
+        return resultIter->first;
+    }
 }

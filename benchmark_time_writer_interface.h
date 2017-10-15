@@ -12,8 +12,8 @@
 class BenchmarkTimeWriterInterface
 {
 public:
-    typedef double OutputNumericType;
-    typedef std::chrono::duration<OutputNumericType, std::micro> OutputDurationType;
+    typedef long double OutputNumericType;
+    typedef std::chrono::duration<OutputNumericType> OutputDurationType;
     // Vector of iterations, every iteration has a map of operation steps and a corresponding duration
     typedef std::vector<std::unordered_map<OperationStep, OutputDurationType>> BenchmarkFixtureResultForOperation;
 
