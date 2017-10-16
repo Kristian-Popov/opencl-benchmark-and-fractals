@@ -22,6 +22,12 @@ public:
     */
     virtual void Initialize() {}
 
+    /*
+    Optional method to initialize a fixture for working with a particular OpenCL context.
+    Called once per every device before running a fixture.
+    */
+    virtual void InitializeForContext( boost::compute::context& context ) {}
+
 	virtual std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) = 0;
 
     /*

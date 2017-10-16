@@ -115,6 +115,11 @@ namespace Utils
     {
         return p.second;
     }
+
+    boost::compute::kernel BuildKernel( const std::string& name,
+        boost::compute::context& context,
+        const std::string& source,
+        const std::string& buildOptions );
 }
 
 #define EXCEPTION_ASSERT(expr) { if(!(expr)) { throw std::logic_error("Assert \"" #expr "\" failed"); } }

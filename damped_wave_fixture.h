@@ -92,6 +92,13 @@ public:
         GenerateData();
     }
 
+    virtual void InitializeForContext( boost::compute::context& context ) override
+    {
+        std::string compilerOptions = baseCompilerOptions + std::string( " -DREAL_T=" ) + openCLTemplateTypeName;
+        kernels_.insert( { context.get(),
+            Utils::BuildKernel( "DampedWave2D", context, kernelCode, compilerOptions ) } );
+    }
+
     virtual std::vector<OperationStep> GetSteps() override
     {
         return {
@@ -125,36 +132,7 @@ public:
         boost::compute::vector<Parameters> input_params_vector( params_.size(), context );
         boost::compute::copy( params_.begin(), params_.end(), input_params_vector.begin(), queue );
 
-        std::string compilerOptions = baseCompilerOptions + std::string(" -DREAL_T=") + openCLTemplateTypeName;
-        boost::compute::program program;
-        try
-        {
-            program = boost::compute::program::build_with_source( kernelCode, context, compilerOptions );
-        }
-        catch (boost::compute::opencl_error& error)
-        {
-            std::string source, buildOptions, buildLog;
-            try // Retrieving these values can cause OpenCL errors, so catch them to write at least something about an error
-            {
-                source = program.source();
-                buildOptions = program.get_build_info<std::string>( CL_PROGRAM_BUILD_OPTIONS, context.get_device() );
-                buildLog = program.build_log();
-            }
-            catch( boost::compute::opencl_error& )
-            {
-            }
-
-            if (error.error_code() == CL_BUILD_PROGRAM_FAILURE )
-            {
-                //TODO something weird happens with std::cerr here, using cout for now
-                std::cerr << "Kernel for fixture \"" << Description() << "\" could not be built. Kernel source: " << std::endl <<
-                    source << std::endl <<
-                    "Build options: " << buildOptions << std::endl <<
-                    "Build log: " << buildLog << std::endl;
-            }
-            throw;
-        }
-        boost::compute::kernel kernel( program, "DampedWave2D" );
+        boost::compute::kernel& kernel = kernels_.at( context.get() );
         boost::compute::vector<T> output_device_vector( inputData_.size(), context );
 
         kernel.set_arg( 0, input_device_vector );
@@ -263,6 +241,7 @@ private:
     I inputDataIter_;
     size_t dataSize_;
     std::string descriptionSuffix_;
+    std::unordered_map<cl_context, boost::compute::kernel> kernels_;
     static const char* openCLTemplateTypeName;
     static const char* descriptionTypeName;
     static const T maxAcceptableRelError;

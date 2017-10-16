@@ -86,6 +86,29 @@ void FixtureRunner::CreateDampedWave2DFixtures(
     }
 }
 
+std::vector<boost::compute::device> FixtureRunner::FillDevicesList()
+{
+    std::vector<boost::compute::device> result;
+    std::vector<boost::compute::platform> platforms = boost::compute::system::platforms();
+    for( boost::compute::platform& platform : platforms )
+    {
+        auto devices = platform.devices();
+        result.insert( result.end(), devices.cbegin(), devices.cend() );
+    }
+    return result;
+}
+
+std::unordered_map<cl_device_id, boost::compute::context> FixtureRunner::FillContextsMap(
+    const std::vector<boost::compute::device>& devices )
+{
+    std::unordered_map<cl_device_id, boost::compute::context> result;
+    for ( const boost::compute::device& device: devices )
+    {
+        result.insert( { device.get(), boost::compute::context( device ) } );
+    }
+    return result;
+}
+
 void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWriter, 
     FixtureRunner::FixturesToRun fixturesToRun )
 {
@@ -109,7 +132,10 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     auto targetFixtureExecutionTime = std::chrono::milliseconds( 10 ); // Time how long fixture should execute
     int minIterations = 10; // Minimal number of iterations
 
-    std::vector<boost::compute::platform> platforms = boost::compute::system::platforms();
+    std::vector<boost::compute::device> devicesList = FillDevicesList();
+    std::unordered_map<cl_device_id, boost::compute::context> contextsList =
+        FillContextsMap( devicesList );
+
     for( size_t fixtureIndex = 0; fixtureIndex < fixtures.size(); ++fixtureIndex )
     {
         std::shared_ptr<Fixture>& fixture = fixtures.at(fixtureIndex);
@@ -119,21 +145,18 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
         dataForTimeWriter.fixtureName = fixture->Description();
         dataForTimeWriter.elementsCount = fixture->GetElementsCount();
 
-        for( boost::compute::platform& platform : platforms )
+        for( boost::compute::device& device : devicesList )
         {
             BenchmarkTimeWriterInterface::BenchmarkFixtureResultForPlatform perPlatformResults;
-            perPlatformResults.platformName = platform.name();
-
-            std::vector<boost::compute::device> devices = platform.devices();
-            for( boost::compute::device& device : devices )
+            perPlatformResults.platformName = device.platform().name();
             {
                 BenchmarkTimeWriterInterface::BenchmarkFixtureResultForDevice perDeviceResults;
                 perDeviceResults.deviceName = device.name();
 
                 try
                 {
-                    // TODO create context for every device only once
-                    boost::compute::context context( device );
+                    boost::compute::context& context = contextsList.at( device.get() );
+                    fixture->InitializeForContext( context );
 
                     std::vector<std::unordered_map<OperationStep, Fixture::Duration>> results;
 

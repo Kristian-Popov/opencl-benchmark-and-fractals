@@ -4,6 +4,8 @@
 
 #include <type_traits>
 
+#include <boost/log/trivial.hpp>
+
 namespace Utils
 {
     std::string ReadFile( const std::string& fileName )
@@ -105,5 +107,39 @@ namespace Utils
 		auto resultIter = std::max_element( counts.begin(), counts.end(), 
             CompareSecond<long double, int> );
         return resultIter->first;
+    }
+
+    boost::compute::kernel BuildKernel( const std::string& name,
+        boost::compute::context& context,
+        const std::string& source,
+        const std::string& buildOptions )
+    {
+        boost::compute::program program;
+        try
+        {
+            program = boost::compute::program::build_with_source( source, context, buildOptions );
+            return boost::compute::kernel( program, name );
+        }
+        catch( boost::compute::opencl_error& error )
+        {
+            std::string buildLog;
+            try // Retrieving these values can cause OpenCL errors, so catch them to write at least something about an error
+            {
+                buildLog = program.build_log();
+            }
+            catch( boost::compute::opencl_error& )
+            {
+            }
+
+            if( error.error_code() == CL_BUILD_PROGRAM_FAILURE )
+            {
+                //TODO something weird happens with std::cerr here, using cout for now
+                BOOST_LOG_TRIVIAL( error ) << "Kernel " << name << " could not be built. Kernel source: " << std::endl <<
+                    source << std::endl <<
+                    "Build options: " << buildOptions << std::endl <<
+                    "Build log: " << buildLog << std::endl;
+            }
+            throw;
+        }
     }
 }

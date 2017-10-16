@@ -50,6 +50,12 @@ public:
         GenerateData();
     }
 
+    virtual void InitializeForContext( boost::compute::context& context ) override
+    {
+        kernels_.insert( { context.get(),
+            Utils::BuildKernel( "TrivialFactorial", context, trivialFactorialKernelCode, compilerOptions )} );
+    }
+
     virtual std::vector<OperationStep> GetSteps() override
     {
         return {
@@ -79,8 +85,7 @@ public:
             boost::compute::copy_async( inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue ).get_event() 
         } );
 
-        boost::compute::program program = boost::compute::program::build_with_source( trivialFactorialKernelCode, context, compilerOptions );
-        boost::compute::kernel kernel( program, "TrivialFactorial" );
+        boost::compute::kernel& kernel = kernels_.at( context.get() );
         boost::compute::vector<unsigned long long> output_device_vector( dataSize_, context );
         kernel.set_arg( 0, input_device_vector );
         kernel.set_arg( 1, output_device_vector );
@@ -150,6 +155,7 @@ private:
     std::vector<cl_ulong> outputData_;
     I inputDataIter_;
     std::string descriptionSuffix_;
+    std::unordered_map<cl_context, boost::compute::kernel> kernels_;
 
     void GenerateData()
     {
