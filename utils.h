@@ -10,6 +10,9 @@
 #include <stdexcept>
 #include <functional>
 #include <memory>
+#include <unordered_map>
+
+#include "operation_step.h"
 
 #include "boost/compute/compute.hpp"
 
@@ -120,6 +123,18 @@ namespace Utils
         boost::compute::context& context,
         const std::string& source,
         const std::string& buildOptions );
+
+    template <typename D>
+    std::unordered_map<OperationStep, D> CalculateTotalStepDurations( 
+         const std::unordered_multimap<OperationStep, boost::compute::event>& events )
+    {
+        std::unordered_map<OperationStep, D> result;
+        for (const std::pair<OperationStep, boost::compute::event>& p: events )
+        {
+            result[p.first] += p.second.duration<D>();
+        }
+        return result;
+    }
 }
 
 #define EXCEPTION_ASSERT(expr) { if(!(expr)) { throw std::logic_error("Assert \"" #expr "\" failed"); } }

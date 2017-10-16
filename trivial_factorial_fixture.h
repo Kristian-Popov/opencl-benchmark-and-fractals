@@ -67,15 +67,13 @@ public:
 
     std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) override
 	{
-        std::unordered_map<OperationStep, Duration> result;
-
         EXCEPTION_ASSERT( context.get_devices().size() == 1 );
         // create command queue with profiling enabled
         boost::compute::command_queue queue(
             context, context.get_device(), boost::compute::command_queue::enable_profiling
         );
 
-        std::unordered_map<OperationStep, boost::compute::event> events;
+        std::unordered_multimap<OperationStep, boost::compute::event> events;
 
         // create a vector on the device
         boost::compute::vector<int> input_device_vector( dataSize_, context );
@@ -102,12 +100,7 @@ public:
 
         lastEvent.wait();
 
-        for ( const std::pair<OperationStep, boost::compute::event>& v: events )
-        {
-            result.insert( std::make_pair( v.first, v.second.duration<Duration>() ) );
-        }
-
-        return result;
+        return Utils::CalculateTotalStepDurations<Duration>( events );
 	}
 
     std::string Description() override
