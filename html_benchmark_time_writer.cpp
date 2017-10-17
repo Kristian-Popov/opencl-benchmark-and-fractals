@@ -226,6 +226,17 @@ HTMLBenchmarkTimeWriter::Units HTMLBenchmarkTimeWriter::CalcUnits( const Benchma
                 } );
         }
     }
+    // Something went horribly wrong, return some default value if we have no duration data
+    if ( avgDurationsInSec.empty() )
+    {
+        result.avgDurationUnit = avgDurationsUnits.cbegin()->first;
+        if( results.elementsCount )
+        {
+            result.durationPerElementUnit = durationPerElementUnits.cbegin()->first;
+            result.elementsPerSecUnit = elementsPerSecUnits.cbegin()->first;
+        }
+        return result;
+    }
     {
         std::vector<long double> avgDurationsList;
         std::transform( avgDurationsUnits.cbegin(), avgDurationsUnits.cend(), std::back_inserter( avgDurationsList ),

@@ -87,6 +87,7 @@ DampedWaveFixture<T, I>::DampedWaveFixture( const std::vector<DampedWaveFixtureP
 {
     static_assert( std::is_floating_point<T>::value, "DampedWaveFixture fixture works only for floating point types" );
     static_assert( FLT_EVAL_METHOD == 0, "Promotion of floating point values is enabled, please disable it using compiler options" );
+    //TODO set rounding mode on host processor using std::fesetround
 }
 
 template<typename T, typename I>
