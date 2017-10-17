@@ -54,6 +54,16 @@ void FixtureRunner::CreateDampedWave2DFixtures(
         fixtures.push_back( dampedWaveFixture );
         fixturesWithData.push_back( dampedWaveFixture );
     }
+    {
+        std::vector<DampedWaveFixtureParameters<cl_double>> params =
+        {DampedWaveFixtureParameters<cl_double>( 1000.0, 0.1, 2 * pi*frequency, 0.0, 1.0 )};
+
+        typedef std::normal_distribution<cl_double> Distribution;
+        typedef RandomValuesIterator<cl_double, Distribution> Iterator;
+        auto dampedWaveFixture = std::make_shared<DampedWaveFixture<cl_double, Iterator>>( params,
+            Distribution( 0.0, 100.0 ), dataSize, "random input values" );
+        fixtures.push_back( dampedWaveFixture );
+    }
 
     {
         const size_t paramsCount = 1000;
@@ -70,10 +80,12 @@ void FixtureRunner::CreateDampedWave2DFixtures(
         {
             typedef std::normal_distribution<cl_float> Distribution;
             typedef RandomValuesIterator<cl_float, Distribution> Iterator;
-            auto fixture = std::make_shared<DampedWaveFixture<cl_float, Iterator>>( params,
-                Iterator( Distribution( 0.0f, 50.0f ) ), dataSize, "random input values" );
-            fixtures.push_back( fixture );
-            fixturesWithData.push_back( fixture );
+            {
+                auto fixture = std::make_shared<DampedWaveFixture<cl_float, Iterator>>( params,
+                    Iterator( Distribution( 0.0f, 50.0f ) ), dataSize, "random input values" );
+                fixtures.push_back( fixture );
+                fixturesWithData.push_back( fixture );
+            }
         }
         {
             typedef std::normal_distribution<cl_float> Distribution;
@@ -147,14 +159,32 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
 
         for( boost::compute::device& device : devicesList )
         {
-            BenchmarkTimeWriterInterface::BenchmarkFixtureResultForPlatform perPlatformResults;
+            dataForTimeWriter.perFixtureResults.push_back( BenchmarkTimeWriterInterface::BenchmarkFixtureResultForPlatform() );
+            BenchmarkTimeWriterInterface::BenchmarkFixtureResultForPlatform& perPlatformResults = 
+                dataForTimeWriter.perFixtureResults.back();
+
             perPlatformResults.platformName = device.platform().name();
             {
-                BenchmarkTimeWriterInterface::BenchmarkFixtureResultForDevice perDeviceResults;
+                perPlatformResults.perDeviceResults.push_back( BenchmarkTimeWriterInterface::BenchmarkFixtureResultForDevice() );
+                BenchmarkTimeWriterInterface::BenchmarkFixtureResultForDevice& perDeviceResults =
+                    perPlatformResults.perDeviceResults.back();
                 perDeviceResults.deviceName = device.name();
 
                 try
                 {
+                    {
+                        std::vector<std::string> requiredExtensions = fixture->GetRequiredExtensions();
+                        std::sort( requiredExtensions.begin(), requiredExtensions.end() );
+
+                        std::vector<std::string> haveExtensions = device.extensions();
+                        std::sort( haveExtensions.begin(), haveExtensions.end() );
+                        if (!std::includes( haveExtensions.begin(), haveExtensions.end(), 
+                            requiredExtensions.begin(), requiredExtensions.end() ) )
+                        {
+                            perDeviceResults.failureReason = "Required extension is not available";
+                            continue;
+                        }
+                    }
                     boost::compute::context& context = contextsList.at( device.get() );
                     fixture->InitializeForContext( context );
 
@@ -209,11 +239,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
                 {
                     BOOST_LOG_TRIVIAL( error ) << "Exception occured: " << e.what();
                 }
-
-                perPlatformResults.perDeviceResults.push_back( perDeviceResults );
             }
-
-            dataForTimeWriter.perFixtureResults.push_back( perPlatformResults );
         }
         fixture->Finalize();
         timeWriter->WriteResultsForFixture( dataForTimeWriter );

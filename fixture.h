@@ -28,6 +28,11 @@ public:
     */
     virtual void InitializeForContext( boost::compute::context& context ) {}
 
+    /*
+    Get a list of required extensions required by this fixture
+    */
+    virtual std::vector<std::string> GetRequiredExtensions() = 0;
+
 	virtual std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) = 0;
 
     /*

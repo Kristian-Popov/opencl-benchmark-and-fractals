@@ -1,54 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <random>
-#include <cmath>
-
-#include "data_verification_failed_exception.h"
-#include "utils.h"
 #include "fixture_that_returns_data.h"
 
 #include <boost/format.hpp>
-
-namespace
-{
-    const char* kernelCode = R"(
-// Requires definition of REAL_T macro, it should be one of floating point types (either float or double)
-// TODO add unit test to check if size of this structure is the same as in host size.
-typedef struct Parameters
-{
-    REAL_T amplitude;
-    REAL_T dampingRatio;
-    REAL_T angularFrequency;
-    REAL_T phase;
-    REAL_T shift;
-} Parameters;
-
-REAL_T DampedWave2DImplementation(REAL_T x, __global Parameters* params, int paramsCount)
-{
-    REAL_T result = 0;
-    // TODO copy parameters to faster memory?
-    for (int i = 0; i < paramsCount; ++i)
-    {
-        Parameters paramSet = params[i];
-        REAL_T t = fabs(x - paramSet.shift);
-        result += paramSet.amplitude * exp(-paramSet.dampingRatio * t) * 
-            cos(paramSet.angularFrequency * t + paramSet.phase);
-    }
-    return result;
-}
-
-__kernel void DampedWave2D(__global REAL_T* input,
-        __global Parameters* params, int paramsCount,
-        __global REAL_T* output)
-{
-    size_t id = get_global_id(0);
-    output[id] = DampedWave2DImplementation(input[id], params, paramsCount);
-}
-)";
-
-    const char* baseCompilerOptions = "-w -Werror";
-}
 
 #pragma pack(push, 1)
 template<typename T>
@@ -77,118 +31,21 @@ class DampedWaveFixture : public FixtureThatReturnsData<T>
 public:
     DampedWaveFixture( const std::vector<DampedWaveFixtureParameters<T>>& params,
         const I& inputDataIter, size_t dataSize,
-        const std::string& descriptionSuffix = std::string() )
-        : params_( params )
-        , inputDataIter_( inputDataIter )
-        , dataSize_( dataSize )
-        , descriptionSuffix_( descriptionSuffix )
-    {
-        static_assert( std::is_floating_point<T>::value, "DampedWaveFixture fixture works only for floating point types" );
-        static_assert( FLT_EVAL_METHOD == 0, "Promotion of floating point values is enabled, please disable it using compiler options" );
-    }
+        const std::string& descriptionSuffix = std::string() );
 
-    virtual void Initialize() override
-    {
-        GenerateData();
-    }
+    virtual void Initialize() override;
 
-    virtual void InitializeForContext( boost::compute::context& context ) override
-    {
-        std::string compilerOptions = baseCompilerOptions + std::string( " -DREAL_T=" ) + openCLTemplateTypeName;
-        kernels_.insert( { context.get(),
-            Utils::BuildKernel( "DampedWave2D", context, kernelCode, compilerOptions ) } );
-    }
+    virtual void InitializeForContext( boost::compute::context& context ) override;
 
-    virtual std::vector<OperationStep> GetSteps() override
-    {
-        return {
-            OperationStep::CopyInputDataToDevice, //TODO try replace copying with mapping
-            OperationStep::Calculate,
-            OperationStep::CopyOutputDataFromDevice
-        };
-    }
+    virtual std::vector<OperationStep> GetSteps() override;
 
-    std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) override
-    {
-        EXCEPTION_ASSERT( context.get_devices().size() == 1 );
-        // create command queue with profiling enabled
-        boost::compute::command_queue queue(
-            context, context.get_device(), boost::compute::command_queue::enable_profiling
-        );
+    virtual std::vector<std::string> GetRequiredExtensions() override;
 
-        std::unordered_multimap<OperationStep, boost::compute::event> events;
+    std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) override;
 
-        // create a vector on the device
-        boost::compute::vector<T> input_device_vector( inputData_.size(), context );
+    std::string Description() override;
 
-        // copy data from the host to the device
-        events.insert( { OperationStep::CopyInputDataToDevice,
-            boost::compute::copy_async( inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue ).get_event()
-        } );
-
-        // TODO measure time for copying parameters
-        boost::compute::vector<Parameters> input_params_vector( params_.size(), context );
-        events.insert( { OperationStep::CopyInputDataToDevice, 
-            boost::compute::copy_async( params_.begin(), params_.end(), input_params_vector.begin(), queue ).get_event()
-        } );
-
-        boost::compute::kernel& kernel = kernels_.at( context.get() );
-        boost::compute::vector<T> output_device_vector( inputData_.size(), context );
-
-        kernel.set_arg( 0, input_device_vector );
-        kernel.set_arg( 1, input_params_vector );
-        kernel.set_arg( 2, static_cast<cl_int>( params_.size() ) );
-        kernel.set_arg( 3, output_device_vector );
-
-        unsigned computeUnitsCount = context.get_device().compute_units();
-        size_t localWorkGroupSize = 0;
-        events.insert( {OperationStep::Calculate,
-            queue.enqueue_1d_range_kernel( kernel, 0, inputData_.size(), localWorkGroupSize )
-        } );
-
-        outputData_.resize( inputData_.size() );
-        boost::compute::event lastEvent = boost::compute::copy_async( output_device_vector.begin(), output_device_vector.end(), outputData_.begin(), queue ).get_event();
-        events.insert( {OperationStep::CopyOutputDataFromDevice, lastEvent} );
-
-        lastEvent.wait();
-
-        return Utils::CalculateTotalStepDurations<Duration>( events );
-    }
-
-    std::string Description() override
-    {
-        std::string result = ( boost::format( "Damped wave, %1%, %2% values, %3% parameters" ) %
-            descriptionTypeName % 
-            Utils::FormatQuantityString( dataSize_ ) % 
-            Utils::FormatQuantityString( params_.size() ) ).str();
-        if( !descriptionSuffix_.empty() )
-        {
-            result += ", " + descriptionSuffix_;
-        }
-        return result;
-    }
-
-    void VerifyResults()
-    {
-        EXCEPTION_ASSERT( !outputData_.empty() );
-        EXCEPTION_ASSERT( outputData_.size() == inputData_.size() );
-        EXCEPTION_ASSERT( outputData_.size() == expectedOutputData_.size() );
-        EXCEPTION_ASSERT( outputData_.size() == dataSize_ );
-
-        for (size_t i = 0; i < outputData_.size(); ++i )
-        {
-            bool areClose = Utils::AreFloatValuesClose( 
-                outputData_.at(i), expectedOutputData_.at(i),
-                maxAcceptableAbsError, maxAcceptableRelError );
-            if (!areClose)
-            {
-                throw DataVerificationFailedException( ( boost::format( 
-                    "Result verification has failed for fixture \"%1%\". "
-                    "Found error for input value %2% (value index %3%).") %
-                    Description() % inputData_.at(i) % i ).str() );
-            }
-        }
-    }
+    void VerifyResults();
 
     /*
         Return results in the following form:
@@ -201,22 +58,7 @@ public:
         First column contains input value, second one - expected value (as calculated on a host CPU),
         third one - value calculated by OpenCL device
     */
-    virtual std::vector<std::vector<T>> GetResults() override
-    {
-        // Verify that output data are not empty to check if fixture was executed
-        EXCEPTION_ASSERT( !outputData_.empty() );
-        EXCEPTION_ASSERT( outputData_.size() == inputData_.size() );
-        EXCEPTION_ASSERT( outputData_.size() == expectedOutputData_.size() );
-        EXCEPTION_ASSERT( outputData_.size() == dataSize_ );
-        std::vector<std::vector<T>> result;
-        for (size_t index = 0; index < outputData_.size(); ++index )
-        {
-            result.push_back( { inputData_.at(index), 
-                expectedOutputData_.at(index), 
-                outputData_.at(index) } );
-        }
-        return result;
-    }
+    virtual std::vector<std::vector<T>> GetResults() override;
 
     virtual boost::optional<size_t> GetElementsCount() override
     {
@@ -237,46 +79,10 @@ private:
     size_t dataSize_;
     std::string descriptionSuffix_;
     std::unordered_map<cl_context, boost::compute::kernel> kernels_;
-    static const char* openCLTemplateTypeName;
-    static const char* descriptionTypeName;
-    static const T maxAcceptableRelError;
-    static const T maxAcceptableAbsError;
 
-    void GenerateData()
-    {
-        inputData_.resize( dataSize_ );
-        std::copy_n( inputDataIter_, dataSize_, inputData_.begin() ); 
+    void GenerateData();
 
-        expectedOutputData_.reserve( dataSize_ );
-
-        using namespace std::placeholders;
-        std::transform( inputData_.begin(), inputData_.end(), std::back_inserter( expectedOutputData_ ), 
-            std::bind( &DampedWaveFixture<T, I>::CalcExpectedValue, this, _1 ) );
-    }
-
-    T CalcExpectedValue( T x ) const
-    {
-        return std::accumulate<decltype( params_.cbegin() ), T>( params_.cbegin(), params_.cend(), 0,
-            [x] (T accum, const Parameters& param)
-            {
-                T v = std::abs( x - param.shift );
-                T currentWave = param.amplitude * std::exp( -param.dampingRatio * v ) * cos( param.angularFrequency * v + param.phase );
-                return accum + currentWave;
-            } );
-    }
+    T CalcExpectedValue( T x ) const;
 };
 
-template<typename T = cl_float, typename I>
-const char* DampedWaveFixture<T, I>::openCLTemplateTypeName = "float";
-template<typename T = cl_float, typename I>
-const char* DampedWaveFixture<T, I>::descriptionTypeName = "float";
-template<typename T = cl_float, typename I>
-const cl_float DampedWaveFixture<T, I>::maxAcceptableRelError = 0.015f; // TODO errors is quite large. Investigate why
-template<typename T = cl_float, typename I>
-const cl_float DampedWaveFixture<T, I>::maxAcceptableAbsError = 0.003f;
-
-/*
-Not supported yet
-const char* DampledWaveFixture<cl_double>::openCLTemplateTypeName = "double";
-const char* DampledWaveFixture<cl_double>::descriptionTypeName = "double";
-*/
+#include "damped_wave_fixture.inl"

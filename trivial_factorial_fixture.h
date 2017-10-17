@@ -65,6 +65,11 @@ public:
         };
     }
 
+    virtual std::vector<std::string> GetRequiredExtensions() override
+    {
+        return std::vector<std::string>(); // This fixture doesn't require any special extensions
+    }
+
     std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) override
 	{
         EXCEPTION_ASSERT( context.get_devices().size() == 1 );

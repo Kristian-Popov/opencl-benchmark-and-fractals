@@ -15,6 +15,7 @@ add_executable (main
 	stdout_benchmark_time_writer.cpp
 	operation_step.cpp
 	fixture_runner.cpp
+	damped_wave_fixture.inl
 	
 	utils.h
 	fixture.h
