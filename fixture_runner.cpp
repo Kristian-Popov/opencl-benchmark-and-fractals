@@ -16,10 +16,13 @@
 #include "csv_document.h"
 #include "sequential_values_iterator.h"
 #include "random_values_iterator.h"
+#include "half_precision_normal_distribution.h"
 
+#include <boost/random/normal_distribution.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/compute/compute.hpp>
 #include <boost/math/constants/constants.hpp>
+#include "half/half.hpp"
 
 void FixtureRunner::CreateTrivialFixtures( std::vector<std::shared_ptr<Fixture>>& fixtures )
 {
@@ -62,6 +65,18 @@ void FixtureRunner::CreateDampedWave2DFixtures(
         typedef RandomValuesIterator<cl_double, Distribution> Iterator;
         auto dampedWaveFixture = std::make_shared<DampedWaveFixture<cl_double, Iterator>>( params,
             Distribution( 0.0, 100.0 ), dataSize, "random input values" );
+        fixtures.push_back( dampedWaveFixture );
+    }
+    {
+        using namespace half_float::literal;
+        std::vector<DampedWaveFixtureParameters<half_float::half>> params =
+        {DampedWaveFixtureParameters<half_float::half>( 1000.0_h, 0.1_h, 
+            static_cast<half_float::half>( 2.0_h * pi*frequency ), 0.0_h, 1.0_h )};
+
+        typedef HalfPrecisionNormalDistribution Distribution;
+        typedef RandomValuesIterator<half_float::half, Distribution> Iterator;
+        auto dampedWaveFixture = std::make_shared<DampedWaveFixture<half_float::half, Iterator>>( params,
+            Distribution( 0.0_h, 100.0_h ), dataSize, "random input values" );
         fixtures.push_back( dampedWaveFixture );
     }
 

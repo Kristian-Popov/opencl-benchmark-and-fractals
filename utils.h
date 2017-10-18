@@ -15,6 +15,7 @@
 #include "operation_step.h"
 
 #include "boost/compute/compute.hpp"
+#include "half/half.hpp"
 
 class Fixture;
 
@@ -64,6 +65,9 @@ namespace Utils
 
     template bool AreFloatValuesClose<float>( float A, float B, float maxAbsDiff, float maxRelDiff );
     template bool AreFloatValuesClose<double>( double A, double B, double maxAbsDiff, double maxRelDiff );
+    template bool AreFloatValuesClose<half_float::half>( 
+        half_float::half A, half_float::half B, 
+        half_float::half maxAbsDiff, half_float::half maxRelDiff );
 
     /*
     Choose a unit for value from a supplied list convenient for output.

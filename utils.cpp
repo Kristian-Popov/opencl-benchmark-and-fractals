@@ -45,7 +45,8 @@ namespace Utils
     bool AreFloatValuesClose( T A, T B,
         T maxAbsDiff, T maxRelDiff ) // TODO not sure about of these differences - T or e.g. long double?
     {
-        static_assert( std::is_floating_point<T>::value, "AreFloatValuesClose function works only for floating point types" );
+        //TODO disabled since it doesn't work for half precision
+        //static_assert( std::is_floating_point<T>::value, "AreFloatValuesClose function works only for floating point types" );
         // Check if the numbers are really close -- needed
         // when comparing numbers near zero.
         long double diff = fabs( A - B );

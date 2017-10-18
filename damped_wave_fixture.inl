@@ -9,6 +9,8 @@
 #include "data_verification_failed_exception.h"
 #include "utils.h"
 
+#include "half/half.hpp"
+
 namespace
 {
     const char* kernelCode = R"(
@@ -74,6 +76,14 @@ __kernel void DampedWave2D(__global REAL_T* input,
     const cl_double Constants<cl_double>::maxAcceptableRelError = 0.015;
     const cl_double Constants<cl_double>::maxAcceptableAbsError = 0.003;
     const char* Constants<cl_double>::requiredExtension = "cl_khr_fp64";
+
+    using namespace half_float::literal;
+    const char* Constants<half_float::half>::openCLTemplateTypeName = "half";
+    const char* Constants<half_float::half>::descriptionTypeName = "half";
+    // TODO calculate appropriate error, for now float values are used
+    const half_float::half Constants<half_float::half>::maxAcceptableRelError = 0.015_h;
+    const half_float::half Constants<half_float::half>::maxAcceptableAbsError = 0.003_h;
+    const char* Constants<half_float::half>::requiredExtension = "cl_khr_fp16";
 }
 
 template<typename T, typename I>
@@ -85,7 +95,8 @@ DampedWaveFixture<T, I>::DampedWaveFixture( const std::vector<DampedWaveFixtureP
     , dataSize_( dataSize )
     , descriptionSuffix_( descriptionSuffix )
 {
-    static_assert( std::is_floating_point<T>::value, "DampedWaveFixture fixture works only for floating point types" );
+    // TODO this doesn't work on half precision values, so disabled for now
+    //static_assert( std::is_floating_point<T>::value, "DampedWaveFixture fixture works only for floating point types" );
     static_assert( FLT_EVAL_METHOD == 0, "Promotion of floating point values is enabled, please disable it using compiler options" );
     //TODO set rounding mode on host processor using std::fesetround
 }
@@ -249,7 +260,7 @@ void DampedWaveFixture<T, I>::GenerateData()
     std::transform( inputData_.begin(), inputData_.end(), std::back_inserter( expectedOutputData_ ),
         std::bind( &DampedWaveFixture<T, I>::CalcExpectedValue, this, _1 ) );
 }
-
+/*
 template<typename T, typename I>
 T DampedWaveFixture<T, I>::CalcExpectedValue( T x ) const
 {
@@ -258,6 +269,19 @@ T DampedWaveFixture<T, I>::CalcExpectedValue( T x ) const
     {
         T v = std::abs( x - param.shift );
         T currentWave = param.amplitude * std::exp( -param.dampingRatio * v ) * cos( param.angularFrequency * v + param.phase );
+        return accum + currentWave;
+    } );
+}
+*/
+
+template<typename T, typename I>
+T DampedWaveFixture<T, I>::CalcExpectedValue( T x ) const
+{
+    return std::accumulate<decltype( params_.cbegin() ), T>( params_.cbegin(), params_.cend(), static_cast<T>(0),
+        [x]( T accum, const Parameters& param )
+    {
+        T v = abs( x - param.shift );
+        T currentWave = param.amplitude * exp( -param.dampingRatio * v ) * cos( param.angularFrequency * v + param.phase );
         return accum + currentWave;
     } );
 }
