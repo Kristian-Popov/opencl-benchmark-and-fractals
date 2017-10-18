@@ -15,10 +15,6 @@ namespace
 {
     const char* kernelCode = R"(
 // Requires definition of REAL_T macro, it should be one of floating point types (either float or double)
-// Also if support for a particular extension is needed, macro REQUIRED_EXTENSION should be defined
-#ifdef REQUIRED_EXTENSION
-#   pragma OPENCL EXTENSION REQUIRED_EXTENSION : enable
-#endif
 // TODO add unit test to check if size of this structure is the same as in host size.
 typedef struct Parameters
 {
@@ -113,13 +109,9 @@ void DampedWaveFixture<T, I>::InitializeForContext( boost::compute::context& con
     std::string compilerOptions = baseCompilerOptions + std::string( " -DREAL_T=" ) + 
         Constants<T>::openCLTemplateTypeName;
 
-    std::string requiredExtension = Constants<T>::requiredExtension;
-    if ( !requiredExtension.empty() )
-    {
-        compilerOptions += " -DREQUIRED_EXTENSION=" + requiredExtension;
-    }
     kernels_.insert( {context.get(),
-        Utils::BuildKernel( "DampedWave2D", context, kernelCode, compilerOptions )} );
+        Utils::BuildKernel( "DampedWave2D", context, kernelCode, compilerOptions,
+        GetRequiredExtensions() )} );
 }
 
 template<typename T, typename I>

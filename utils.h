@@ -126,7 +126,8 @@ namespace Utils
     boost::compute::kernel BuildKernel( const std::string& name,
         boost::compute::context& context,
         const std::string& source,
-        const std::string& buildOptions );
+        const std::string& buildOptions,
+        const std::vector<std::string>& extensions = std::vector<std::string>() );
 
     template <typename D>
     std::unordered_map<OperationStep, D> CalculateTotalStepDurations( 

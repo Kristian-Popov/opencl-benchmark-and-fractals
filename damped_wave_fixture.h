@@ -2,8 +2,6 @@
 
 #include "fixture_that_returns_data.h"
 
-#include <boost/format.hpp>
-
 #pragma pack(push, 1)
 template<typename T>
 struct DampedWaveFixtureParameters

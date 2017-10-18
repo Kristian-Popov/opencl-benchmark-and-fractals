@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include <boost/log/trivial.hpp>
+#include <boost/format.hpp>
 
 namespace Utils
 {
@@ -113,12 +114,19 @@ namespace Utils
     boost::compute::kernel BuildKernel( const std::string& name,
         boost::compute::context& context,
         const std::string& source,
-        const std::string& buildOptions )
+        const std::string& buildOptions,
+        const std::vector<std::string>& extensions)
     {
         boost::compute::program program;
+        std::string allSource;
+        for (const std::string& extension: extensions)
+        {
+            allSource += ( boost::format( "#pragma OPENCL EXTENSION %1% : enable\n" ) % extension ).str();
+        }
+        allSource += source;
         try
         {
-            program = boost::compute::program::build_with_source( source, context, buildOptions );
+            program = boost::compute::program::build_with_source( allSource, context, buildOptions );
             return boost::compute::kernel( program, name );
         }
         catch( boost::compute::opencl_error& error )
@@ -136,7 +144,7 @@ namespace Utils
             {
                 //TODO something weird happens with std::cerr here, using cout for now
                 BOOST_LOG_TRIVIAL( error ) << "Kernel " << name << " could not be built. Kernel source: " << std::endl <<
-                    source << std::endl <<
+                    allSource << std::endl <<
                     "Build options: " << buildOptions << std::endl <<
                     "Build log: " << buildLog << std::endl;
             }
