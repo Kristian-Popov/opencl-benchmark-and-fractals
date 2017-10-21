@@ -40,6 +40,12 @@ int main( int argc, char** argv )
         BOOST_LOG_TRIVIAL( fatal ) << desc;
         return EXIT_FAILURE;
     }
+    catch (std::exception& e)
+    {
+        BOOST_LOG_TRIVIAL( fatal ) << "Caught exception when parsin command line arguments: " << e.what();
+        BOOST_LOG_TRIVIAL( fatal ) << desc;
+        return EXIT_FAILURE;
+    }
     boost::program_options::notify( vm );
 
     if( vm.count( "help" ) ) 

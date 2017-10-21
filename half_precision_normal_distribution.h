@@ -1,8 +1,6 @@
 #pragma once
 
-//TODO include this file in one place with correct configuration of rounding just before
-// an include
-#include "half/half.hpp"
+#include "half_precision_fp.h"
 
 #include <random>
 

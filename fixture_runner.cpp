@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <random>
+#include <cfenv>
 
 #include "data_verification_failed_exception.h"
 #include "trivial_factorial_fixture.h"
@@ -22,7 +23,9 @@
 #include <boost/log/trivial.hpp>
 #include <boost/compute/compute.hpp>
 #include <boost/math/constants/constants.hpp>
-#include "half/half.hpp"
+#include "half_precision_fp.h"
+
+#pragma STDC FENV_ACCESS on
 
 void FixtureRunner::CreateTrivialFixtures( std::vector<std::shared_ptr<Fixture>>& fixtures )
 {
@@ -113,6 +116,11 @@ void FixtureRunner::CreateDampedWave2DFixtures(
     }
 }
 
+void SetFloatingPointEnvironment()
+{
+    EXCEPTION_ASSERT( std::fesetround( FE_TONEAREST ) == 0);
+}
+
 std::vector<boost::compute::device> FixtureRunner::FillDevicesList()
 {
     std::vector<boost::compute::device> result;
@@ -140,6 +148,9 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     FixtureRunner::FixturesToRun fixturesToRun )
 {
     BOOST_LOG_TRIVIAL( info ) << "Welcome to OpenCL benchmark.";
+
+    SetFloatingPointEnvironment();
+
     std::vector<std::shared_ptr<Fixture>> fixtures;
     std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>> fixturesWithData;
 

@@ -15,7 +15,7 @@
 #include "operation_step.h"
 
 #include "boost/compute/compute.hpp"
-#include "half/half.hpp"
+#include "half_precision_fp.h"
 
 class Fixture;
 

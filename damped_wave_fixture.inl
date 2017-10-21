@@ -9,7 +9,7 @@
 #include "data_verification_failed_exception.h"
 #include "utils.h"
 
-#include "half/half.hpp"
+#include "half_precision_fp.h"
 
 namespace
 {
