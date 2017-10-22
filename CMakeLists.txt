@@ -17,14 +17,16 @@ add_executable (main
 	fixture_runner.cpp
 	damped_wave_fixture.inl
 	
+	trivial_factorial_fixture.h
+	damped_wave_fixture.h
+	koch_curve_fixture.h
+
 	utils.h
 	fixture.h
 	fixture_that_returns_data.h
-	trivial_factorial_fixture.h 
 	operation_step.h
 	html_document.h
 	html_benchmark_time_writer.h
-	damped_wave_fixture.h
 	csv_document.h
 	benchmark_time_writer_interface.h
 	stdout_benchmark_time_writer.h

@@ -9,4 +9,6 @@ const std::unordered_map<OperationStep, std::string> OperationStepDescriptionRep
     std::make_pair( OperationStep::CopyInputDataToDevice, "Copy input data to device" ),
     std::make_pair( OperationStep::Calculate, "Calculation" ),
     std::make_pair( OperationStep::CopyOutputDataFromDevice, "Copy output data from device" ),
+    std::make_pair( OperationStep::MapOutputData, "Map output data" ),
+    std::make_pair( OperationStep::UnmapOutputData, "Unmap output data" ),
 };

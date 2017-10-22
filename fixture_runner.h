@@ -13,6 +13,7 @@ public:
     {
         bool trivialFactorial = true;
         bool dampedWave2D = true;
+        bool kochCurve = true;
     };
 
     static void Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWriter, 
@@ -22,6 +23,10 @@ private:
     static void CreateDampedWave2DFixtures( 
         std::vector<std::shared_ptr<Fixture>>& fixtures,
         std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixturesWithData );
+    static void CreateKochCurveFixtures( 
+        std::vector<std::shared_ptr<Fixture>>& fixtures,
+        std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixturesWithData );
+
     static std::vector<boost::compute::device> FillDevicesList();
     static std::unordered_map<cl_device_id, boost::compute::context> FillContextsMap(
         const std::vector<boost::compute::device>& devices );

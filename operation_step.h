@@ -6,7 +6,9 @@ enum class OperationStep
 { 
     CopyInputDataToDevice,
     Calculate,
-    CopyOutputDataFromDevice
+    CopyOutputDataFromDevice,
+    MapOutputData,
+    UnmapOutputData
 };
 
 class OperationStepDescriptionRepository

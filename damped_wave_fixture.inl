@@ -13,7 +13,7 @@
 
 namespace
 {
-    const char* kernelCode = R"(
+    const char* dampedWaveProgramCode = R"(
 // Requires definition of REAL_T macro, it should be one of floating point types (either float or double)
 // TODO add unit test to check if size of this structure is the same as in host size.
 typedef struct Parameters
@@ -51,7 +51,7 @@ __kernel void DampedWave2D(__global REAL_T* input,
     const char* baseCompilerOptions = "-w -Werror";
 
     template<typename T>
-    struct Constants
+    struct DampedWaveFixtureConstants
     {
         static const char* openCLTemplateTypeName;
         static const char* descriptionTypeName;
@@ -60,26 +60,26 @@ __kernel void DampedWave2D(__global REAL_T* input,
         static const char* requiredExtension;
     };
 
-    const char* Constants<cl_float>::openCLTemplateTypeName = "float";
-    const char* Constants<cl_float>::descriptionTypeName = "float";
-    const cl_float Constants<cl_float>::maxAcceptableRelError = 0.015f; // TODO errors is quite large. Investigate why
-    const cl_float Constants<cl_float>::maxAcceptableAbsError = 0.003f;
-    const char* Constants<cl_float>::requiredExtension = ""; // No extensions needed for single precision arithmetic
+    const char* DampedWaveFixtureConstants<cl_float>::openCLTemplateTypeName = "float";
+    const char* DampedWaveFixtureConstants<cl_float>::descriptionTypeName = "float";
+    const cl_float DampedWaveFixtureConstants<cl_float>::maxAcceptableRelError = 0.015f; // TODO errors is quite large. Investigate why
+    const cl_float DampedWaveFixtureConstants<cl_float>::maxAcceptableAbsError = 0.003f;
+    const char* DampedWaveFixtureConstants<cl_float>::requiredExtension = ""; // No extensions needed for single precision arithmetic
 
-    const char* Constants<cl_double>::openCLTemplateTypeName = "double";
-    const char* Constants<cl_double>::descriptionTypeName = "double";
+    const char* DampedWaveFixtureConstants<cl_double>::openCLTemplateTypeName = "double";
+    const char* DampedWaveFixtureConstants<cl_double>::descriptionTypeName = "double";
     // TODO calculate appropriate error, for now float values are used
-    const cl_double Constants<cl_double>::maxAcceptableRelError = 0.015;
-    const cl_double Constants<cl_double>::maxAcceptableAbsError = 0.003;
-    const char* Constants<cl_double>::requiredExtension = "cl_khr_fp64";
+    const cl_double DampedWaveFixtureConstants<cl_double>::maxAcceptableRelError = 0.015;
+    const cl_double DampedWaveFixtureConstants<cl_double>::maxAcceptableAbsError = 0.003;
+    const char* DampedWaveFixtureConstants<cl_double>::requiredExtension = "cl_khr_fp64";
 
     using namespace half_float::literal;
-    const char* Constants<half_float::half>::openCLTemplateTypeName = "half";
-    const char* Constants<half_float::half>::descriptionTypeName = "half";
+    const char* DampedWaveFixtureConstants<half_float::half>::openCLTemplateTypeName = "half";
+    const char* DampedWaveFixtureConstants<half_float::half>::descriptionTypeName = "half";
     // TODO calculate appropriate error, for now float values are used
-    const half_float::half Constants<half_float::half>::maxAcceptableRelError = 0.015_h;
-    const half_float::half Constants<half_float::half>::maxAcceptableAbsError = 0.003_h;
-    const char* Constants<half_float::half>::requiredExtension = "cl_khr_fp16";
+    const half_float::half DampedWaveFixtureConstants<half_float::half>::maxAcceptableRelError = 0.015_h;
+    const half_float::half DampedWaveFixtureConstants<half_float::half>::maxAcceptableAbsError = 0.003_h;
+    const char* DampedWaveFixtureConstants<half_float::half>::requiredExtension = "cl_khr_fp16";
 }
 
 template<typename T, typename I>
@@ -107,10 +107,10 @@ template<typename T, typename I>
 void DampedWaveFixture<T, I>::InitializeForContext( boost::compute::context& context )
 {
     std::string compilerOptions = baseCompilerOptions + std::string( " -DREAL_T=" ) + 
-        Constants<T>::openCLTemplateTypeName;
+        DampedWaveFixtureConstants<T>::openCLTemplateTypeName;
 
     kernels_.insert( {context.get(),
-        Utils::BuildKernel( "DampedWave2D", context, kernelCode, compilerOptions,
+        Utils::BuildKernel( "DampedWave2D", context, dampedWaveProgramCode, compilerOptions,
         GetRequiredExtensions() )} );
 }
 
@@ -127,7 +127,7 @@ std::vector<OperationStep> DampedWaveFixture<T, I>::GetSteps()
 template<typename T, typename I>
 std::vector<std::string> DampedWaveFixture<T, I>::GetRequiredExtensions()
 {
-    std::string requiredExtension = Constants<T>::requiredExtension;
+    std::string requiredExtension = DampedWaveFixtureConstants<T>::requiredExtension;
     std::vector<std::string> result;
     if ( !requiredExtension.empty() )
     {
@@ -156,7 +156,6 @@ std::unordered_map<OperationStep, Fixture::Duration> DampedWaveFixture<T, I>::Ex
         boost::compute::copy_async( inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue ).get_event()
     } );
 
-    // TODO measure time for copying parameters
     boost::compute::vector<Parameters> input_params_vector( params_.size(), context );
     events.insert( {OperationStep::CopyInputDataToDevice,
         boost::compute::copy_async( params_.begin(), params_.end(), input_params_vector.begin(), queue ).get_event()
@@ -189,7 +188,7 @@ template<typename T, typename I>
 std::string DampedWaveFixture<T, I>::Description()
 {
     std::string result = ( boost::format( "Damped wave, %1%, %2% values, %3% parameters" ) %
-        Constants<T>::descriptionTypeName %
+        DampedWaveFixtureConstants<T>::descriptionTypeName %
         Utils::FormatQuantityString( dataSize_ ) %
         Utils::FormatQuantityString( params_.size() ) ).str();
     if( !descriptionSuffix_.empty() )
@@ -211,7 +210,7 @@ void DampedWaveFixture<T, I>::VerifyResults()
     {
         bool areClose = Utils::AreFloatValuesClose(
             outputData_.at( i ), expectedOutputData_.at( i ),
-            Constants<T>::maxAcceptableAbsError, Constants<T>::maxAcceptableRelError );
+            DampedWaveFixtureConstants<T>::maxAcceptableAbsError, DampedWaveFixtureConstants<T>::maxAcceptableRelError );
         if( !areClose )
         {
             throw DataVerificationFailedException( ( boost::format(

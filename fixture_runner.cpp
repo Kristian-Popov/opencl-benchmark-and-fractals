@@ -11,13 +11,15 @@
 #include <cfenv>
 
 #include "data_verification_failed_exception.h"
-#include "trivial_factorial_fixture.h"
-#include "damped_wave_fixture.h"
 #include "operation_step.h"
 #include "csv_document.h"
 #include "sequential_values_iterator.h"
 #include "random_values_iterator.h"
 #include "half_precision_normal_distribution.h"
+
+#include "trivial_factorial_fixture.h"
+#include "damped_wave_fixture.h"
+#include "koch_curve_fixture.h"
 
 #include <boost/random/normal_distribution.hpp>
 #include <boost/log/trivial.hpp>
@@ -116,9 +118,23 @@ void FixtureRunner::CreateDampedWave2DFixtures(
     }
 }
 
+void FixtureRunner::CreateKochCurveFixtures( 
+    std::vector<std::shared_ptr<Fixture>>& fixtures,
+    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixturesWithData )
+{
+    for (int i = 1; i < 10; ++i)
+    {
+        auto ptr = std::make_shared<KochCurveFixture<cl_float,
+            cl_float2, cl_float4>>(i);
+        fixtures.push_back( ptr );
+        fixturesWithData.push_back( ptr );
+    }
+}
+
 void SetFloatingPointEnvironment()
 {
-    EXCEPTION_ASSERT( std::fesetround( FE_TONEAREST ) == 0);
+    int result = std::fesetround( FE_TONEAREST );
+    EXCEPTION_ASSERT( result == 0);
 }
 
 std::vector<boost::compute::device> FixtureRunner::FillDevicesList()
@@ -161,6 +177,10 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     if (fixturesToRun.dampedWave2D)
     {
         CreateDampedWave2DFixtures(fixtures, fixturesWithData);
+    }
+    if (fixturesToRun.kochCurve)
+    {
+        CreateKochCurveFixtures(fixtures, fixturesWithData );
     }
 
     BOOST_LOG_TRIVIAL( info ) << "We have " << fixtures.size() << " fixtures to run";
@@ -251,10 +271,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
                 {
                     // TODO replace with logging
                     BOOST_LOG_TRIVIAL( error ) << "OpenCL error occured: " << e.what();
-                    if( e.error_code() == CL_BUILD_PROGRAM_FAILURE )
-                    {
-                        perDeviceResults.failureReason = "Kernel build failed";
-                    }
+                    perDeviceResults.failureReason = e.what();
                 }
                 catch( DataVerificationFailedException& e )
                 {
