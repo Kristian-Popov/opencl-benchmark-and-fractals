@@ -222,14 +222,14 @@ void DampedWaveFixture<T, I>::VerifyResults()
 }
 
 template<typename T, typename I>
-std::vector<std::vector<T>> DampedWaveFixture<T, I>::GetResults()
+std::vector<std::vector<long double>> DampedWaveFixture<T, I>::GetResults()
 {
     // Verify that output data are not empty to check if fixture was executed
     EXCEPTION_ASSERT( !outputData_.empty() );
     EXCEPTION_ASSERT( outputData_.size() == inputData_.size() );
     EXCEPTION_ASSERT( outputData_.size() == expectedOutputData_.size() );
     EXCEPTION_ASSERT( outputData_.size() == dataSize_ );
-    std::vector<std::vector<T>> result;
+    std::vector<std::vector<long double>> result;
     for( size_t index = 0; index < outputData_.size(); ++index )
     {
         result.push_back( {inputData_.at( index ),

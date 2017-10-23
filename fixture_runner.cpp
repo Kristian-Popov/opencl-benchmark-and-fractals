@@ -46,7 +46,7 @@ void FixtureRunner::CreateTrivialFixtures( std::vector<std::shared_ptr<Fixture>>
 
 void FixtureRunner::CreateDampedWave2DFixtures(
     std::vector<std::shared_ptr<Fixture>>& fixtures,
-    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixturesWithData )
+    std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>>& fixturesWithData )
 {
     cl_float frequency = 1.0f;
     const cl_float pi = boost::math::constants::pi<cl_float>();
@@ -121,16 +121,25 @@ void FixtureRunner::CreateDampedWave2DFixtures(
 
 void FixtureRunner::CreateKochCurveFixtures( 
     std::vector<std::shared_ptr<Fixture>>& fixtures,
-    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixturesWithData,
-    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixtureToWriteResultToSVG )
+    std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>>& fixturesWithData,
+    std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>>& fixtureToWriteResultToSVG )
 {
     for (int i = 1; i < 10; ++i)
     {
-        auto ptr = std::make_shared<KochCurveFixture<cl_float,
-            cl_float2, cl_float4>>(i);
-        fixtures.push_back( ptr );
-        fixturesWithData.push_back( ptr );
-        fixtureToWriteResultToSVG.push_back( ptr );
+        {
+            auto ptr = std::make_shared<KochCurveFixture<cl_float,
+                cl_float2, cl_float4>>( i );
+            fixtures.push_back( ptr );
+            fixturesWithData.push_back( ptr );
+            fixtureToWriteResultToSVG.push_back( ptr );
+        }
+        {
+            auto ptr = std::make_shared<KochCurveFixture<cl_double,
+                cl_double2, cl_double4>>( i );
+            fixtures.push_back( ptr );
+            fixturesWithData.push_back( ptr );
+            fixtureToWriteResultToSVG.push_back( ptr );
+        }
     }
 }
 
@@ -171,8 +180,8 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     SetFloatingPointEnvironment();
 
     std::vector<std::shared_ptr<Fixture>> fixtures;
-    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>> fixturesWithData;
-    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>> fixtureToWriteResultToSVG;
+    std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>> fixturesWithData;
+    std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>> fixtureToWriteResultToSVG;
 
     if (fixturesToRun.trivialFactorial)
     {
@@ -309,16 +318,24 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
         csvDocument.AddValues( fixtureWithData->GetResults() );
         csvDocument.BuildAndWriteToDisk();
     }
-    for( auto& fixture : fixtureToWriteResultToSVG )
+
+    try
     {
-        SVGDocument document;
-        std::vector<std::vector<cl_float>> results = fixture->GetResults();
-        for (const auto& line: results)
+        for( auto& fixture : fixtureToWriteResultToSVG )
         {
-            EXCEPTION_ASSERT( line.size() == 4 );
-            document.AddLine( line.at(0), line.at(1), line.at(2), line.at(3) );
+            SVGDocument document;
+            std::vector<std::vector<long double>> results = fixture->GetResults();
+            for (const auto& line: results)
+            {
+                EXCEPTION_ASSERT( line.size() == 4 );
+                document.AddLine( line.at(0), line.at(1), line.at(2), line.at(3) );
+            }
+            document.BuildAndWriteToDisk( fixture->Description() + ".svg" );
         }
-        document.BuildAndWriteToDisk( fixture->Description() + ".svg" );
+    }
+    catch(std::exception& e)
+    {
+        BOOST_LOG_TRIVIAL( error ) << "Caught exception when building SVG document: " << e.what();
     }
     BOOST_LOG_TRIVIAL( info ) << "Done";
 }

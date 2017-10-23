@@ -2,8 +2,9 @@
 
 #include <boost/format.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/log/trivial.hpp>
 
-const long double SVGDocument::multiplier_ = 500.0;
+const long double SVGDocument::multiplier_ = 1000.0;
 
 SVGDocument::SVGDocument()
 {
@@ -26,7 +27,15 @@ void SVGDocument::AddLine( long double x1, long double y1, long double x2, long 
 
 void SVGDocument::BuildAndWriteToDisk( const std::string& filename )
 {
-    boost::property_tree::write_xml( filename, tree_ );
+    try
+    {
+        boost::property_tree::write_xml( filename, tree_ );
+    }
+    catch(std::exception& e)
+    {
+        BOOST_LOG_TRIVIAL( error ) << "Caught exception when building SVG document " << filename << ": " << e.what();
+        throw;
+    }
 }
 
 std::string SVGDocument::FormatValue( long double v )

@@ -24,7 +24,7 @@ struct DampedWaveFixtureParameters
 #pragma pack(pop)
 
 template<typename T, typename I>
-class DampedWaveFixture : public FixtureThatReturnsData<T>
+class DampedWaveFixture : public FixtureThatReturnsData<long double>
 {
 public:
     DampedWaveFixture( const std::vector<DampedWaveFixtureParameters<T>>& params,
@@ -56,7 +56,7 @@ public:
         First column contains input value, second one - expected value (as calculated on a host CPU),
         third one - value calculated by OpenCL device
     */
-    virtual std::vector<std::vector<T>> GetResults() override;
+    virtual std::vector<std::vector<long double>> GetResults() override;
 
     virtual boost::optional<size_t> GetElementsCount() override
     {

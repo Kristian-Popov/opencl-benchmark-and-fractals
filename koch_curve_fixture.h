@@ -223,15 +223,21 @@ __kernel void KochCurve(int iterationsCount, __global REAL_T_4* output )
         static const char* openclTypeName;
         static const char* requiredExtension;
         static const char* descriptionTypeName;
+        static const int maxIterations;
     };
 
     const char* KochCurveFixtureConstants<cl_float>::openclTypeName = "float";
     const char* KochCurveFixtureConstants<cl_float>::requiredExtension = ""; // No extensions needed for single precision arithmetic
     const char* KochCurveFixtureConstants<cl_float>::descriptionTypeName = "float";
+    const int KochCurveFixtureConstants<cl_float>::maxIterations = 20; //TODO update value
 
     const char* KochCurveFixtureConstants<cl_double>::openclTypeName = "double";
     const char* KochCurveFixtureConstants<cl_double>::requiredExtension = "cl_khr_fp64";
     const char* KochCurveFixtureConstants<cl_double>::descriptionTypeName = "double";
+    const int KochCurveFixtureConstants<cl_double>::maxIterations = 20;
+
+    // TODO support for half precision could be added by creating an alternate data types,
+    // something like half2 and half4
 }
 
 /*
@@ -240,7 +246,12 @@ __kernel void KochCurve(int iterationsCount, __global REAL_T_4* output )
     T4 should be a vector of 4 elements of the same type,
 */
 template<typename T, typename T2, typename T4>
-class KochCurveFixture : public FixtureThatReturnsData<T>
+/* FixtureThatReturnsData is used to retrieve data. If we have something like
+FixtureThatReturnsData<T>, then we may have trouble writing multiple values into CSV/SVG/etc.
+Instead we are using long double that is well suiting to store floating point values
+since it can hold any half/float/double value without any precision loss
+*/
+class KochCurveFixture : public FixtureThatReturnsData<long double>
 {
 public:
     explicit KochCurveFixture( 
@@ -251,7 +262,7 @@ public:
     {
         static_assert( sizeof( T2 ) == 2 * sizeof( T ), "Given wrong second template argument to KochCurveFixture" );
         static_assert( sizeof( T4 ) == 4 * sizeof( T ), "Given wrong third template argument to KochCurveFixture" );
-        EXCEPTION_ASSERT( iterationsCount >= 1 );
+        EXCEPTION_ASSERT( iterationsCount >= 1 && iterationsCount <= KochCurveFixtureConstants<T>::maxIterations );
     }
 
     //virtual void Initialize() override;
@@ -360,13 +371,13 @@ public:
     }
     Every line is one line, where (x1, y1) is starting point and (x2, y2) is ending point
     */
-    virtual std::vector<std::vector<T>> GetResults() override
+    virtual std::vector<std::vector<long double>> GetResults() override
     {
-        std::vector<std::vector<T>> result;
+        std::vector<std::vector<long double>> result;
         std::transform( outputData_.cbegin(), outputData_.cend(), std::back_inserter(result),
             [] (const T4& data)
         {
-            return std::vector<T>( { data.x, data.y, data.z, data.w } );
+            return std::vector<long double>( { data.x, data.y, data.z, data.w } );
         } );
         return result;
     }
