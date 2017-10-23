@@ -25,7 +25,8 @@ private:
         std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixturesWithData );
     static void CreateKochCurveFixtures( 
         std::vector<std::shared_ptr<Fixture>>& fixtures,
-        std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixturesWithData );
+        std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixturesWithData,
+        std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixtureToWriteResultToSVG );
 
     static std::vector<boost::compute::device> FillDevicesList();
     static std::unordered_map<cl_device_id, boost::compute::context> FillContextsMap(

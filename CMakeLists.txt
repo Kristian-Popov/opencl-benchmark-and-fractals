@@ -15,6 +15,7 @@ add_executable (main
 	stdout_benchmark_time_writer.cpp
 	operation_step.cpp
 	fixture_runner.cpp
+	svg_document.cpp
 	damped_wave_fixture.inl
 	
 	trivial_factorial_fixture.h
@@ -33,6 +34,7 @@ add_executable (main
 	fixture_runner.h
 	sequential_values_iterator.h
 	random_values_iterator.h
+	svg_document.h
 	)
 
 # target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/nonius/include )

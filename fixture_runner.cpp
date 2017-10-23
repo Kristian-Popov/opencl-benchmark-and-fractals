@@ -16,6 +16,7 @@
 #include "sequential_values_iterator.h"
 #include "random_values_iterator.h"
 #include "half_precision_normal_distribution.h"
+#include "svg_document.h"
 
 #include "trivial_factorial_fixture.h"
 #include "damped_wave_fixture.h"
@@ -120,7 +121,8 @@ void FixtureRunner::CreateDampedWave2DFixtures(
 
 void FixtureRunner::CreateKochCurveFixtures( 
     std::vector<std::shared_ptr<Fixture>>& fixtures,
-    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixturesWithData )
+    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixturesWithData,
+    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>>& fixtureToWriteResultToSVG )
 {
     for (int i = 1; i < 10; ++i)
     {
@@ -128,6 +130,7 @@ void FixtureRunner::CreateKochCurveFixtures(
             cl_float2, cl_float4>>(i);
         fixtures.push_back( ptr );
         fixturesWithData.push_back( ptr );
+        fixtureToWriteResultToSVG.push_back( ptr );
     }
 }
 
@@ -169,6 +172,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
 
     std::vector<std::shared_ptr<Fixture>> fixtures;
     std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>> fixturesWithData;
+    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_float>>> fixtureToWriteResultToSVG;
 
     if (fixturesToRun.trivialFactorial)
     {
@@ -180,7 +184,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     }
     if (fixturesToRun.kochCurve)
     {
-        CreateKochCurveFixtures(fixtures, fixturesWithData );
+        CreateKochCurveFixtures(fixtures, fixturesWithData, fixtureToWriteResultToSVG );
     }
 
     BOOST_LOG_TRIVIAL( info ) << "We have " << fixtures.size() << " fixtures to run";
@@ -304,6 +308,17 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
         CSVDocument csvDocument( ( fixtureWithData->Description() + ".csv" ).c_str() );
         csvDocument.AddValues( fixtureWithData->GetResults() );
         csvDocument.BuildAndWriteToDisk();
+    }
+    for( auto& fixture : fixtureToWriteResultToSVG )
+    {
+        SVGDocument document;
+        std::vector<std::vector<cl_float>> results = fixture->GetResults();
+        for (const auto& line: results)
+        {
+            EXCEPTION_ASSERT( line.size() == 4 );
+            document.AddLine( line.at(0), line.at(1), line.at(2), line.at(3) );
+        }
+        document.BuildAndWriteToDisk( fixture->Description() + ".svg" );
     }
     BOOST_LOG_TRIVIAL( info ) << "Done";
 }

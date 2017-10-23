@@ -247,9 +247,8 @@ void DampedWaveFixture<T, I>::GenerateData()
 
     expectedOutputData_.reserve( dataSize_ );
 
-    using namespace std::placeholders;
     std::transform( inputData_.begin(), inputData_.end(), std::back_inserter( expectedOutputData_ ),
-        std::bind( &DampedWaveFixture<T, I>::CalcExpectedValue, this, _1 ) );
+        std::bind( &DampedWaveFixture<T, I>::CalcExpectedValue, this, std::placeholders::_1 ) );
 }
 /*
 template<typename T, typename I>
