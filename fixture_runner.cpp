@@ -324,11 +324,17 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
         for( auto& fixture : fixtureToWriteResultToSVG )
         {
             SVGDocument document;
+            long double multiplier = 1000.0;
+            document.SetSize( multiplier, 500 );
             std::vector<std::vector<long double>> results = fixture->GetResults();
             for (const auto& line: results)
             {
                 EXCEPTION_ASSERT( line.size() == 4 );
-                document.AddLine( line.at(0), line.at(1), line.at(2), line.at(3) );
+                document.AddLine( 
+                    line.at(0) * multiplier, 
+                    line.at(1) * multiplier, 
+                    line.at(2) * multiplier, 
+                    line.at(3) * multiplier );
             }
             document.BuildAndWriteToDisk( fixture->Description() + ".svg" );
         }

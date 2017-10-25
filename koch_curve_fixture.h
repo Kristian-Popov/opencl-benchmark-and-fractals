@@ -72,7 +72,7 @@ int GetStackSize(__private Stack* stack)
 */
 typedef struct LineMap
 {
-    Stack stacks[MAX_ITERATION_NUMBER+1];
+    Stack stacks[MAX_ITERATION_NUMBER];
 } LineMap;
 
 void InitializeLineMap(__private LineMap* map)
@@ -276,7 +276,7 @@ public:
             typeName % 
             (typeName+"2") %
             ( typeName + "4" ) %
-            GetLineCount() %
+            GetLineCount( iterationsCount_ ) %
             iterationsCount_
             ).str();
 
@@ -398,13 +398,14 @@ private:
 
     size_t GetLineCount()
     {
-        size_t a = 1;
-        return a << ( 2 * iterationsCount_ ); // Same as 4 ^ (iterationsCount)
+        return GetLineCount( iterationsCount_ );
     }
 
-    //void GenerateData();
-
-    //T CalcExpectedValue( T x ) const;
+    size_t GetLineCount( int i )
+    {
+        size_t a = 1;
+        return a << ( 2 * i ); // Same as 4 ^ i
+    }
 };
 
 //#include "damped_wave_fixture.inl"

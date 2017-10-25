@@ -4,14 +4,16 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/log/trivial.hpp>
 
-const long double SVGDocument::multiplier_ = 1000.0;
-
 SVGDocument::SVGDocument()
 {
     tree_.put( "svg.<xmlattr>.xmlns", "http://www.w3.org/2000/svg" );
     tree_.put( "svg.<xmlattr>.xmlns:xlink", "http://www.w3.org/1999/xlink" );
-    tree_.put( "svg.<xmlattr>.width", multiplier_ );
-    tree_.put( "svg.<xmlattr>.height", multiplier_ );
+}
+
+void SVGDocument::SetSize( long double width, long double height )
+{
+    tree_.put( "svg.<xmlattr>.width", width );
+    tree_.put( "svg.<xmlattr>.height", height );
 }
 
 void SVGDocument::AddLine( long double x1, long double y1, long double x2, long double y2 )
@@ -40,5 +42,5 @@ void SVGDocument::BuildAndWriteToDisk( const std::string& filename )
 
 std::string SVGDocument::FormatValue( long double v )
 {
-    return std::to_string( v * multiplier_ );
+    return std::to_string( v );
 }
