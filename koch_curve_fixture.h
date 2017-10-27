@@ -1,7 +1,7 @@
 #pragma once
 
 #include "fixture_that_returns_data.h"
-#include "boost/compute/compute.hpp"
+#include "boost/compute.hpp"
 
 namespace
 {

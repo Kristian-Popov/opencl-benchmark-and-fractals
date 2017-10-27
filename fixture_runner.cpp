@@ -24,7 +24,7 @@
 
 #include <boost/random/normal_distribution.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/compute/compute.hpp>
+#include <boost/compute.hpp>
 #include <boost/math/constants/constants.hpp>
 #include "half_precision_fp.h"
 

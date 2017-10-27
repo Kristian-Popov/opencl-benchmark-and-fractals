@@ -7,7 +7,7 @@
 #include "operation_step.h"
 
 #include <boost/optional.hpp>
-#include "boost/compute/compute.hpp"
+#include "boost/compute.hpp"
 
 class Fixture
 {

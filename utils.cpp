@@ -117,16 +117,32 @@ namespace Utils
         const std::string& buildOptions,
         const std::vector<std::string>& extensions)
     {
-        boost::compute::program program;
         std::string allSource;
         for (const std::string& extension: extensions)
         {
             allSource += ( boost::format( "#pragma OPENCL EXTENSION %1% : enable\n" ) % extension ).str();
         }
         allSource += source;
+
+        // Taken from boost::compute::program::create_with_source() so we have build log
+        // left in case of errors
+        const char *source_string = allSource.c_str();
+
+        cl_int error = 0;
+        cl_program program_ = clCreateProgramWithSource( context,
+            cl_uint( 1 ),
+            &source_string,
+            0,
+            &error );
+        boost::compute::program program;
         try
         {
-            program = boost::compute::program::build_with_source( allSource, context, buildOptions );
+            if (!program_)
+            {
+                throw boost::compute::opencl_error( error );
+            }
+            program = boost::compute::program( program_ );
+            program.build( buildOptions );
             return boost::compute::kernel( program, name );
         }
         catch( boost::compute::opencl_error& error )
