@@ -124,7 +124,7 @@ namespace Utils
     boost::compute::kernel BuildKernel( const std::string& name,
         boost::compute::context& context,
         const std::string& source,
-        const std::string& buildOptions,
+        const std::string& buildOptions = std::string(),
         const std::vector<std::string>& extensions = std::vector<std::string>() );
 
     template <typename D>
