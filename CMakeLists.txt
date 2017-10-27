@@ -9,11 +9,9 @@ link_directories(${OpenCL_LIBRARY} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost/sta
 
 add_executable (main 
 	main.cpp 
-	utils.cpp
 	html_document.cpp
 	html_benchmark_time_writer.cpp
 	stdout_benchmark_time_writer.cpp
-	operation_step.cpp
 	fixture_runner.cpp
 	svg_document.cpp
 	damped_wave_fixture.inl
@@ -22,10 +20,8 @@ add_executable (main
 	damped_wave_fixture.h
 	koch_curve_fixture.h
 
-	utils.h
 	fixture.h
 	fixture_that_returns_data.h
-	operation_step.h
 	html_document.h
 	html_benchmark_time_writer.h
 	csv_document.h
@@ -36,10 +32,12 @@ add_executable (main
 	random_values_iterator.h
 	svg_document.h
 	)
+	
+add_subdirectory(utils)
 
 # target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/nonius/include )
-target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost/ )
-target_link_libraries (main ${OpenCL_LIBRARY})
+target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost/ utils)
+target_link_libraries (main ${OpenCL_LIBRARY} utils)
 
 # Couldn't get this working on Windows
 #SET( BOOST_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost )

@@ -1,7 +1,5 @@
 #include "utils.h"
 
-#include "fixture.h"
-
 #include <type_traits>
 
 #include <boost/log/trivial.hpp>

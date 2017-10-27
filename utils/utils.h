@@ -17,8 +17,6 @@
 #include "boost/compute.hpp"
 #include "half_precision_fp.h"
 
-class Fixture;
-
 namespace Utils
 {
     std::string ReadFile( const std::string& fileName );
