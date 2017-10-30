@@ -1,0 +1,121 @@
+#include "catch/single_include/catch.hpp"
+
+#include <vector>
+
+#include "utils.h"
+
+namespace
+{
+	// TODO use the same source for unit tests and main application
+	const char* source = R"(
+int Pow2ForInt(int x)
+{
+	return (x<0) ? 0 : (1<<x);
+}
+
+// TODO for invalid values report error in some way or return 0?
+int CalcLinesNumberForIteration(int iterationCount)
+{
+    return Pow2ForInt(2*iterationCount);
+}
+
+__kernel void CalcLinesNumberForIterationKernel(__global int* input, __global int* output)
+{
+	size_t id = get_global_id(0);
+	output[id] = CalcLinesNumberForIteration(input[id]);
+}
+
+// TODO for invalid values report error in some way or return 0?
+int CalcGlobalId(int2 ids)
+{
+	int result = ids.y;
+	// TODO this function can be optimized by caching these values
+	for (int iterationNumber = 0; iterationNumber < ids.x; ++iterationNumber)
+	{
+		result += CalcLinesNumberForIteration(iterationNumber);
+	}
+	return result;
+}
+
+__kernel void CalcGlobalIdKernel(__global int2* input, __global int* output)
+{
+	size_t id = get_global_id(0);
+	output[id] = CalcGlobalId(input[id]);
+}
+)";
+}
+
+TEST_CASE( "CalcLinesNumberForIteration works correctly", "[Koch curve tests]" ) {
+    std::vector<int32_t> inputValues = { -1000, -1, 0, 1, 2, 3 };
+    std::vector<int32_t> expectedOutput = {0, 0, 1, 4, 16, 64 };
+
+    REQUIRE( inputValues.size() == expectedOutput.size() );
+    // get default device and setup context
+    boost::compute::device device = boost::compute::system::default_device();
+    boost::compute::context context( device );
+    boost::compute::command_queue queue( context, device );
+
+    // create vector on device
+    boost::compute::vector<int> input_device_vector( inputValues.size(), context );
+    boost::compute::vector<int> output_device_vector( inputValues.size(), context );
+
+    // copy from host to device
+    boost::compute::copy(
+        inputValues.cbegin(), inputValues.cend(), input_device_vector.begin(), queue
+    );
+
+    boost::compute::kernel kernel = Utils::BuildKernel( "CalcLinesNumberForIterationKernel", 
+        context,
+        source );
+    kernel.set_arg( 0, input_device_vector );
+    kernel.set_arg( 1, output_device_vector );
+    queue.enqueue_1d_range_kernel( kernel, 0, inputValues.size(), 0 );
+
+    // create vector on host
+    std::vector<int> results( inputValues.size() );
+
+    // copy data back to host
+    boost::compute::copy(
+        output_device_vector.begin(), output_device_vector.end(), results.begin(), queue
+    );
+
+    REQUIRE( expectedOutput == results );
+}
+
+TEST_CASE( "CalcGlobalId works correctly", "[Koch curve tests]" ) {
+    std::vector<cl_int2> inputValues = { {0, 0}, {1, 0}, {1, 1}, {1, 2}, {1, 3}, {2, 0}, {2, 7},
+    {2, 15}, {3, 0}};
+    std::vector<int32_t> expectedOutput = {0, 1, 2, 3, 4, 5, 12, 20, 21};
+
+    REQUIRE( inputValues.size() == expectedOutput.size() );
+    // get default device and setup context
+    boost::compute::device device = boost::compute::system::default_device();
+    boost::compute::context context( device );
+    boost::compute::command_queue queue( context, device );
+
+    // create vector on device
+    boost::compute::vector<cl_int2> input_device_vector( inputValues.size(), context );
+    boost::compute::vector<int> output_device_vector( inputValues.size(), context );
+
+    // copy from host to device
+    boost::compute::copy(
+        inputValues.cbegin(), inputValues.cend(), input_device_vector.begin(), queue
+    );
+
+    boost::compute::kernel kernel = Utils::BuildKernel( "CalcGlobalIdKernel",
+        context,
+        source );
+    kernel.set_arg( 0, input_device_vector );
+    kernel.set_arg( 1, output_device_vector );
+    queue.enqueue_1d_range_kernel( kernel, 0, inputValues.size(), 0 );
+
+    // create vector on host
+    std::vector<int> results( inputValues.size() );
+
+    // copy data back to host
+    boost::compute::copy(
+        output_device_vector.begin(), output_device_vector.end(), results.begin(), queue
+    );
+
+    REQUIRE( expectedOutput == results );
+}

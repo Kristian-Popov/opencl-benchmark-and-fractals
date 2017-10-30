@@ -1,4 +1,4 @@
-#include "unit_tests_include.h"
+#include "catch/single_include/catch.hpp"
 
 #include <vector>
 
@@ -21,7 +21,7 @@ __kernel void Pow2ForIntKernel(__global int* input, __global int* output)
 )";
 }
 
-TEST_CASE( "Pow2ForInt works correctly", "[Pow2ForInt]" ) {
+TEST_CASE( "Pow2ForInt works correctly", "[OpenCL math]" ) {
     std::vector<int32_t> inputValues = { -1000, -1, 0, 1, 2, 3, 10 };
     std::vector<int32_t> expectedOutput = {0, 0, 1, 2, 4, 8, 1024 };
 
