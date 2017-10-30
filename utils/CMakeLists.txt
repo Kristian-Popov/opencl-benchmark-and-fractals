@@ -19,5 +19,5 @@ add_library( utils
 target_include_directories (utils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../contrib/boost/ )
 target_link_libraries (utils ${OpenCL_LIBRARY})
 
-set_property(TARGET main PROPERTY CXX_STANDARD 14)
-set_property(TARGET main PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET utils PROPERTY CXX_STANDARD 14)
+set_property(TARGET utils PROPERTY CXX_STANDARD_REQUIRED ON)

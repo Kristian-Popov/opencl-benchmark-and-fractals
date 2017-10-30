@@ -24,11 +24,11 @@ target_link_libraries (unit_tests ${OpenCL_LIBRARY} utils)
 #add_definitions(-D__CL_ENABLE_EXCEPTIONS)
 
 if (UNIX)
-    target_link_libraries (main pthread)
+    target_link_libraries (unit_tests pthread)
 endif (UNIX)
 
-set_property(TARGET main PROPERTY CXX_STANDARD 14)
-set_property(TARGET main PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET unit_tests PROPERTY CXX_STANDARD 14)
+set_property(TARGET unit_tests PROPERTY CXX_STANDARD_REQUIRED ON)
 
 # Many compilers use implicit promotion of single and double precision floating point values to extended precision ones by default
 # This may cause issues with data verification since OpenCL doesn't perform this promotion implicitly
