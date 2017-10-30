@@ -2,17 +2,13 @@
 
 #include <vector>
 
+#include "program_source_repository.h"
 #include "utils.h"
 
 namespace
 {
 	// TODO use the same source for unit tests and main application
-	const char* Pow2ForIntSource = R"(
-int Pow2ForInt(int x)
-{
-	return (x<0) ? 0 : (1<<x);
-}
-
+	const char* source = R"(
 __kernel void Pow2ForIntKernel(__global int* input, __global int* output)
 {
 	size_t id = get_global_id(0);
@@ -42,7 +38,7 @@ TEST_CASE( "Pow2ForInt works correctly", "[OpenCL math]" ) {
 
     boost::compute::kernel kernel = Utils::BuildKernel( "Pow2ForIntKernel", 
         context,
-        Pow2ForIntSource );
+        Utils::CombineStrings( {ProgramSourceRepository::GetOpenCLMathSource(), source } ) );
     kernel.set_arg( 0, input_device_vector );
     kernel.set_arg( 1, output_device_vector );
     queue.enqueue_1d_range_kernel( kernel, 0, inputValues.size(), 0 );

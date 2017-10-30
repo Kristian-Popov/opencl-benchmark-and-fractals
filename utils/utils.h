@@ -22,10 +22,10 @@ namespace Utils
     std::string ReadFile( const std::string& fileName );
 
     template <typename T>
-    std::string VectorToString( const std::vector<T>& v )
+    std::string VectorToString( const std::vector<T>& v, const std::string& delimiter = ", " )
     {
         std::stringstream result;
-        std::copy( v.begin(), v.end(), std::ostream_iterator<T>( result, ", " ) );
+        std::copy( v.begin(), v.end(), std::ostream_iterator<T>( result, delimiter.c_str() ) );
         return result.str();
     }
 
@@ -138,6 +138,8 @@ namespace Utils
         }
         return result;
     }
+
+    std::string CombineStrings( const std::vector<std::string>& strings, const std::string & delimiter = "\n" );
 }
 
 #define EXCEPTION_ASSERT(expr) { if(!(expr)) { throw std::logic_error("Assert \"" #expr "\" failed"); } }

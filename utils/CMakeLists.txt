@@ -10,10 +10,12 @@ find_package(OpenCL REQUIRED)
 add_library( utils
 	utils.cpp
 	operation_step.cpp
+	program_source_repository.cpp
 	
 	utils.h
 	operation_step.h
 	half_precision_fp.h
+	program_source_repository.h
 )
 
 target_include_directories (utils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../contrib/boost/ )

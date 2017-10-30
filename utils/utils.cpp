@@ -165,4 +165,9 @@ namespace Utils
             throw;
         }
     }
+
+    std::string CombineStrings( const std::vector<std::string>& strings, const std::string & delimiter )
+    {
+        return VectorToString( strings, delimiter );
+    }
 }
