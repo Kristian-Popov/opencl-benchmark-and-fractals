@@ -25,6 +25,7 @@ int main( int argc, char** argv )
             "By default this option is on if results are written to any output except standard output stream" )
         ( "no-trivial-factorial", "do not run a trivial factorial fixture. " )
         ( "no-damped-wave2d", "do not run a damped wave in 2D fixture. " )
+        ( "no-koch-curve", "do not run Koch curve fixture. " )
         ;
 
     // TODO something is wrong here. For command line arguments line "--html --stdout" only "html" part is present in vm after parsing
@@ -80,8 +81,23 @@ int main( int argc, char** argv )
     FixtureRunner::FixturesToRun fixturesToRun;
     fixturesToRun.trivialFactorial = vm.count( "no-trivial-factorial" ) == 0;
     fixturesToRun.dampedWave2D = vm.count( "no-damped-wave2d" ) == 0;
-    FixtureRunner::Run( std::move( timeWriter ), fixturesToRun );
+    fixturesToRun.kochCurve = vm.count( "no-koch-curve" ) == 0;
 
-    return 0;
+    try
+    {
+        FixtureRunner::Run( std::move( timeWriter ), fixturesToRun );
+    }
+    catch(std::exception& e)
+    {
+        BOOST_LOG_TRIVIAL( fatal ) << "Caught fatal exception: " << e.what();
+        return EXIT_FAILURE;
+    }
+    catch(...)
+    {
+        BOOST_LOG_TRIVIAL( fatal ) << "Caught fatal error";
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
 }
 

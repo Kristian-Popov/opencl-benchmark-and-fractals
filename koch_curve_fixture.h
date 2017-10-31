@@ -269,6 +269,7 @@ public:
 
     virtual void InitializeForContext( boost::compute::context& context ) override
     {
+        // TODO all warnings are disabled by -w, remove this option everywhere
         std::string typeName = KochCurveFixtureConstants<T>::openclTypeName;
         std::string compilerOptions = ( boost::format(
             "%1% -DREAL_T=%2% -DREAL_T_2=%3% -DREAL_T_4=%4% -DSTACK_SIZE=%5% -DMAX_ITERATION_NUMBER=%6%") %
@@ -405,6 +406,16 @@ private:
     {
         size_t a = 1;
         return a << ( 2 * i ); // Same as 4 ^ i
+    }
+
+    size_t CalcTotalLineCount( int iterCount )
+    {
+        size_t result = 0;
+        for (int i = 0; i <= iterCount; ++i)
+        {
+            result += GetLineCount( i );
+        }
+        return result;
     }
 };
 

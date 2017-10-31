@@ -16,6 +16,7 @@ add_library( utils
 	operation_step.h
 	half_precision_fp.h
 	program_source_repository.h
+	koch_curve_utils.h
 )
 
 target_include_directories (utils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../contrib/boost/ )
