@@ -132,29 +132,46 @@ TEST_CASE( "Line structure is aligned correctly for single precision values", "[
     inputValue.coords = { 10.0f, 20.0f, 30.0f, 40.0f };
     inputValue.ids = { 100, 100 };
 
-    // get default device and setup context
-    boost::compute::device device = boost::compute::system::default_device();
-    boost::compute::context context( device );
-    boost::compute::command_queue queue( context, device );
+    REQUIRE( expectedOutput.at(0) == sizeof( inputValue ) );
+    REQUIRE( expectedOutput.at( 1 ) == sizeof( inputValue.coords ) );
+    REQUIRE( expectedOutput.at( 2 ) == sizeof( inputValue.ids ) );
 
-    // create vector on device
-    boost::compute::vector<uint64_t> output_device_vector( expectedOutput.size(), context );
+    uintptr_t ptr = (uintptr_t) ( &inputValue );
+    uintptr_t coordsPtr = (uintptr_t) ( &( inputValue.coords ) );
+    uintptr_t idsPtr = (uintptr_t) ( &( inputValue.ids ) );
 
-    boost::compute::kernel kernel = Utils::BuildKernel( "VerifyLineStructKernel",
-        context,
-        Utils::CombineStrings( {ProgramSourceRepository::GetKochCurveSource(), source} ),
-        "-DREAL_T_4=float4 -Werror" );
-    kernel.set_arg( 0, sizeof( inputValue ), &inputValue );
-    kernel.set_arg( 1, output_device_vector );
-    queue.enqueue_task( kernel );
+    REQUIRE( expectedOutput.at( 3 ) == coordsPtr - ptr );
+    REQUIRE( expectedOutput.at( 4 ) == idsPtr - ptr );
 
-    // create vector on host
-    std::vector<uint64_t> results( expectedOutput.size() );
+    std::vector<boost::compute::platform> platforms = boost::compute::system::platforms();
+    for( boost::compute::platform& platform : platforms )
+    {
+        for ( boost::compute::device& device: platform.devices() )
+        {
+            INFO( "Running test case for platform " << platform.name() << " and device " << device.name() );
+            boost::compute::context context( device );
+            boost::compute::command_queue queue( context, device );
 
-    // copy data back to host
-    boost::compute::copy(
-        output_device_vector.begin(), output_device_vector.end(), results.begin(), queue
-    );
+            // create vector on device
+            boost::compute::vector<uint64_t> output_device_vector( expectedOutput.size(), context );
 
-    REQUIRE( expectedOutput == results );
+            boost::compute::kernel kernel = Utils::BuildKernel( "VerifyLineStructKernel",
+                context,
+                Utils::CombineStrings( {ProgramSourceRepository::GetKochCurveSource(), source} ),
+                "-DREAL_T_4=float4 -Werror" );
+            kernel.set_arg( 0, sizeof( inputValue ), &inputValue );
+            kernel.set_arg( 1, output_device_vector );
+            queue.enqueue_task( kernel );
+
+            // create vector on host
+            std::vector<uint64_t> results( expectedOutput.size() );
+
+            // copy data back to host
+            boost::compute::copy(
+                output_device_vector.begin(), output_device_vector.end(), results.begin(), queue
+            );
+
+            REQUIRE( expectedOutput == results );
+        }
+    }
 }

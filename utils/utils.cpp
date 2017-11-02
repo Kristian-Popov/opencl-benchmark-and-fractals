@@ -157,8 +157,9 @@ namespace Utils
             if( error.error_code() == CL_BUILD_PROGRAM_FAILURE )
             {
                 //TODO something weird happens with std::cerr here, using cout for now
-                BOOST_LOG_TRIVIAL( error ) << "Kernel " << name << " could not be built. Kernel source: " << std::endl <<
-                    allSource << std::endl <<
+                BOOST_LOG_TRIVIAL( error ) << "Kernel " << name << " failed to build on device " <<
+                    context.get_device().name() << std::endl <<
+                    //"Kernel source: " << std::endl << allSource << std::endl <<
                     "Build options: " << buildOptions << std::endl <<
                     "Build log: " << buildLog << std::endl;
             }

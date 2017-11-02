@@ -1,6 +1,9 @@
 #pragma once
 
 #include "fixture_that_returns_data.h"
+#include "program_source_repository.h"
+#include "koch_curve_utils.h"
+
 #include "boost/compute.hpp"
 
 namespace
@@ -12,84 +15,7 @@ namespace
 Requires a definition:
 - floating point type REAL_T (float, or, if device supports, half and double)
 - REAL_T_2, REAL_T_4 (corresponding vector types with 2 and 4 elements respectively);
-- STACK_SIZE is a maximum size of a stack;
-- MAX_ITERATION_NUMBER is a maximum number of iterations
 */
-
-/*
-	Stack of lines
-	Please keep in mind that it has no synchronization, so it's not safe to use
-	from different threads.
-	Data are allocated on private memory, so other processing elements don't have
-	access to these data
-*/
-typedef struct Stack
-{
-	__private REAL_T_4 items[STACK_SIZE];
-	int top;
-} Stack;
-
-void InitializeStack(__private Stack* stack)
-{
-    stack->top = 0;
-}
-
-void PushToStack(__private Stack* stack, REAL_T_4 value)
-{
-	// TODO does it hurt performance to check for over/underflows?
-	if (STACK_SIZE == stack->top)
-	{
-	//TODO report error
-	}
-	else
-	{
-		stack->items[stack->top] = value;
-		++(stack->top);
-	}
-}
-
-REAL_T_4 PopFromStack(__private Stack* stack)
-{
-	// TODO does it hurt performance to check for over/underflows?
-	if (0 == stack->top)
-	{
-	//TODO report error
-	}
-	else
-	{
-		--(stack->top);
-		return stack->items[stack->top];
-	}
-}
-
-int GetStackSize(__private Stack* stack)
-{
-	return stack->top;
-}
-//////////////////////////////////////////////////
-/*
-    Stores a list of line stacks, using an iteration number as a key
-*/
-typedef struct LineMap
-{
-    Stack stacks[MAX_ITERATION_NUMBER];
-} LineMap;
-
-void InitializeLineMap(__private LineMap* map)
-{
-    for (int i = 0; i < MAX_ITERATION_NUMBER; ++i)
-    {
-        InitializeStack(&(map->stacks[i]));
-    }
-}
-
-__private Stack* GetStack(__private LineMap* map, int iterationNumber)
-{
-    //return &(map->stacks[iterationNumber]);
-    return map->stacks + iterationNumber; 
-}
-
-////////////////////////////////////////////////////
 
 REAL_T_4 MergePointsVectorsToLineVector(REAL_T_2 a, REAL_T_2 b)
 {
@@ -109,52 +35,6 @@ REAL_T_2 MultiplyMatrix2x2AndVector(REAL_T_4 m, REAL_T_2 v)
 	return (REAL_T_2)(m.x*v.x + m.y*v.y, m.z*v.x + m.w*v.y);
 }
 
-void ProcessLineRecursively(__private LineMap* map, __private REAL_T_4* transformationMatrices, 
-    int iterationIndex)
-{
-	REAL_T_4 t = PopFromStack(GetStack(map, iterationIndex));
-	REAL_T_2 start = t.lo;
-	REAL_T_2 end = t.hi;
-	REAL_T_2 vector = end - start;
-	REAL_T_2 newStart = start;
-	for (int i = 0; i < 4; ++i)
-	{
-		REAL_T_2 newEnd = MultiplyMatrix2x2AndVector(transformationMatrices[i], vector) + newStart;
-		PushToStack(GetStack(map, iterationIndex+1), MergePointsVectorsToLineVector(newStart, newEnd));
-		newStart = newEnd;
-	}
-}
-
-void ProcessAllRemainingLines(__private LineMap* map, __private REAL_T_4* transformationMatrices, int iterationIndex, 
-    __global REAL_T_4* output)
-{
-  __private Stack* stack = GetStack(map, iterationIndex);
-	int opNeeded = GetStackSize(stack);
-	for (int operationIndex = 0; operationIndex < opNeeded; ++operationIndex)
-	{
-		REAL_T_4 t = PopFromStack(stack);
-		REAL_T_2 start = t.lo;
-		REAL_T_2 end = t.hi;
-		REAL_T_2 vector = end - start;
-		REAL_T_2 newStart = start;
-		for (int i = 0; i < 4; ++i)
-		{
-			REAL_T_2 newEnd = MultiplyMatrix2x2AndVector(transformationMatrices[i], vector) + newStart;
-			output[operationIndex*4 + i] = MergePointsVectorsToLineVector(newStart, newEnd);
-			newStart = newEnd;
-		}
-	}
-}
-
-/*
-	Calculates power of 2 of an integer argument.
-	Returns 0 for arguments that are smaller than 0
-*/
-int Pow2ForInt(int x)
-{
-	return (x<0) ? 0 : (1<<x);
-}
-
 /*
 	Fill an array with 4 transformation matrices.
 */
@@ -166,54 +46,80 @@ void BuildTransformationMatrices(__private REAL_T_4* transformationMatrices)
 	transformationMatrices[3] = (REAL_T_4)(1.0/3.0, 0, 0, 1.0/3.0);
 }
 
-int CalcLinesNumberForIteration(int iterationCount)
+void ProcessLine(Line parentLine, __private REAL_T_4* transformationMatrices,
+	__global Line* storage)
 {
-    return Pow2ForInt(2*iterationCount);
+	REAL_T_2 start = parentLine.coords.lo;
+	REAL_T_2 end = parentLine.coords.hi;
+	REAL_T_2 vector = end - start;
+	REAL_T_2 newStart = start;
+	for (int i = 0; i < 4; ++i)
+	{
+		REAL_T_2 newEnd = MultiplyMatrix2x2AndVector(transformationMatrices[i], vector) + newStart;
+		// New iteration number is one more than parent's one,
+		// identifier is calculated using a formula based on a parent's identifier
+		int2 ids = (int2)(parentLine.ids.x + 1, 4*parentLine.ids.y + i);
+        size_t currentId = CalcGlobalId(ids);
+        REAL_T_4 coords = MergePointsVectorsToLineVector(newStart, newEnd);
+
+        //printf("Adding child line at index %d\n", currentId);
+        //printf("Coords %v4hlf \n", coords);
+        //printf("First value %d, second value %v4hlf \n", 100, coords);
+
+		storage[currentId] = (Line){ .coords = coords, .ids = ids };
+		newStart = newEnd;
+	}
 }
 
-void BuildKochCurve(int iterationsCount, __global REAL_T_4* output)
+void KochCurveImplementation(int startIteration, int stopAtIteration, __global Line* inout)
 {
-	LineMap map;
-  InitializeLineMap(&map);
-	PushToStack( GetStack(&map, 0), (REAL_T_4)(0, 0, 1, 0) );
-	
 	REAL_T_4 transformationMatrices[4];
 	BuildTransformationMatrices(transformationMatrices);
 	// Calculate total number of intermediate operations needed
-	// using (interationsCount-1)
-	// All data from intermediate operations will go to stack,
-	// but data from finishing operations will go directly to output buffer
-	int iterationNumber = 0;
-  for (; iterationNumber < iterationsCount-1; ++iterationNumber)
-  {
-      int lineCount = CalcLinesNumberForIteration(iterationNumber);
-      for (int i = 0; i < lineCount; ++i)
-      {
-          ProcessLineRecursively(&map, transformationMatrices, iterationNumber);
-      }
-  }
-	ProcessAllRemainingLines(&map, transformationMatrices, iterationNumber, output);
+	for (int iterationNumber = startIteration; iterationNumber < stopAtIteration; ++iterationNumber)
+	{
+		int lineCount = CalcLinesNumberForIteration(iterationNumber);
+		for (int i = 0; i < lineCount; ++i)
+		{
+            size_t parentLineId = CalcGlobalId((int2)(iterationNumber, i));
+
+            //printf("Processing parent line at index %d\n", parentLineId);
+
+			__global Line* parentLine = inout + parentLineId;
+			ProcessLine(*parentLine, transformationMatrices, inout);
+		}
+	}
 }
 
 /*
-	Builds a Koch's curve. Start point is (0; 0), ends at (1; 0).
+	Build Koch's curve. This kernel iterates on all lines on iteration level "startIteration"
+	and iterate all levels up and including "stopAtIteration".
+	Input data should be stored in "inout" buffer before starting this kernel.
+	So if you want to start iteration ("startIteration" is zero), "inout" should contain
+	exactly one value.
+	The following convention is encouraged to simplify calculations:
+		- start point is (0; 0), ends at (1; 0).
+	
+	Unsafe variant - few first iterations read and write data
+	to the beginning of "output" without synchronization
+	
 	Output format is the following:
-	startPoint.x                   startPoint.y
-	endPoint.x(accessible via z)   endPoint.y(accessible via w)
+	Line.coords has coordinates for a line stored as following:
+		startPoint.x                   startPoint.y
+		endPoint.x(accessible via z)   endPoint.y(accessible via w)
+	Line.ids contain identificators of a line stored in the following way:
+		ids.x contain iteration number, ids.y contain line number
 */
-__kernel void KochCurve(int iterationsCount, __global REAL_T_4* output )
+__kernel void KochCurveKernel(int startIteration, int stopAtIteration, __global Line* inout )
 {
-  if (iterationsCount > MAX_ITERATION_NUMBER || iterationsCount < 1)
+/*
+  if (get_global_size(0) > 1)
   {
       // TODO report error
       return;
   }
-  if (STACK_SIZE < CalcLinesNumberForIteration(MAX_ITERATION_NUMBER))
-  {
-      // TODO report error
-      return;
-  }
-	BuildKochCurve(iterationsCount, output);
+*/
+  KochCurveImplementation(startIteration, stopAtIteration, inout);
 }
 )";
 
@@ -272,17 +178,18 @@ public:
         // TODO all warnings are disabled by -w, remove this option everywhere
         std::string typeName = KochCurveFixtureConstants<T>::openclTypeName;
         std::string compilerOptions = ( boost::format(
-            "%1% -DREAL_T=%2% -DREAL_T_2=%3% -DREAL_T_4=%4% -DSTACK_SIZE=%5% -DMAX_ITERATION_NUMBER=%6%") %
+            "%1% -DREAL_T=%2% -DREAL_T_2=%3% -DREAL_T_4=%4%") %
             baseCompilerOptions % 
             typeName % 
             (typeName+"2") %
-            ( typeName + "4" ) %
-            GetLineCount( iterationsCount_ ) %
-            iterationsCount_
+            ( typeName + "4" )
             ).str();
 
+        std::string source = Utils::CombineStrings( 
+            { ProgramSourceRepository::GetKochCurveSource(), kochCurveProgramCode } );
+
         kernels_.insert( {context.get(),
-            Utils::BuildKernel( "KochCurve", context, kochCurveProgramCode, compilerOptions,
+            Utils::BuildKernel( "KochCurveKernel", context, source, compilerOptions,
                 GetRequiredExtensions() )} );
     }
 
@@ -308,6 +215,7 @@ public:
 
     std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) override
     {
+        typedef KochCurveUtils::Line<T4> Line;
         EXCEPTION_ASSERT( context.get_devices().size() == 1 );
         outputData_.clear();
         // create command queue with profiling enabled
@@ -317,31 +225,45 @@ public:
 
         std::unordered_multimap<OperationStep, boost::compute::event> events;
 
-        boost::compute::vector<T4> output_device_vector( GetLineCount(), context );
+        boost::compute::vector<KochCurveUtils::Line<T4>> inout_device_vector( 
+            CalcTotalLineCount(), context );
+        inout_device_vector.at(0) = KochCurveUtils::Line<T4>( {0, 0, 1, 0}, {0, 0} );
 
         boost::compute::kernel& kernel = kernels_.at( context.get() );
 
-        kernel.set_arg( 0, iterationsCount_ );
-        kernel.set_arg( 1, output_device_vector.get_buffer() );
+        const unsigned minThreadsCount = 4;
+        // TODO processingElementsCount should be a compute_units() multiplied with
+        // a CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE
+        unsigned processingElementsCount = context.get_device().compute_units();
+        //unsigned threadsCount = std::max( minThreadsCount, processingElementsCount );
+        unsigned threadsCount = 1u;
 
-        unsigned computeUnitsCount = context.get_device().compute_units();
-        size_t localWorkGroupSize = 0;
+        kernel.set_arg( 0, 0 );
+        kernel.set_arg( 1, iterationsCount_ );
+        kernel.set_arg( 2, inout_device_vector );
+
         events.insert( {OperationStep::Calculate,
-            queue.enqueue_1d_range_kernel( kernel, 0, 1, localWorkGroupSize )
+            queue.enqueue_1d_range_kernel( kernel, 0, threadsCount, 0 )
         } );
 
         boost::compute::event event;
         void* outputDataPtr = queue.enqueue_map_buffer_async(
-            output_device_vector.get_buffer(), CL_MAP_WRITE, 0,
-            output_device_vector.size()*sizeof(T4),
+            inout_device_vector.get_buffer(), CL_MAP_WRITE, 0,
+            inout_device_vector.size()*sizeof(Line),
             event );
         events.insert( {OperationStep::MapOutputData, event} );
         event.wait();
 
-        const T4* outputDataPtrCasted = reinterpret_cast<const T4*>( outputDataPtr );
-        std::copy_n( outputDataPtrCasted, GetLineCount(), std::back_inserter(outputData_) );
+        const Line* outputDataPtrCasted = reinterpret_cast<const Line*>( outputDataPtr );
+        const Line* endIterator = outputDataPtrCasted + inout_device_vector.size();
+        std::transform( outputDataPtrCasted, endIterator,
+            std::back_inserter(outputData_),
+            [] (const Line& l) -> T4
+        {
+            return l.coords;
+        } );
 
-        boost::compute::event lastEvent = queue.enqueue_unmap_buffer( output_device_vector.get_buffer(), outputDataPtr );
+        boost::compute::event lastEvent = queue.enqueue_unmap_buffer( inout_device_vector.get_buffer(), outputDataPtr );
         events.insert( {OperationStep::UnmapOutputData, lastEvent } );
         lastEvent.wait();
 
@@ -350,7 +272,7 @@ public:
 
     std::string Description() override
     {
-        std::string result = ( boost::format( "Koch curve, %1%, up to %2% iterations (%3% lines to total)" ) %
+        std::string result = ( boost::format( "Koch curve, %1%, up to %2% iterations (%3% lines)" ) %
             KochCurveFixtureConstants<T>::descriptionTypeName %
             iterationsCount_ %
             GetLineCount()
@@ -416,6 +338,11 @@ private:
             result += GetLineCount( i );
         }
         return result;
+    }
+
+    size_t CalcTotalLineCount()
+    {
+        return CalcTotalLineCount( iterationsCount_ );
     }
 };
 

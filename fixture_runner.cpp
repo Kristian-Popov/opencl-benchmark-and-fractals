@@ -240,7 +240,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
                         if (!std::includes( haveExtensions.begin(), haveExtensions.end(), 
                             requiredExtensions.begin(), requiredExtensions.end() ) )
                         {
-                            perDeviceResults.failureReason = "Required extension is not available";
+                            perDeviceResults.failureReason = "Required extension(s) are not available";
                             continue;
                         }
                     }
@@ -257,7 +257,8 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
                         return acc + r.second;
                     } );
                     int iterationCount = static_cast<int>( std::ceil( targetFixtureExecutionTime / totalOperationDuration ) );
-                    iterationCount = std::max( iterationCount, minIterations );
+                    //iterationCount = std::max( iterationCount, minIterations );
+                    iterationCount = 1;
                     EXCEPTION_ASSERT( iterationCount >= 1 );
 
                     fixture->VerifyResults();
