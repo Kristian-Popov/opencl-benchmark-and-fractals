@@ -75,7 +75,7 @@ void ProcessLine(Line parentLine, __private REAL_T_4* transformationMatrices,
     Process all lines on iteration level "startIteration",
     process all levels up to iteration level "stopAtIteration"
 */
-void KochCurveImplementation(int startIteration, int stopAtIteration, __global Line* inout)
+void KochCurveCalc(int startIteration, int stopAtIteration, __global Line* inout)
 {
 	REAL_T_4 transformationMatrices[4];
 	BuildTransformationMatrices(transformationMatrices);
@@ -98,30 +98,30 @@ void KochCurveImplementation(int startIteration, int stopAtIteration, __global L
 /*
 	Build Koch's curve. This kernel iterates on all lines on iteration level "startIteration"
 	and iterate all levels up and including "stopAtIteration".
-	Input data should be stored in "inout" buffer before starting this kernel.
-	So if you want to start iteration ("startIteration" is zero), "inout" should contain
-	exactly one value.
-	The following convention is encouraged to simplify calculations:
-		- start point is (0; 0), ends at (1; 0).
+	
+    Kernel allows to set where curves start and stop plus amount of curves.
+    Every curve is just a general Koch curve, but combining them you can build
+    different figures like Koch snowflakes.
 	
 	Unsafe variant - few first iterations read and write data
 	to the beginning of "inout" without synchronization
 	
-	Output format is the following:
+	Input/output format is the following:
 	Line.coords has coordinates for a line stored as following:
 		startPoint.x                   startPoint.y
 		endPoint.x(accessible via z)   endPoint.y(accessible via w)
 	Line.ids contain identificators of a line stored in the following way:
 		ids.x contain iteration number, ids.y contain line number
 */
-__kernel void KochCurveKernel(int startIteration, int stopAtIteration, __global Line* inout )
+__kernel void KochCurveCalcKernel(int startIteration, int stopAtIteration,
+    __global REAL_T_4* curves, __global Line* inout )
 {
-  if (get_global_size(0) > 1)
-  {
-      // TODO report error
-      return;
-  }
-  KochCurveImplementation(startIteration, stopAtIteration, inout);
+    if (get_global_size(0) > 1)
+    {
+        // TODO report error
+        return;
+    }
+    KochCurveCalc(startIteration, stopAtIteration, inout);
 }
 )";
 
@@ -164,9 +164,12 @@ class KochCurveFixture : public FixtureThatReturnsData<long double>
 public:
     explicit KochCurveFixture( 
         int iterationsCount,
+        // Vector of lines. Every line becomes a curve that starts at (l.x; l.y) and ends at (l.z; l.w)
+        const std::vector<T4>& curves,
         const std::string& descriptionSuffix = std::string() )
         : iterationsCount_(iterationsCount)
         , descriptionSuffix_(descriptionSuffix)
+        , curves_(curves)
     {
         static_assert( sizeof( T2 ) == 2 * sizeof( T ), "Given wrong second template argument to KochCurveFixture" );
         static_assert( sizeof( T4 ) == 4 * sizeof( T ), "Given wrong third template argument to KochCurveFixture" );
@@ -219,19 +222,30 @@ public:
     {
         typedef KochCurveUtils::Line<T4> Line;
         EXCEPTION_ASSERT( context.get_devices().size() == 1 );
+        size_t inoutVectorSize = CalcTotalLineCount();
         outputData_.clear();
         // create command queue with profiling enabled
         boost::compute::command_queue queue(
             context, context.get_device(), boost::compute::command_queue::enable_profiling
         );
-
         std::unordered_multimap<OperationStep, boost::compute::event> events;
-
-        boost::compute::vector<KochCurveUtils::Line<T4>> inout_device_vector( 
-            CalcTotalLineCount(), context );
-        inout_device_vector.at(0) = KochCurveUtils::Line<T4>( {0, 0, 1, 0}, {0, 0} );
-
         boost::compute::kernel& kernel = kernels_.at( context.get() );
+        kernel.set_arg( 0, 0 );
+        kernel.set_arg( 1, iterationsCount_ );
+
+        {
+            boost::compute::vector<T4> curvesDeviceVector( curves_.cbegin(), curves_.cend(), queue );
+            kernel.set_arg( 2, curvesDeviceVector );
+        }
+        
+        boost::compute::buffer inoutBuffer;
+        {
+            boost::compute::vector<KochCurveUtils::Line<T4>> inout_device_vector(
+                inoutVectorSize, context );
+            inout_device_vector.at( 0 ) = KochCurveUtils::Line<T4>( {0, 0, 1, 0}, {0, 0} );
+            kernel.set_arg( 3, inout_device_vector );
+            inoutBuffer = inout_device_vector.get_buffer();
+        }
 
         const unsigned minThreadsCount = 4;
         // TODO processingElementsCount should be a compute_units() multiplied with
@@ -239,25 +253,20 @@ public:
         unsigned processingElementsCount = context.get_device().compute_units();
         //unsigned threadsCount = std::max( minThreadsCount, processingElementsCount );
         unsigned threadsCount = 1u;
-
-        kernel.set_arg( 0, 0 );
-        kernel.set_arg( 1, iterationsCount_ );
-        kernel.set_arg( 2, inout_device_vector );
-
         events.insert( {OperationStep::Calculate,
             queue.enqueue_1d_range_kernel( kernel, 0, threadsCount, 0 )
         } );
 
         boost::compute::event event;
         void* outputDataPtr = queue.enqueue_map_buffer_async(
-            inout_device_vector.get_buffer(), CL_MAP_WRITE, 0,
-            inout_device_vector.size()*sizeof(Line),
+            inoutBuffer, CL_MAP_WRITE, 0,
+            inoutVectorSize * sizeof(Line),
             event );
         events.insert( {OperationStep::MapOutputData, event} );
         event.wait();
 
         const Line* outputDataPtrCasted = reinterpret_cast<const Line*>( outputDataPtr );
-        const Line* endIterator = outputDataPtrCasted + inout_device_vector.size();
+        const Line* endIterator = outputDataPtrCasted + inoutVectorSize;
         std::transform( outputDataPtrCasted, endIterator,
             std::back_inserter(outputData_),
             [] (const Line& l) -> T4
@@ -265,7 +274,7 @@ public:
             return l.coords;
         } );
 
-        boost::compute::event lastEvent = queue.enqueue_unmap_buffer( inout_device_vector.get_buffer(), outputDataPtr );
+        boost::compute::event lastEvent = queue.enqueue_unmap_buffer( inoutBuffer, outputDataPtr );
         events.insert( {OperationStep::UnmapOutputData, lastEvent } );
         lastEvent.wait();
 
@@ -285,8 +294,6 @@ public:
         }
         return result;
     }
-
-    void VerifyResults() {}
 
     /*
     Return results in the following form:
@@ -320,6 +327,7 @@ private:
     std::vector<T4> outputData_;
     std::string descriptionSuffix_;
     std::unordered_map<cl_context, boost::compute::kernel> kernels_;
+    std::vector<T4> curves_;
 
     size_t GetLineCount()
     {
@@ -347,5 +355,3 @@ private:
         return CalcTotalLineCount( iterationsCount_ );
     }
 };
-
-//#include "damped_wave_fixture.inl"

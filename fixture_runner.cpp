@@ -124,18 +124,19 @@ void FixtureRunner::CreateKochCurveFixtures(
     std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>>& fixturesWithData,
     std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>>& fixtureToWriteResultToSVG )
 {
-    for (int i = 1; i < 10; ++i)
+    const std::vector<int> iterationCountVariants = {3, 10};
+    for (int i: iterationCountVariants)
     {
         {
             auto ptr = std::make_shared<KochCurveFixture<cl_float,
-                cl_float2, cl_float4>>( i );
+                cl_float2, cl_float4>>( i, std::vector<cl_float4>() );
             fixtures.push_back( ptr );
             fixturesWithData.push_back( ptr );
             fixtureToWriteResultToSVG.push_back( ptr );
         }
         {
             auto ptr = std::make_shared<KochCurveFixture<cl_double,
-                cl_double2, cl_double4>>( i );
+                cl_double2, cl_double4>>( i, std::vector<cl_double4>() );
             fixtures.push_back( ptr );
             fixturesWithData.push_back( ptr );
             fixtureToWriteResultToSVG.push_back( ptr );
