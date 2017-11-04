@@ -71,6 +71,10 @@ void ProcessLine(Line parentLine, __private REAL_T_4* transformationMatrices,
 	}
 }
 
+/*
+    Process all lines on iteration level "startIteration",
+    process all levels up to iteration level "stopAtIteration"
+*/
 void KochCurveImplementation(int startIteration, int stopAtIteration, __global Line* inout)
 {
 	REAL_T_4 transformationMatrices[4];
@@ -101,7 +105,7 @@ void KochCurveImplementation(int startIteration, int stopAtIteration, __global L
 		- start point is (0; 0), ends at (1; 0).
 	
 	Unsafe variant - few first iterations read and write data
-	to the beginning of "output" without synchronization
+	to the beginning of "inout" without synchronization
 	
 	Output format is the following:
 	Line.coords has coordinates for a line stored as following:
@@ -112,13 +116,11 @@ void KochCurveImplementation(int startIteration, int stopAtIteration, __global L
 */
 __kernel void KochCurveKernel(int startIteration, int stopAtIteration, __global Line* inout )
 {
-/*
   if (get_global_size(0) > 1)
   {
       // TODO report error
       return;
   }
-*/
   KochCurveImplementation(startIteration, stopAtIteration, inout);
 }
 )";

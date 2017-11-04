@@ -74,7 +74,7 @@ TEST_CASE( "CalcLinesNumberForIteration works correctly", "[Koch curve tests]" )
         "-DREAL_T_4=float4 -Werror" );
     kernel.set_arg( 0, input_device_vector );
     kernel.set_arg( 1, output_device_vector );
-    queue.enqueue_1d_range_kernel( kernel, 0, inputValues.size(), 0 );
+    queue.enqueue_1d_range_kernel( kernel, 0, inputValues.size(), 0 ).wait();
 
     // create vector on host
     std::vector<int> results( inputValues.size() );
@@ -113,7 +113,7 @@ TEST_CASE( "CalcGlobalId works correctly", "[Koch curve tests]" ) {
         "-DREAL_T_4=float4 -Werror" );
     kernel.set_arg( 0, input_device_vector );
     kernel.set_arg( 1, output_device_vector );
-    queue.enqueue_1d_range_kernel( kernel, 0, inputValues.size(), 0 );
+    queue.enqueue_1d_range_kernel( kernel, 0, inputValues.size(), 0 ).wait();
 
     // create vector on host
     std::vector<int> results( inputValues.size() );
@@ -161,7 +161,7 @@ TEST_CASE( "Line structure is aligned correctly for single precision values", "[
                 "-DREAL_T_4=float4 -Werror" );
             kernel.set_arg( 0, sizeof( inputValue ), &inputValue );
             kernel.set_arg( 1, output_device_vector );
-            queue.enqueue_task( kernel );
+            queue.enqueue_task( kernel ).wait();
 
             // create vector on host
             std::vector<uint64_t> results( expectedOutput.size() );

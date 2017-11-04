@@ -41,7 +41,7 @@ TEST_CASE( "Pow2ForInt works correctly", "[OpenCL math]" ) {
         Utils::CombineStrings( {ProgramSourceRepository::GetOpenCLMathSource(), source } ) );
     kernel.set_arg( 0, input_device_vector );
     kernel.set_arg( 1, output_device_vector );
-    queue.enqueue_1d_range_kernel( kernel, 0, inputValues.size(), 0 );
+    queue.enqueue_1d_range_kernel( kernel, 0, inputValues.size(), 0 ).wait();
 
     // create vector on host
     std::vector<int> results( inputValues.size() );
@@ -51,5 +51,5 @@ TEST_CASE( "Pow2ForInt works correctly", "[OpenCL math]" ) {
         output_device_vector.begin(), output_device_vector.end(), results.begin(), queue
     );
 
-    REQUIRE( expectedOutput == results );
+    CHECK( expectedOutput == results );
 }

@@ -159,7 +159,7 @@ namespace Utils
                 //TODO something weird happens with std::cerr here, using cout for now
                 BOOST_LOG_TRIVIAL( error ) << "Kernel " << name << " failed to build on device " <<
                     context.get_device().name() << std::endl <<
-                    //"Kernel source: " << std::endl << allSource << std::endl <<
+                    "Kernel source: " << std::endl << allSource << std::endl <<
                     "Build options: " << buildOptions << std::endl <<
                     "Build log: " << buildLog << std::endl;
             }
