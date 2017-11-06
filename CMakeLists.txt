@@ -1,11 +1,25 @@
 cmake_minimum_required (VERSION 3.1)
 
-project(OpenCLTestProject)
+# Set used language
+enable_language(CXX)
 
-# Handle OpenCL
+# Find OpenCL and Boost libraries.
+# It is assumed that Boost can be found either by default location is OS (often a case on Linux) or
+# it is located in <project source root>/contrib/boost
+# Minimal Boost version is 1.65.1
 find_package(OpenCL REQUIRED)
-include_directories(${OpenCL_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/contrib )
-link_directories(${OpenCL_LIBRARY} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost/stage/lib)
+SET( BOOST_ROOT ${CMAKE_SOURCE_DIR}/contrib/boost )
+find_package(Boost 1.65.1 REQUIRED )
+
+# Look for libraries in the following folders
+link_directories(${OpenCL_LIBRARY} ${Boost_LIBRARY_DIRS})
+
+# Add subprojects
+add_subdirectory(utils)
+add_subdirectory(unit_tests)
+
+# Add main project
+project(OpenCLTestProject)
 
 add_executable (main 
 	main.cpp 
@@ -32,21 +46,12 @@ add_executable (main
 	random_values_iterator.h
 	svg_document.h
 	)
-	
-add_subdirectory(utils)
-add_subdirectory(unit_tests)
 
-# target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/nonius/include )
-target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost/ utils)
-target_link_libraries (main ${OpenCL_LIBRARY} utils)
-
-# Couldn't get this working on Windows
-#SET( BOOST_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost )
-#SET( BOOST_INCLUDEDIR ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost_1_65_1/boost )
-#find_package(Boost 1.65.1 REQUIRED COMPONENTS compute chrono )
-#target_link_libraries(foo Boost::chrono )
-
-#add_definitions(-D__CL_ENABLE_EXCEPTIONS)
+target_include_directories (main PUBLIC ${OpenCL_INCLUDE_DIRS} 
+	${CMAKE_SOURCE_DIR}/contrib 
+	${Boost_INCLUDE_DIRS} 
+	${CMAKE_SOURCE_DIR}/utils )
+target_link_libraries (main ${OpenCL_LIBRARY} ${Boost_LIBRARIES} utils)
 
 if (UNIX)
     target_link_libraries (main pthread)
