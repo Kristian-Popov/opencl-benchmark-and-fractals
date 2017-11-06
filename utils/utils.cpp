@@ -154,7 +154,7 @@ namespace Utils
             {
             }
 
-            if( error.error_code() == CL_BUILD_PROGRAM_FAILURE )
+            //if( error.error_code() == CL_BUILD_PROGRAM_FAILURE )
             {
                 //TODO something weird happens with std::cerr here, using cout for now
                 BOOST_LOG_TRIVIAL( error ) << "Kernel " << name << " failed to build on device " <<
