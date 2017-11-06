@@ -2,26 +2,17 @@ cmake_minimum_required (VERSION 3.1)
 
 project(unit_tests)
 
-# Handle OpenCL
-find_package(OpenCL REQUIRED)
-
 add_executable (unit_tests 
 	opencl_math_tests.cpp
 	koch_curve_tests.cpp
 	unit_tests.cpp
 )
 
-# target_include_directories (main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/nonius/include )
-target_include_directories (unit_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost/ utils)
-target_link_libraries (unit_tests ${OpenCL_LIBRARY} utils)
-
-# Couldn't get this working on Windows
-#SET( BOOST_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost )
-#SET( BOOST_INCLUDEDIR ${CMAKE_CURRENT_SOURCE_DIR}/contrib/boost_1_65_1/boost )
-#find_package(Boost 1.65.1 REQUIRED COMPONENTS compute chrono )
-#target_link_libraries(foo Boost::chrono )
-
-#add_definitions(-D__CL_ENABLE_EXCEPTIONS)
+target_include_directories (unit_tests PUBLIC ${OpenCL_INCLUDE_DIRS} 
+	${CMAKE_SOURCE_DIR}/contrib 
+	${Boost_INCLUDE_DIRS} 
+	${CMAKE_SOURCE_DIR}/utils )
+target_link_libraries (unit_tests ${OpenCL_LIBRARY} ${Boost_LIBRARIES} utils)
 
 if (UNIX)
     target_link_libraries (unit_tests pthread)
