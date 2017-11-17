@@ -17,6 +17,7 @@ link_directories(${OpenCL_LIBRARY} ${Boost_LIBRARY_DIRS})
 # Add subprojects
 add_subdirectory(utils)
 add_subdirectory(unit_tests)
+add_subdirectory(contrib/lodepng)
 
 # Add main project
 project(OpenCLTestProject)
@@ -29,10 +30,12 @@ add_executable (main
 	fixture_runner.cpp
 	svg_document.cpp
 	damped_wave_fixture.inl
+	fixtures/multibrot_fractal_fixture.cpp
 	
 	trivial_factorial_fixture.h
 	damped_wave_fixture.h
 	koch_curve_fixture.h
+	fixtures/multibrot_fractal_fixture.h
 
 	fixture.h
 	fixture_that_returns_data.h
@@ -45,13 +48,15 @@ add_executable (main
 	sequential_values_iterator.h
 	random_values_iterator.h
 	svg_document.h
+	document_writers/png_document_builder.h
 	)
 
-target_include_directories (main PUBLIC ${OpenCL_INCLUDE_DIRS} 
+target_include_directories (main PUBLIC ${CMAKE_SOURCE_DIR}
+	${OpenCL_INCLUDE_DIRS} 
 	${CMAKE_SOURCE_DIR}/contrib 
 	${Boost_INCLUDE_DIRS} 
 	${CMAKE_SOURCE_DIR}/utils )
-target_link_libraries (main ${OpenCL_LIBRARY} ${Boost_LIBRARIES} utils)
+target_link_libraries (main ${OpenCL_LIBRARY} ${Boost_LIBRARIES} utils lodepng)
 
 if (UNIX)
     target_link_libraries (main pthread)

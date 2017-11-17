@@ -21,12 +21,14 @@
 #include "trivial_factorial_fixture.h"
 #include "damped_wave_fixture.h"
 #include "koch_curve_fixture.h"
+#include "fixtures/multibrot_fractal_fixture.h"
 
 #include <boost/random/normal_distribution.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/compute.hpp>
 #include <boost/math/constants/constants.hpp>
 #include "half_precision_fp.h"
+#include "document_writers/png_document_builder.h"
 
 #pragma STDC FENV_ACCESS on
 
@@ -143,6 +145,24 @@ void FixtureRunner::CreateKochCurveFixtures(
     }
 }
 
+void FixtureRunner::CreateMultibrotSetFixtures(
+    std::vector<std::shared_ptr<Fixture>>& fixtures,
+    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort4>>>& fixturesToWriteDataToPNG )
+{
+    {
+        auto ptr = std::make_shared<MultibrotFractalFixture<cl_float>>(
+            5000, 5000, -2.5f, 1.5f, -2.0f, 2.0f, 2.0f );
+        fixtures.push_back( ptr );
+        fixturesToWriteDataToPNG.push_back(ptr);
+    }
+    {
+        auto ptr = std::make_shared<MultibrotFractalFixture<cl_double>>(
+            5000, 5000, -2.5f, 1.5f, -2.0f, 2.0f, 2.0 );
+        fixtures.push_back( ptr );
+        fixturesToWriteDataToPNG.push_back( ptr );
+    }
+}
+
 void SetFloatingPointEnvironment()
 {
     int result = std::fesetround( FE_TONEAREST );
@@ -182,6 +202,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     std::vector<std::shared_ptr<Fixture>> fixtures;
     std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>> fixturesWithData;
     std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>> fixtureToWriteResultToSVG;
+    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort4>>> fixturesToWriteDataToPNG;
 
     if (fixturesToRun.trivialFactorial)
     {
@@ -194,6 +215,10 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     if (fixturesToRun.kochCurve)
     {
         CreateKochCurveFixtures(fixtures, fixturesWithData, fixtureToWriteResultToSVG );
+    }
+    if (fixturesToRun.multibrotSet)
+    {
+        CreateMultibrotSetFixtures(fixtures, fixturesToWriteDataToPNG );
     }
 
     BOOST_LOG_TRIVIAL( info ) << "We have " << fixtures.size() << " fixtures to run";
@@ -343,5 +368,13 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     {
         BOOST_LOG_TRIVIAL( error ) << "Caught exception when building SVG document: " << e.what();
     }
+
+    for (auto& fixture: fixturesToWriteDataToPNG )
+    {
+        // TODO move getting size to one place to avoid duplicating it between here and fixture creation
+        PNGDocumentBuilder::BuildRGBA64Bit( fixture->Description() + ".png", fixture->GetResults().at(0), 
+            5000, 5000 );
+    }
+
     BOOST_LOG_TRIVIAL( info ) << "Done";
 }

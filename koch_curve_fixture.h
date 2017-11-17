@@ -407,5 +407,3 @@ private:
         return a << ( 2 * i ); // Same as 4 ^ i
     }
 };
-
-//#include "damped_wave_fixture.inl"
