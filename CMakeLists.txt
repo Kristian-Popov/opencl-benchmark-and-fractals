@@ -8,7 +8,6 @@ enable_language(CXX)
 # it is located in <project source root>/contrib/boost
 # Minimal Boost version is 1.65.1
 find_package(OpenCL REQUIRED)
-SET( BOOST_ROOT ${CMAKE_SOURCE_DIR}/contrib/boost )
 find_package(Boost 1.65.1 REQUIRED )
 
 # Look for libraries in the following folders

@@ -1,6 +1,9 @@
 #include "fixtures/multibrot_fractal_fixture.h"
 #include "utils.h"
 #include <boost/format.hpp>
+#include <limits>
+
+#include "document_writers/png_document_builder.h"
 
 namespace
 {
@@ -10,12 +13,10 @@ namespace
 /*
 Requires a definition:
 - floating point type REAL_T (float, or, if device supports, half and double),
+- max iteration number MAX_ITERATION_NUMBER (should be smaller or equal to USHRT_MAX)
 */
 
-//#define MAX_ITERATION_NUMBER USHRT_MAX
-#define MAX_ITERATION_NUMBER 1000
-
-ushort4 CalcPointOnMultibrotSet( REAL_T real, REAL_T img, REAL_T power )
+ushort CalcPointOnMultibrotSet( REAL_T real, REAL_T img, REAL_T power )
 {
     ushort iterationNumber = 0;
     REAL_T escapePointSqr = 2*2;
@@ -33,35 +34,26 @@ ushort4 CalcPointOnMultibrotSet( REAL_T real, REAL_T img, REAL_T power )
 
         zlenSqr = zreal*zreal + zimg*zimg;
         ++iterationNumber;
-        //printf("%d\n", iterationNumber);
     }
-    // For now we don't use color, so just return an iteration number in all components
     iterationNumber = ( USHRT_MAX / MAX_ITERATION_NUMBER ) * iterationNumber;
     iterationNumber = USHRT_MAX - iterationNumber;
-    return (ushort4)( iterationNumber, iterationNumber, iterationNumber, USHRT_MAX );
+    return iterationNumber;
 }
 
 /*
     rmin, rmax contain minimum and maximum values for real part of a values in an estimated range,
     imin, imax contain minimum and maximum values for imaginary part.
 
-    Output is a pointer to buffer that will contain color data. Data are located in the following order:
-    red, green, blue, alpha. Alpha value is always maximum possible value
+    Output is a pointer to buffer that will contain pixel data. Data format are grayscale 16 bit
 */
 __kernel void MultibrotSetKernel(REAL_T rmin, REAL_T rmax, REAL_T imin, REAL_T imax, REAL_T power,
-    __global ushort4* output)
+    __global ushort* output)
 {
     REAL_T rstep = ( rmax - rmin ) / get_global_size(0);
     REAL_T istep = ( imax - imin ) / get_global_size(1);
     
     size_t rowWidth = get_global_size(1);
-    size_t resultIndex = get_global_id(0) * rowWidth + get_global_id(1);
-    /*
-    printf("%u;%u\n", get_global_id(0), get_global_id(1));
-    printf("AAA %u\n", rowWidth);
-    printf("BBB %u\n", get_global_size(1));
-    */
-    //printf("CCC %u\n", resultIndex);
+    size_t resultIndex = get_global_id(1) * rowWidth + get_global_id(0);
 
     REAL_T real = rmin + get_global_id(0) * rstep;
     REAL_T img = imin + get_global_id(1) * istep;
@@ -75,7 +67,6 @@ __kernel void MultibrotSetKernel(REAL_T rmin, REAL_T rmax, REAL_T imin, REAL_T i
         static const char* openclTypeName;
         static const char* requiredExtension;
         static const char* descriptionTypeName;
-        //static const int maxIterations;
     };
 
     const char* baseCompilerOptions = "-w -Werror";
@@ -83,14 +74,14 @@ __kernel void MultibrotSetKernel(REAL_T rmin, REAL_T rmax, REAL_T imin, REAL_T i
     const char* Constants<cl_float>::openclTypeName = "float";
     const char* Constants<cl_float>::requiredExtension = ""; // No extensions needed for single precision arithmetic
     const char* Constants<cl_float>::descriptionTypeName = "float";
-    //const int Constants<cl_float>::maxIterations = 20; //TODO update value
 
     const char* Constants<cl_double>::openclTypeName = "double";
     const char* Constants<cl_double>::requiredExtension = "cl_khr_fp64";
     const char* Constants<cl_double>::descriptionTypeName = "double";
-    //const int KochCurveFixtureConstants<cl_double>::maxIterations = 20;
 
-    // TODO support for half precision could be added
+    const char* Constants<half_float::half>::openclTypeName = "half";
+    const char* Constants<half_float::half>::requiredExtension = "cl_khr_fp16";
+    const char* Constants<half_float::half>::descriptionTypeName = "half";
 }
 
 template<typename T>
@@ -107,16 +98,22 @@ inline MultibrotFractalFixture<T>::MultibrotFractalFixture( size_t width, size_t
 {
     EXCEPTION_ASSERT( width > 0 );
     EXCEPTION_ASSERT( height > 0 );
+    EXCEPTION_ASSERT( realMax > realMin );
+    EXCEPTION_ASSERT( imgMax > imgMin );
+    EXCEPTION_ASSERT( width <= CalcMaxSizeInPix( realMin, realMax ) );
+    EXCEPTION_ASSERT( height <= CalcMaxSizeInPix( imgMin, imgMax ) );
 }
 
 template<typename T>
 inline void MultibrotFractalFixture<T>::InitializeForContext( boost::compute::context & context )
 {
+    const uint16_t maxIterationNumber = 100;
     std::string typeName = Constants<T>::openclTypeName;
     std::string compilerOptions = ( boost::format(
-        "%1% -DREAL_T=%2%" ) %
+        "%1% -DREAL_T=%2% -DMAX_ITERATION_NUMBER=%3%" ) %
         baseCompilerOptions %
-        typeName
+        typeName %
+        maxIterationNumber
         ).str();
 
     kernels_.insert( {context.get(),
@@ -148,15 +145,15 @@ inline std::unordered_map<OperationStep, Fixture::Duration> MultibrotFractalFixt
 
     std::unordered_multimap<OperationStep, boost::compute::event> events;
 
-    boost::compute::vector<cl_ushort4> output_device_vector( GetElementsCountInternal(), context );
+    boost::compute::vector<cl_ushort> output_device_vector( GetElementsCountInternal(), context );
 
     boost::compute::kernel& kernel = kernels_.at( context.get() );
 
-    kernel.set_arg( 0, realMin_ );
-    kernel.set_arg( 1, realMax_ );
-    kernel.set_arg( 2, imgMin_ );
-    kernel.set_arg( 3, imgMax_ );
-    kernel.set_arg( 4, power_ );
+    kernel.set_arg( 0, sizeof( realMin_ ), &realMin_ );
+    kernel.set_arg( 1, sizeof( realMax_ ), &realMax_ );
+    kernel.set_arg( 2, sizeof( imgMin_ ), &imgMin_ );
+    kernel.set_arg( 3, sizeof( imgMax_ ), &imgMax_ );
+    kernel.set_arg( 4, sizeof( power_ ), &power_ );
     kernel.set_arg( 5, output_device_vector.get_buffer() );
 
     boost::compute::extents<2> workgroupSize = {width_, height_};
@@ -167,12 +164,13 @@ inline std::unordered_map<OperationStep, Fixture::Duration> MultibrotFractalFixt
     boost::compute::event event;
     void* outputDataPtr = queue.enqueue_map_buffer_async(
         output_device_vector.get_buffer(), CL_MAP_WRITE, 0,
-        output_device_vector.size() * sizeof( cl_ushort4 ),
+        output_device_vector.size() * sizeof( cl_ushort ),
         event );
     events.insert( {OperationStep::MapOutputData, event} );
     event.wait();
 
-    const cl_ushort4* outputDataPtrCasted = reinterpret_cast<const cl_ushort4*>( outputDataPtr );
+    // TODO move this to separate class with correct initialization and destruction
+    const cl_ushort* outputDataPtrCasted = reinterpret_cast<const cl_ushort*>( outputDataPtr );
     outputData_.reserve( GetElementsCountInternal() );
     std::copy_n( outputDataPtrCasted, GetElementsCountInternal(), std::back_inserter( outputData_ ) );
     /*
@@ -197,8 +195,8 @@ inline std::unordered_map<OperationStep, Fixture::Duration> MultibrotFractalFixt
 template<typename T>
 inline std::string MultibrotFractalFixture<T>::Description()
 {
-    std::string fixtureBaseName = power_ == 2 ? "Mandelbrot set" : "Multibrot set";
-    // TODO add power for Multibrot variant
+    std::string fixtureBaseName = power_ == 2 ? "Mandelbrot set" : 
+        ( boost::format( "Multibrot set, power %1%" ) % power_ ).str();
     std::string result = ( boost::format( "%1%, %2%x%3%, %4%" ) %
         fixtureBaseName %
         width_ %
@@ -210,4 +208,19 @@ inline std::string MultibrotFractalFixture<T>::Description()
         result += ", " + descriptionSuffix_;
     }
     return result;
+}
+
+template<typename T>
+void MultibrotFractalFixture<T>::WriteResults()
+{
+    PNGDocumentBuilder::BuildGrayscale16Bit( Description() + ".png", outputData_,
+        width_, height_ );
+}
+
+template<typename T>
+size_t MultibrotFractalFixture<T>::CalcMaxSizeInPix( T min, T max )
+{
+    T diff = max - min;
+    T step = std::numeric_limits<T>::epsilon() * exp2( log2( diff ) ); // TODO some part of diff is thrown away in this formula. Where?
+    return diff / step; // TODO also limit by some value that makes sense e.g. 1 billion
 }

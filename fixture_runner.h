@@ -30,7 +30,7 @@ private:
         std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>>& fixtureToWriteResultToSVG );
     static void CreateMultibrotSetFixtures(
         std::vector<std::shared_ptr<Fixture>>& fixtures,
-        std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort4>>>& fixturesToWriteDataToPNG );
+        std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort>>>& fixturesToWriteDataToPNG );
 
     static std::vector<boost::compute::device> FillDevicesList();
     static std::unordered_map<cl_device_id, boost::compute::context> FillContextsMap(

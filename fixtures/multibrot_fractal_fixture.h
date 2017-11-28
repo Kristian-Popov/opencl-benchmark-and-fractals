@@ -2,6 +2,7 @@
 
 #include "fixture_that_returns_data.h"
 #include "boost/compute.hpp"
+#include "half_precision_fp.h"
 
 /*
 T should be a floating point type (e.g. float, double or half),
@@ -12,7 +13,7 @@ FixtureThatReturnsData<T>, then we may have trouble writing multiple values into
 Instead we are using long double that is well suiting to store floating point values
 since it can hold any half/float/double value without any precision loss
 */
-class MultibrotFractalFixture : public FixtureThatReturnsData<cl_ushort4>
+class MultibrotFractalFixture : public FixtureThatReturnsData<cl_ushort>
 {
 public:
     explicit MultibrotFractalFixture(
@@ -41,7 +42,7 @@ public:
 
     std::string Description() override;
 
-    virtual std::vector<std::vector<cl_ushort4>> GetResults() override
+    virtual std::vector<std::vector<cl_ushort>> GetResults() override
     {
         // TODO add more elegant retrieving results for building PNG
         //return outputData_;
@@ -53,12 +54,15 @@ public:
         return GetElementsCountInternal();
     }
 
+    virtual void WriteResults() override;
+
+    static size_t MultibrotFractalFixture<T>::CalcMaxSizeInPix( T min, T max );
+
     virtual ~MultibrotFractalFixture()
     {
     }
 private:
-    //std::vector<std::vector<cl_ushort4>> outputData_;
-    std::vector<cl_ushort4> outputData_;
+    std::vector<cl_ushort> outputData_;
     T realMin_;
     T realMax_;
     T imgMin_;
@@ -80,3 +84,5 @@ private:
 template class MultibrotFractalFixture<cl_float>;
 
 template class MultibrotFractalFixture<cl_double>;
+
+template class MultibrotFractalFixture<half_float::half>;

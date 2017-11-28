@@ -28,7 +28,6 @@
 #include <boost/compute.hpp>
 #include <boost/math/constants/constants.hpp>
 #include "half_precision_fp.h"
-#include "document_writers/png_document_builder.h"
 
 #pragma STDC FENV_ACCESS on
 
@@ -147,19 +146,37 @@ void FixtureRunner::CreateKochCurveFixtures(
 
 void FixtureRunner::CreateMultibrotSetFixtures(
     std::vector<std::shared_ptr<Fixture>>& fixtures,
-    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort4>>>& fixturesToWriteDataToPNG )
+    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort>>>& fixturesToWriteDataToPNG )
 {
+    // TODO add support for negative powers
+    std::vector<double> powers = { 1.0, 2.0, 3.0, 7.0, 3.5, 0.1, 0.5 };
+    std::array<double, 2> realRange = {-2.5, 1.5}, imgRange = {-2.0, 2.0};
+
+    for (double power: powers)
     {
-        auto ptr = std::make_shared<MultibrotFractalFixture<cl_float>>(
-            5000, 5000, -2.5f, 1.5f, -2.0f, 2.0f, 2.0f );
-        fixtures.push_back( ptr );
-        fixturesToWriteDataToPNG.push_back(ptr);
-    }
-    {
-        auto ptr = std::make_shared<MultibrotFractalFixture<cl_double>>(
-            5000, 5000, -2.5f, 1.5f, -2.0f, 2.0f, 2.0 );
-        fixtures.push_back( ptr );
-        fixturesToWriteDataToPNG.push_back( ptr );
+        {
+            auto ptr = std::make_shared<MultibrotFractalFixture<cl_float>>(
+                3000, 3000, realRange.at(0), realRange.at(1), imgRange.at(0), imgRange.at(1), power );
+            fixtures.push_back( ptr );
+            fixturesToWriteDataToPNG.push_back( ptr );
+        }
+        {
+            auto ptr = std::make_shared<MultibrotFractalFixture<cl_double>>(
+                2000, 2000, realRange.at(0), realRange.at(1), imgRange.at(0), imgRange.at(1), power );
+            fixtures.push_back( ptr );
+            fixturesToWriteDataToPNG.push_back( ptr );
+        }
+        {
+            auto ptr = std::make_shared<MultibrotFractalFixture<half_float::half>>(
+                1000, 1000, 
+                static_cast<half_float::half>( realRange.at( 0 )), 
+                static_cast<half_float::half>( realRange.at( 1 )),
+                static_cast<half_float::half>( imgRange.at( 0 )),
+                static_cast<half_float::half>( imgRange.at( 1 )),
+                static_cast<half_float::half>( power ));
+            fixtures.push_back( ptr );
+            fixturesToWriteDataToPNG.push_back( ptr );
+        }
     }
 }
 
@@ -202,7 +219,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     std::vector<std::shared_ptr<Fixture>> fixtures;
     std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>> fixturesWithData;
     std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>> fixtureToWriteResultToSVG;
-    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort4>>> fixturesToWriteDataToPNG;
+    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort>>> fixturesToWriteDataToPNG;
 
     if (fixturesToRun.trivialFactorial)
     {
@@ -371,9 +388,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
 
     for (auto& fixture: fixturesToWriteDataToPNG )
     {
-        // TODO move getting size to one place to avoid duplicating it between here and fixture creation
-        PNGDocumentBuilder::BuildRGBA64Bit( fixture->Description() + ".png", fixture->GetResults().at(0), 
-            5000, 5000 );
+        fixture->WriteResults();
     }
 
     BOOST_LOG_TRIVIAL( info ) << "Done";

@@ -9,4 +9,6 @@ class FixtureThatReturnsData: public Fixture
 {
 public:
     virtual std::vector<std::vector<T>> GetResults() = 0;
+
+    virtual void WriteResults() {}
 };
