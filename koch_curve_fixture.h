@@ -62,10 +62,6 @@ void ProcessLine(Line parentLine, __private REAL_T_4* transformationMatrices,
         size_t currentId = CalcGlobalId(ids);
         REAL_T_4 coords = MergePointsVectorsToLineVector(newStart, newEnd);
 
-        //printf("Adding child line at index %d\n", currentId);
-        //printf("Coords %v4hlf \n", coords);
-        //printf("First value %d, second value %v4hlf \n", 100, coords);
-
 		storage[currentId] = (Line){ .coords = coords, .ids = ids };
 		newStart = newEnd;
 	}
@@ -75,7 +71,7 @@ void ProcessLine(Line parentLine, __private REAL_T_4* transformationMatrices,
     Process all lines on iteration level "startIteration",
     process all levels up to iteration level "stopAtIteration"
 */
-void KochCurveCalc(int startIteration, int stopAtIteration, __global Line* inout)
+void KochCurveCalc(int startIteration, int stopAtIteration, __global Line* linesTempStorage)
 {
 	REAL_T_4 transformationMatrices[4];
 	BuildTransformationMatrices(transformationMatrices);
@@ -87,41 +83,98 @@ void KochCurveCalc(int startIteration, int stopAtIteration, __global Line* inout
 		{
             size_t parentLineId = CalcGlobalId((int2)(iterationNumber, i));
 
-            //printf("Processing parent line at index %d\n", parentLineId);
-
-			__global Line* parentLine = inout + parentLineId;
-			ProcessLine(*parentLine, transformationMatrices, inout);
+			__global Line* parentLine = linesTempStorage + parentLineId;
+			ProcessLine(*parentLine, transformationMatrices, linesTempStorage);
 		}
 	}
 }
 
+ulong MinSpaceNeededInLineTempStorage(int stopAtIteration)
+{
+    return CalcLinesNumberForIteration(stopAtIteration) * sizeof(Line);
+}
+
 /*
-	Build Koch's curve. This kernel iterates on all lines on iteration level "startIteration"
-	and iterate all levels up and including "stopAtIteration".
-	
-    Kernel allows to set where curves start and stop plus amount of curves.
-    Every curve is just a general Koch curve, but combining them you can build
-    different figures like Koch snowflakes.
-	
-	Unsafe variant - few first iterations read and write data
-	to the beginning of "inout" without synchronization
-	
-	Input/output format is the following:
-	Line.coords has coordinates for a line stored as following:
-		startPoint.x                   startPoint.y
-		endPoint.x(accessible via z)   endPoint.y(accessible via w)
-	Line.ids contain identificators of a line stored in the following way:
-		ids.x contain iteration number, ids.y contain line number
+	Build Koch's curve. This kernel iterates all levels up and including "stopAtIteration".
 */
-__kernel void KochCurveCalcKernel(int startIteration, int stopAtIteration,
-    __global REAL_T_4* curves, __global Line* inout )
+__kernel void KochCurvePrecalculationKernel(int stopAtIteration,
+    __global void* linesTempStorage, ulong linesTempStorageSize)
 {
     if (get_global_size(0) > 1)
     {
         // TODO report error
         return;
     }
-    KochCurveCalc(startIteration, stopAtIteration, inout);
+    if(linesTempStorageSize < MinSpaceNeededInLineTempStorage(stopAtIteration))
+    {
+        // TODO report error
+        // TODO Don't think this check works
+        return;
+    }
+    int startIteration = 0;
+    __global Line* linesTempStorageConverted = (__global Line*)linesTempStorage;
+    linesTempStorageConverted[0] = (Line){.coords = {0, 0, 1, 0}, .ids = {0, 0}};
+    KochCurveCalc(startIteration, stopAtIteration, linesTempStorageConverted);;
+}
+
+REAL_T_4 KochCurveTransformLineToCurve(Line line, REAL_T_4 transformMatrix, REAL_T_2 offset)
+{
+    REAL_T_2 start = line.coords.lo;
+    REAL_T_2 end = line.coords.hi;
+    REAL_T_2 newStart = MultiplyMatrix2x2AndVector(transformMatrix, start) + offset;
+    REAL_T_2 newEnd = MultiplyMatrix2x2AndVector(transformMatrix, end) + offset;
+    return (REAL_T_4)(newStart, newEnd);
+}
+
+void KochSnowflakeCalc(int stopAtIteration, __global REAL_T_4* curves, int curvesCount, 
+    __global Line* linesTempStorageConverted,
+    __global REAL_T_4* out)
+{
+    size_t id = get_global_id(0);
+    size_t resultStartIndex = id * curvesCount;
+    size_t lineIndex = CalcGlobalId( (int2)(stopAtIteration, id) );
+    for (int i = 0; i < curvesCount; ++i)
+    {
+        REAL_T_4 curve = curves[i];
+        REAL_T_2 curveVector = curve.hi - curve.lo;
+        REAL_T_2 curveVectorNorm = normalize(curveVector);
+        REAL_T_4 transformMatrix = length(curveVector) *
+            (REAL_T_4)(curveVectorNorm.x, -curveVectorNorm.y, curveVectorNorm.y, curveVectorNorm.x);
+        REAL_T_2 offset = curve.lo;
+        out[resultStartIndex + i] = KochCurveTransformLineToCurve(linesTempStorageConverted[lineIndex], transformMatrix, offset);
+    }
+}
+
+/*
+    Kernel allows to set where curves start and stop plus amount of curves.
+    Every curve is just a general Koch curve, but combining them you can build
+    different figures like Koch snowflakes.
+
+    Lines are stored in "out" as following:
+    <line 0 curve 0> <line 0 curve 1> <line 0 curve 2> <line 1 curve 0> <line 1 curve 1> <line 1 curve 2>...
+
+    This kernel should be started with global size equal to number of lines.
+    One work item equals to one line.
+
+    TODO add option to leave lines from older iterations
+*/
+__kernel void KochSnowflakeKernel(int stopAtIteration,
+    __global REAL_T_4* curves, int curvesCount,
+    __global void* linesTempStorage, ulong linesTempStorageSize, 
+    __global REAL_T_4* out )
+{
+    if(linesTempStorageSize < MinSpaceNeededInLineTempStorage(stopAtIteration))
+    {
+        // TODO report error
+        return;
+    }
+    if(get_global_size(0) != CalcLinesNumberForIteration(stopAtIteration))
+    {
+        // TODO report error
+        return;
+    }
+    __global Line* linesTempStorageConverted = (__global Line*)linesTempStorage;
+    KochSnowflakeCalc(stopAtIteration, curves, curvesCount, linesTempStorageConverted, out);
 }
 )";
 
@@ -193,8 +246,8 @@ public:
         std::string source = Utils::CombineStrings( 
             { ProgramSourceRepository::GetKochCurveSource(), kochCurveProgramCode } );
 
-        kernels_.insert( {context.get(),
-            Utils::BuildKernel( "KochCurveKernel", context, source, compilerOptions,
+        programs_.insert( {context.get(),
+            Utils::BuildProgram( context, source, compilerOptions,
                 GetRequiredExtensions() )} );
     }
 
@@ -220,61 +273,76 @@ public:
 
     std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) override
     {
-        typedef KochCurveUtils::Line<T4> Line;
         EXCEPTION_ASSERT( context.get_devices().size() == 1 );
-        size_t inoutVectorSize = CalcTotalLineCount();
         outputData_.clear();
         // create command queue with profiling enabled
         boost::compute::command_queue queue(
             context, context.get_device(), boost::compute::command_queue::enable_profiling
         );
         std::unordered_multimap<OperationStep, boost::compute::event> events;
-        boost::compute::kernel& kernel = kernels_.at( context.get() );
-        kernel.set_arg( 0, 0 );
-        kernel.set_arg( 1, iterationsCount_ );
 
+        const size_t lineSizeInBytes = 64; // TODO find a better way to calculate this value to avoid wasting memory
+        static_assert( lineSizeInBytes >= sizeof(T4) + 8, "Capacity allocated for one line is not sufficient" );
+        const size_t linesTempStorageSizeInBytes = CalcTotalLineCount() * lineSizeInBytes;
+        boost::compute::buffer linesTempStorage( context, linesTempStorageSizeInBytes );
+        // Precalculation step
         {
-            boost::compute::vector<T4> curvesDeviceVector( curves_.cbegin(), curves_.cend(), queue );
-            kernel.set_arg( 2, curvesDeviceVector );
-        }
-        
-        boost::compute::buffer inoutBuffer;
-        {
-            boost::compute::vector<KochCurveUtils::Line<T4>> inout_device_vector(
-                inoutVectorSize, context );
-            inout_device_vector.at( 0 ) = KochCurveUtils::Line<T4>( {0, 0, 1, 0}, {0, 0} );
-            kernel.set_arg( 3, inout_device_vector );
-            inoutBuffer = inout_device_vector.get_buffer();
+            boost::compute::kernel kernel( programs_.at( context.get() ), "KochCurvePrecalculationKernel" );
+            kernel.set_arg( 0, iterationsCount_ );
+
+            kernel.set_arg( 1, linesTempStorage );
+            kernel.set_arg( 2, linesTempStorageSizeInBytes );
+
+            const unsigned minThreadsCount = 4;
+            // TODO processingElementsCount should be a compute_units() multiplied with
+            // a CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE
+            unsigned processingElementsCount = context.get_device().compute_units();
+            //unsigned threadsCount = std::max( minThreadsCount, processingElementsCount );
+            unsigned threadsCount = 1u;
+            events.insert( {OperationStep::Calculate,
+                queue.enqueue_1d_range_kernel( kernel, 0, threadsCount, 0 )
+            } );
         }
 
-        const unsigned minThreadsCount = 4;
-        // TODO processingElementsCount should be a compute_units() multiplied with
-        // a CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE
-        unsigned processingElementsCount = context.get_device().compute_units();
-        //unsigned threadsCount = std::max( minThreadsCount, processingElementsCount );
-        unsigned threadsCount = 1u;
-        events.insert( {OperationStep::Calculate,
-            queue.enqueue_1d_range_kernel( kernel, 0, threadsCount, 0 )
-        } );
+        // Final step
+        // TODO include data copy in benchmark
+        //boost::compute::vector<T4> curvesDeviceVector( curves_.cbegin(), curves_.cend(), queue );
+        boost::compute::vector<T4> curvesDeviceVector( curves_.size(), context );
+        boost::compute::copy( curves_.cbegin(), curves_.cend(), curvesDeviceVector.begin(), queue );
+        // TODO avoid initialization on release build and use it on debug build
+        size_t resultLineCount = CalcLineCount() * curves_.size();
+        boost::compute::vector<T4> resultDeviceVector( resultLineCount, context );
+        {
+            boost::compute::kernel kernel( programs_.at( context.get() ), "KochSnowflakeKernel" );
+            kernel.set_arg( 0, iterationsCount_ );
+
+            kernel.set_arg( 1, curvesDeviceVector );
+            kernel.set_arg( 2, static_cast<cl_int>( curvesDeviceVector.size() ) );
+
+            kernel.set_arg( 3, linesTempStorage );
+            kernel.set_arg( 4, static_cast<cl_ulong>( linesTempStorageSizeInBytes ) );
+
+            kernel.set_arg( 5, resultDeviceVector );
+
+            const unsigned threadsCount = CalcLineCount( iterationsCount_ );
+            events.insert( {OperationStep::Calculate,
+                queue.enqueue_1d_range_kernel( kernel, 0, threadsCount, 0 )
+            } );
+        }
 
         boost::compute::event event;
         void* outputDataPtr = queue.enqueue_map_buffer_async(
-            inoutBuffer, CL_MAP_WRITE, 0,
-            inoutVectorSize * sizeof(Line),
+            resultDeviceVector.get_buffer(), CL_MAP_WRITE, 0,
+            resultDeviceVector.size() * sizeof(T4),
             event );
         events.insert( {OperationStep::MapOutputData, event} );
         event.wait();
 
-        const Line* outputDataPtrCasted = reinterpret_cast<const Line*>( outputDataPtr );
-        const Line* endIterator = outputDataPtrCasted + inoutVectorSize;
-        std::transform( outputDataPtrCasted, endIterator,
-            std::back_inserter(outputData_),
-            [] (const Line& l) -> T4
-        {
-            return l.coords;
-        } );
+        const T4* outputDataPtrCasted = reinterpret_cast<const T4*>( outputDataPtr );
+        const T4* endIterator = outputDataPtrCasted + resultDeviceVector.size();
+        std::copy( outputDataPtrCasted, endIterator, std::back_inserter(outputData_) );
 
-        boost::compute::event lastEvent = queue.enqueue_unmap_buffer( inoutBuffer, outputDataPtr );
+        boost::compute::event lastEvent = queue.enqueue_unmap_buffer( resultDeviceVector.get_buffer(), outputDataPtr );
         events.insert( {OperationStep::UnmapOutputData, lastEvent } );
         lastEvent.wait();
 
@@ -283,10 +351,10 @@ public:
 
     std::string Description() override
     {
-        std::string result = ( boost::format( "Koch curve, %1%, up to %2% iterations (%3% lines)" ) %
+        std::string result = ( boost::format( "Koch curve, %1%, %2% iterations (%3% lines)" ) %
             KochCurveFixtureConstants<T>::descriptionTypeName %
             iterationsCount_ %
-            GetLineCount()
+            ( CalcLineCount() * curves_.size() )
             ).str();
         if( !descriptionSuffix_.empty() )
         {
@@ -316,7 +384,7 @@ public:
 
     virtual boost::optional<size_t> GetElementsCount() override
     {
-        return GetLineCount();
+        return CalcLineCount();
     }
 
     virtual ~KochCurveFixture()
@@ -326,15 +394,15 @@ private:
     int iterationsCount_;
     std::vector<T4> outputData_;
     std::string descriptionSuffix_;
-    std::unordered_map<cl_context, boost::compute::kernel> kernels_;
+    std::unordered_map<cl_context, boost::compute::program> programs_;
     std::vector<T4> curves_;
 
-    size_t GetLineCount()
+    size_t CalcLineCount()
     {
-        return GetLineCount( iterationsCount_ );
+        return CalcLineCount( iterationsCount_ );
     }
 
-    size_t GetLineCount( int i )
+    size_t CalcLineCount( int i )
     {
         size_t a = 1;
         return a << ( 2 * i ); // Same as 4 ^ i
@@ -345,7 +413,7 @@ private:
         size_t result = 0;
         for (int i = 0; i <= iterCount; ++i)
         {
-            result += GetLineCount( i );
+            result += CalcLineCount( i );
         }
         return result;
     }

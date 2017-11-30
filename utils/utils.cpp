@@ -109,14 +109,13 @@ namespace Utils
         return resultIter->first;
     }
 
-    boost::compute::kernel BuildKernel( const std::string& name,
-        boost::compute::context& context,
+    boost::compute::program BuildProgram( boost::compute::context& context,
         const std::string& source,
-        const std::string& buildOptions,
-        const std::vector<std::string>& extensions)
+        const std::string& buildOptions /*= std::string()*/,
+        const std::vector<std::string>& extensions /*= std::vector<std::string>()*/ )
     {
         std::string allSource;
-        for (const std::string& extension: extensions)
+        for( const std::string& extension : extensions )
         {
             allSource += ( boost::format( "#pragma OPENCL EXTENSION %1% : enable\n" ) % extension ).str();
         }
@@ -135,13 +134,13 @@ namespace Utils
         boost::compute::program program;
         try
         {
-            if (!program_)
+            if( !program_ )
             {
                 throw boost::compute::opencl_error( error );
             }
             program = boost::compute::program( program_ );
             program.build( buildOptions );
-            return boost::compute::kernel( program, name );
+            return program;
         }
         catch( boost::compute::opencl_error& error )
         {
@@ -154,10 +153,10 @@ namespace Utils
             {
             }
 
-            //if( error.error_code() == CL_BUILD_PROGRAM_FAILURE )
+            if( error.error_code() == CL_BUILD_PROGRAM_FAILURE )
             {
-                //TODO something weird happens with std::cerr here, using cout for now
-                BOOST_LOG_TRIVIAL( error ) << "Kernel " << name << " failed to build on device " <<
+                //TODO throw special exception and log outside of utils library
+                BOOST_LOG_TRIVIAL( error ) << "Program failed to build on device " <<
                     context.get_device().name() << std::endl <<
                     "Kernel source: " << std::endl << allSource << std::endl <<
                     "Build options: " << buildOptions << std::endl <<
@@ -165,6 +164,15 @@ namespace Utils
             }
             throw;
         }
+    }
+
+    boost::compute::kernel BuildKernel( const std::string& name,
+        boost::compute::context& context,
+        const std::string& source,
+        const std::string& buildOptions,
+        const std::vector<std::string>& extensions)
+    {
+        return boost::compute::kernel( BuildProgram( context, source, buildOptions, extensions), name );
     }
 
     std::string CombineStrings( const std::vector<std::string>& strings, const std::string & delimiter )

@@ -127,6 +127,11 @@ namespace Utils
         const std::string& buildOptions = std::string(),
         const std::vector<std::string>& extensions = std::vector<std::string>() );
 
+    boost::compute::program BuildProgram( boost::compute::context& context,
+        const std::string& source,
+        const std::string& buildOptions = std::string(),
+        const std::vector<std::string>& extensions = std::vector<std::string>() );
+
     template <typename D>
     std::unordered_map<OperationStep, D> CalculateTotalStepDurations( 
          const std::unordered_multimap<OperationStep, boost::compute::event>& events )
@@ -140,6 +145,25 @@ namespace Utils
     }
 
     std::string CombineStrings( const std::vector<std::string>& strings, const std::string & delimiter = "\n" );
+
+    /*
+        Tries to get a value from a map by key. If it is not found, use a default one supplied as a parameter
+    */
+    template<typename C, typename K, typename V>
+    V FindInMapWithDefault( const C& container, K key, V defaultValue )
+    {
+        V result;
+        auto iter = container.find( key );
+        if( iter != container.end() )
+        {
+            result = iter->second;
+        }
+        else
+        {
+            result = defaultValue;
+        }
+        return result;
+    }
 }
 
 #define EXCEPTION_ASSERT(expr) { if(!(expr)) { throw std::logic_error("Assert \"" #expr "\" failed"); } }

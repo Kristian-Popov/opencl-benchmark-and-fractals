@@ -11,7 +11,7 @@ int Pow2ForInt(int x)
 )";
 
     const char* kochCurveSource = R"(
-typedef struct __attribute__ ((packed)) Line
+typedef struct Line
 {
 	REAL_T_4 coords;
 	// First number (x) is an iteration number, second is line identifier in current iteration

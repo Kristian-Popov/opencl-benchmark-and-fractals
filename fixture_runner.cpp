@@ -128,15 +128,19 @@ void FixtureRunner::CreateKochCurveFixtures(
     for (int i: iterationCountVariants)
     {
         {
+            std::vector<cl_float4> curves = {
+                { 0.0f, 0.0f, 1000.0f, 0.0f },
+                { 1000.0f, 300.0f, 0.0f, 300.0f },
+            };
             auto ptr = std::make_shared<KochCurveFixture<cl_float,
-                cl_float2, cl_float4>>( i, std::vector<cl_float4>() );
+                cl_float2, cl_float4>>( i, curves );
             fixtures.push_back( ptr );
             fixturesWithData.push_back( ptr );
             fixtureToWriteResultToSVG.push_back( ptr );
         }
         {
             auto ptr = std::make_shared<KochCurveFixture<cl_double,
-                cl_double2, cl_double4>>( i, std::vector<cl_double4>() );
+                cl_double2, cl_double4>>( i, std::vector<cl_double4>( {{ 0.0, 0.0, 1000.0, 0.0 }} ) );
             fixtures.push_back( ptr );
             fixturesWithData.push_back( ptr );
             fixtureToWriteResultToSVG.push_back( ptr );
@@ -326,17 +330,17 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
         for( auto& fixture : fixtureToWriteResultToSVG )
         {
             SVGDocument document;
-            long double multiplier = 1000.0;
-            document.SetSize( multiplier, 500 );
+            document.SetSize( 1000, 300 );
             std::vector<std::vector<long double>> results = fixture->GetResults();
             for (const auto& line: results)
             {
                 EXCEPTION_ASSERT( line.size() == 4 );
                 document.AddLine( 
-                    line.at(0) * multiplier, 
-                    line.at(1) * multiplier, 
-                    line.at(2) * multiplier, 
-                    line.at(3) * multiplier );
+                    line.at(0), 
+                    line.at(1), 
+                    line.at(2), 
+                    line.at(3)
+                );
             }
             document.BuildAndWriteToDisk( fixture->Description() + ".svg" );
         }

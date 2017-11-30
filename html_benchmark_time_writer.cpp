@@ -195,7 +195,10 @@ std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationTy
             std::transform( perOperationData.cbegin(), perOperationData.cend(), std::back_inserter( perOperationResults ),
                 [id]( const std::unordered_map<OperationStep, OutputDurationType>& d )
             {
-                return std::chrono::duration_cast<OutputDurationType>( d.at( id ) );
+                // If duration for the given step is not given, use quiet NaN instead
+                return std::chrono::duration_cast<OutputDurationType>( Utils::FindInMapWithDefault( d, id, 
+                    OutputDurationType( std::numeric_limits<OutputNumericType>::quiet_NaN() ) 
+                ) );
             } );
 
             //TODO "accumulate" can safely be changed to "reduce" here to increase performance
