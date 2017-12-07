@@ -243,8 +243,10 @@ public:
             ( typeName + "4" )
             ).str();
 
-        std::string source = Utils::CombineStrings( 
-            { ProgramSourceRepository::GetKochCurveSource(), kochCurveProgramCode } );
+        std::string source = Utils::CombineStrings( {
+            ProgramSourceRepository::GetKochCurveSource(),
+            kochCurveProgramCode
+        } );
 
         programs_.insert( {context.get(),
             Utils::BuildProgram( context, source, compilerOptions,
@@ -263,7 +265,7 @@ public:
     virtual std::vector<std::string> GetRequiredExtensions() override
     {
         std::string requiredExtension = KochCurveFixtureConstants<T>::requiredExtension;
-        std::vector<std::string> result;
+        std::vector<std::string> result = { "cl_khr_global_int32_base_atomics" };
         if( !requiredExtension.empty() )
         {
             result.push_back( requiredExtension );

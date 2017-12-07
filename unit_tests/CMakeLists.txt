@@ -6,6 +6,7 @@ add_executable (unit_tests
 	opencl_math_tests.cpp
 	koch_curve_tests.cpp
 	unit_tests.cpp
+	global_memory_pool_tests.cpp
 )
 
 target_include_directories (unit_tests PUBLIC ${OpenCL_INCLUDE_DIRS} 
