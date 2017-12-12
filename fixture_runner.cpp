@@ -21,6 +21,7 @@
 #include "trivial_factorial_fixture.h"
 #include "damped_wave_fixture.h"
 #include "koch_curve_fixture.h"
+#include "fixtures/multibrot_fractal_fixture.h"
 
 #include <boost/random/normal_distribution.hpp>
 #include <boost/log/trivial.hpp>
@@ -148,6 +149,42 @@ void FixtureRunner::CreateKochCurveFixtures(
     }
 }
 
+void FixtureRunner::CreateMultibrotSetFixtures(
+    std::vector<std::shared_ptr<Fixture>>& fixtures,
+    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort>>>& fixturesToWriteDataToPNG )
+{
+    // TODO add support for negative powers
+    std::vector<double> powers = { 1.0, 2.0, 3.0, 7.0, 3.5, 0.1, 0.5 };
+    std::array<double, 2> realRange = {-2.5, 1.5}, imgRange = {-2.0, 2.0};
+
+    for (double power: powers)
+    {
+        {
+            auto ptr = std::make_shared<MultibrotFractalFixture<cl_float>>(
+                3000, 3000, realRange.at(0), realRange.at(1), imgRange.at(0), imgRange.at(1), power );
+            fixtures.push_back( ptr );
+            fixturesToWriteDataToPNG.push_back( ptr );
+        }
+        {
+            auto ptr = std::make_shared<MultibrotFractalFixture<cl_double>>(
+                2000, 2000, realRange.at(0), realRange.at(1), imgRange.at(0), imgRange.at(1), power );
+            fixtures.push_back( ptr );
+            fixturesToWriteDataToPNG.push_back( ptr );
+        }
+        {
+            auto ptr = std::make_shared<MultibrotFractalFixture<half_float::half>>(
+                1000, 1000, 
+                static_cast<half_float::half>( realRange.at( 0 )), 
+                static_cast<half_float::half>( realRange.at( 1 )),
+                static_cast<half_float::half>( imgRange.at( 0 )),
+                static_cast<half_float::half>( imgRange.at( 1 )),
+                static_cast<half_float::half>( power ));
+            fixtures.push_back( ptr );
+            fixturesToWriteDataToPNG.push_back( ptr );
+        }
+    }
+}
+
 void SetFloatingPointEnvironment()
 {
     int result = std::fesetround( FE_TONEAREST );
@@ -187,6 +224,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     std::vector<std::shared_ptr<Fixture>> fixtures;
     std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>> fixturesWithData;
     std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>> fixtureToWriteResultToSVG;
+    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort>>> fixturesToWriteDataToPNG;
 
     if (fixturesToRun.trivialFactorial)
     {
@@ -199,6 +237,10 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     if (fixturesToRun.kochCurve)
     {
         CreateKochCurveFixtures(fixtures, fixturesWithData, fixtureToWriteResultToSVG );
+    }
+    if (fixturesToRun.multibrotSet)
+    {
+        CreateMultibrotSetFixtures(fixtures, fixturesToWriteDataToPNG );
     }
 
     BOOST_LOG_TRIVIAL( info ) << "We have " << fixtures.size() << " fixtures to run";
@@ -349,5 +391,11 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     {
         BOOST_LOG_TRIVIAL( error ) << "Caught exception when building SVG document: " << e.what();
     }
+
+    for (auto& fixture: fixturesToWriteDataToPNG )
+    {
+        fixture->WriteResults();
+    }
+
     BOOST_LOG_TRIVIAL( info ) << "Done";
 }

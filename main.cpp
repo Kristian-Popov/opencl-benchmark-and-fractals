@@ -25,7 +25,8 @@ int main( int argc, char** argv )
             "By default this option is on if results are written to any output except standard output stream" )
         ( "no-trivial-factorial", "do not run a trivial factorial fixture. " )
         ( "no-damped-wave2d", "do not run a damped wave in 2D fixture. " )
-        ( "no-koch-curve", "do not run Koch curve fixture. " )
+        ( "no-koch-curve", "do not run a Koch curve fixture. " )
+        ( "no-multibrot-set", "do not run a Mandelbrot/Multibrot set fixture. " )
         ;
 
     // TODO something is wrong here. For command line arguments line "--html --stdout" only "html" part is present in vm after parsing
@@ -82,6 +83,7 @@ int main( int argc, char** argv )
     fixturesToRun.trivialFactorial = vm.count( "no-trivial-factorial" ) == 0;
     fixturesToRun.dampedWave2D = vm.count( "no-damped-wave2d" ) == 0;
     fixturesToRun.kochCurve = vm.count( "no-koch-curve" ) == 0;
+    fixturesToRun.multibrotSet = vm.count( "no-multibrot-set" ) == 0;
 
     try
     {
