@@ -8,6 +8,7 @@ SVGDocument::SVGDocument()
 {
     tree_.put( "svg.<xmlattr>.xmlns", "http://www.w3.org/2000/svg" );
     tree_.put( "svg.<xmlattr>.xmlns:xlink", "http://www.w3.org/1999/xlink" );
+    tree_.put( "svg.<xmlattr>.stroke", "black" );
 }
 
 void SVGDocument::SetSize( long double width, long double height )
@@ -23,7 +24,6 @@ void SVGDocument::AddLine( long double x1, long double y1, long double x2, long 
     node.put( "<xmlattr>.y1", FormatValue( y1 ) );
     node.put( "<xmlattr>.x2", FormatValue( x2 ) );
     node.put( "<xmlattr>.y2", FormatValue( y2 ) );
-    node.put( "<xmlattr>.style", "stroke: black" );
     tree_.add_child( "svg.line", node );
 }
 
