@@ -199,6 +199,12 @@ __kernel void KochSnowflakeKernel(int stopAtIteration,
 
     // TODO support for half precision could be added by creating an alternate data types,
     // something like half2 and half4
+
+    template<typename T>
+    bool IsPointInViewport(T x, T y, long double width, long double height)
+    {
+        return x >= 0 && y >= 0 && x <= width && y <= height;
+    }
 }
 
 /*
@@ -219,8 +225,11 @@ public:
         int iterationsCount,
         // Vector of lines. Every line becomes a curve that starts at (l.x; l.y) and ends at (l.z; l.w)
         const std::vector<T4>& curves,
+        long double width, long double height,
         const std::string& descriptionSuffix = std::string() )
         : iterationsCount_(iterationsCount)
+        , width_(width)
+        , height_(height)
         , descriptionSuffix_(descriptionSuffix)
         , curves_(curves)
     {
@@ -389,6 +398,35 @@ public:
         return CalcLineCount();
     }
 
+    virtual void VerifyResults() override
+    {
+        // Verify that all points are within viewport (limited by width and height)
+        if (!std::all_of(outputData_.cbegin(), outputData_.cend(),
+            [&] (const T4& line) -> bool
+            {
+                return IsPointInViewport(line.x, line.y, width_, height_) &&
+                    IsPointInViewport( line.z, line.w, width_, height_ );
+            } ))
+        {
+        }
+    }
+
+    virtual void WriteResults() override
+    {
+        SVGDocument document;
+        document.SetSize( width_, height_ );
+        for( const auto& line : outputData_ )
+        {
+            document.AddLine(
+                line.x,
+                line.y,
+                line.z,
+                line.w
+            );
+        }
+        document.BuildAndWriteToDisk( this->Description() + ".svg" );
+    }
+
     virtual ~KochCurveFixture()
     {
     }
@@ -398,6 +436,7 @@ private:
     std::string descriptionSuffix_;
     std::unordered_map<cl_context, boost::compute::program> programs_;
     std::vector<T4> curves_;
+    long double width_, height_;
 
     size_t CalcLineCount()
     {

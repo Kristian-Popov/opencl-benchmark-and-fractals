@@ -164,6 +164,11 @@ namespace Utils
         }
         return result;
     }
+
+    // TODO add more generic solution?
+    std::vector<cl_float4> ConvertDouble4ToFloat4Vectors( const std::vector<cl_double4>& vectors );
+
+    cl_double4 CombineTwoDouble2Vectors( const cl_double2& a, const cl_double2& b);
 }
 
 #define EXCEPTION_ASSERT(expr) { if(!(expr)) { throw std::logic_error("Assert \"" #expr "\" failed"); } }

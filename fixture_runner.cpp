@@ -125,26 +125,79 @@ void FixtureRunner::CreateKochCurveFixtures(
     std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>>& fixturesWithData,
     std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>>& fixtureToWriteResultToSVG )
 {
-    const std::vector<int> iterationCountVariants = {3, 10};
+    // TODO it would be great to get images with higher number of iterations but
+    // another output method is needed (SVG doesn't work well)
+    const std::vector<int> iterationCountVariants = {1, 3, 7};
+    struct CurveVariant
+    {
+        std::vector<cl_double4> curves;
+        std::string descriptionSuffix;
+    };
+    std::vector<CurveVariant> curveVariants;
+    {
+        std::vector<cl_double4> singleCurve = {{0.0, 0.0, 1000.0, 0.0}};
+        std::vector<cl_double4> twoCurvesFace2Face = {
+            {0.0, 0.0, 1000.0, 0.0},
+            {1000.0, 300.0, 0.0, 300.0}
+        };
+        std::vector<cl_double4> snowflakeTriangleCurves;
+        {
+            cl_double2 A = { 300.0, 646.41 };
+            cl_double2 B = { 500.0, 300.0 };
+            cl_double2 C = { 700.0, 646.41 };
+            snowflakeTriangleCurves = {
+                Utils::CombineTwoDouble2Vectors(B, A),
+                Utils::CombineTwoDouble2Vectors(C, B),
+                Utils::CombineTwoDouble2Vectors(A, C)
+            };
+        }
+        std::vector<cl_double4> snowflakeSomeFigure = {
+            {300.0, 646.41, 500.0, 300.0},
+            {700.0, 646.41, 300.0, 646.41},
+            {500.0, 300.0, 700.0, 646.41},
+        };
+        std::vector<cl_double4> snowflakeSquareCurves;
+        {
+            cl_double2 A = {300.0, 300.0};
+            cl_double2 B = {700.0, 300.0};
+            cl_double2 C = {300.0, 700.0};
+            cl_double2 D = {700.0, 700.0};
+            snowflakeSquareCurves = {
+                Utils::CombineTwoDouble2Vectors( B, A ),
+                Utils::CombineTwoDouble2Vectors( A, C ),
+                Utils::CombineTwoDouble2Vectors( D, B ),
+                Utils::CombineTwoDouble2Vectors( C, D ),
+            };
+        }
+        curveVariants = { 
+            { singleCurve, "single curve" }, 
+            { twoCurvesFace2Face, "two curves" },
+            { snowflakeTriangleCurves, "triangle" },
+            { snowflakeSquareCurves, "square"},
+            { snowflakeSomeFigure, "some figure"}
+        };
+    }
+    
     for (int i: iterationCountVariants)
     {
+        for (const auto& curveVariant: curveVariants)
         {
-            std::vector<cl_float4> curves = {
-                { 0.0f, 0.0f, 1000.0f, 0.0f },
-                { 1000.0f, 300.0f, 0.0f, 300.0f },
-            };
-            auto ptr = std::make_shared<KochCurveFixture<cl_float,
-                cl_float2, cl_float4>>( i, curves );
-            fixtures.push_back( ptr );
-            fixturesWithData.push_back( ptr );
-            fixtureToWriteResultToSVG.push_back( ptr );
-        }
-        {
-            auto ptr = std::make_shared<KochCurveFixture<cl_double,
-                cl_double2, cl_double4>>( i, std::vector<cl_double4>( {{ 0.0, 0.0, 1000.0, 0.0 }} ) );
-            fixtures.push_back( ptr );
-            fixturesWithData.push_back( ptr );
-            fixtureToWriteResultToSVG.push_back( ptr );
+            {
+                auto ptr = std::make_shared<KochCurveFixture<cl_float,
+                    cl_float2, cl_float4>>( i, Utils::ConvertDouble4ToFloat4Vectors( curveVariant.curves ),
+                        1000.0f, 1000.0f, curveVariant.descriptionSuffix );
+                fixtures.push_back( ptr );
+                fixturesWithData.push_back( ptr );
+                fixtureToWriteResultToSVG.push_back( ptr );
+            }
+            {
+                auto ptr = std::make_shared<KochCurveFixture<cl_double,
+                    cl_double2, cl_double4>>( i, curveVariant.curves, 1000.0, 1000.0, 
+                        curveVariant.descriptionSuffix );
+                fixtures.push_back( ptr );
+                fixturesWithData.push_back( ptr );
+                fixtureToWriteResultToSVG.push_back( ptr );
+            }
         }
     }
 }
@@ -371,20 +424,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
     {
         for( auto& fixture : fixtureToWriteResultToSVG )
         {
-            SVGDocument document;
-            document.SetSize( 1000, 300 );
-            std::vector<std::vector<long double>> results = fixture->GetResults();
-            for (const auto& line: results)
-            {
-                EXCEPTION_ASSERT( line.size() == 4 );
-                document.AddLine( 
-                    line.at(0), 
-                    line.at(1), 
-                    line.at(2), 
-                    line.at(3)
-                );
-            }
-            document.BuildAndWriteToDisk( fixture->Description() + ".svg" );
+            fixture->WriteResults();
         }
     }
     catch(std::exception& e)
