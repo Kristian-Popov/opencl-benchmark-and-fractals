@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fixture_that_returns_data.h"
+#include "fixture.h"
 #include "program_source_repository.h"
 #include "koch_curve_utils.h"
 
@@ -213,12 +213,7 @@ __kernel void KochSnowflakeKernel(int stopAtIteration,
     T4 should be a vector of 4 elements of the same type,
 */
 template<typename T, typename T2, typename T4>
-/* FixtureThatReturnsData is used to retrieve data. If we have something like
-FixtureThatReturnsData<T>, then we may have trouble writing multiple values into CSV/SVG/etc.
-Instead we are using long double that is well suiting to store floating point values
-since it can hold any half/float/double value without any precision loss
-*/
-class KochCurveFixture : public FixtureThatReturnsData<long double>
+class KochCurveFixture : public Fixture
 {
 public:
     explicit KochCurveFixture( 
@@ -374,25 +369,6 @@ public:
         return result;
     }
 
-    /*
-    Return results in the following form:
-    {
-    { x1, y1, x2, y2 },
-    ...
-    }
-    Every line is one line, where (x1, y1) is starting point and (x2, y2) is ending point
-    */
-    virtual std::vector<std::vector<long double>> GetResults() override
-    {
-        std::vector<std::vector<long double>> result;
-        std::transform( outputData_.cbegin(), outputData_.cend(), std::back_inserter(result),
-            [] (const T4& data)
-        {
-            return std::vector<long double>( { data.x, data.y, data.z, data.w } );
-        } );
-        return result;
-    }
-
     virtual boost::optional<size_t> GetElementsCount() override
     {
         return CalcLineCount();
@@ -462,5 +438,24 @@ private:
     size_t CalcTotalLineCount()
     {
         return CalcTotalLineCount( iterationsCount_ );
+    }
+
+    /*
+    Return results in the following form:
+    {
+    { x1, y1, x2, y2 },
+    ...
+    }
+    Every line is one line, where (x1, y1) is starting point and (x2, y2) is ending point
+    */
+    std::vector<std::vector<long double>> GetResults()
+    {
+        std::vector<std::vector<long double>> result;
+        std::transform( outputData_.cbegin(), outputData_.cend(), std::back_inserter( result ),
+            []( const T4& data )
+        {
+            return std::vector<long double>( {data.x, data.y, data.z, data.w} );
+        } );
+        return result;
     }
 };

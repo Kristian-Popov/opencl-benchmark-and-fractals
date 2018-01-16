@@ -62,5 +62,11 @@ public:
         return boost::optional<size_t>();
     }
 
+    /*
+        Write results of list fixture execution to a file.
+        Every fixture may provide its own method, but it is optional.
+    */
+    virtual void WriteResults() {}
+
     virtual ~Fixture() {}
 };

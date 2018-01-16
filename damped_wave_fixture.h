@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fixture_that_returns_data.h"
+#include "fixture.h"
 
 #pragma pack(push, 1)
 template<typename T>
@@ -24,7 +24,7 @@ struct DampedWaveFixtureParameters
 #pragma pack(pop)
 
 template<typename T, typename I>
-class DampedWaveFixture : public FixtureThatReturnsData<long double>
+class DampedWaveFixture : public Fixture
 {
 public:
     DampedWaveFixture( const std::vector<DampedWaveFixtureParameters<T>>& params,
@@ -45,22 +45,16 @@ public:
 
     void VerifyResults();
 
-    /*
-        Return results in the following form:
-        {
-            { xmin, y_expected_1, y_1 },
-            { x2, y_expected_2, y_2 },
-            ...
-            { xmax, y_expected_n, y_n },
-        }
-        First column contains input value, second one - expected value (as calculated on a host CPU),
-        third one - value calculated by OpenCL device
-    */
-    virtual std::vector<std::vector<long double>> GetResults() override;
-
     virtual boost::optional<size_t> GetElementsCount() override
     {
         return dataSize_;
+    }
+
+    virtual void WriteResults() override
+    {
+        CSVDocument csvDocument( ( Description() + ".csv" ).c_str() );
+        csvDocument.AddValues( GetResults() );
+        csvDocument.BuildAndWriteToDisk();
     }
 
     virtual ~DampedWaveFixture()
@@ -81,6 +75,19 @@ private:
     void GenerateData();
 
     T CalcExpectedValue( T x ) const;
+
+    /*
+    Return results in the following form:
+    {
+    { xmin, y_expected_1, y_1 },
+    { x2, y_expected_2, y_2 },
+    ...
+    { xmax, y_expected_n, y_n },
+    }
+    First column contains input value, second one - expected value (as calculated on a host CPU),
+    third one - value calculated by OpenCL device
+    */
+    std::vector<std::vector<long double>> GetResults();
 };
 
 #include "damped_wave_fixture.inl"

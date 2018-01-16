@@ -87,7 +87,8 @@ int main( int argc, char** argv )
 
     try
     {
-        FixtureRunner::Run( std::move( timeWriter ), fixturesToRun );
+        FixtureRunner fixtureRunner;
+        fixtureRunner.Run( std::move( timeWriter ), fixturesToRun );
     }
     catch(std::exception& e)
     {

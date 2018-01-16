@@ -29,12 +29,13 @@
 #include <boost/math/constants/constants.hpp>
 #include "half_precision_fp.h"
 
+// TODO enable only on relevant compilers
 #pragma STDC FENV_ACCESS on
 
-void FixtureRunner::CreateTrivialFixtures( std::vector<std::shared_ptr<Fixture>>& fixtures )
+void FixtureRunner::CreateTrivialFixtures()
 {
     const std::vector<int> dataSizesForTrivialFactorial = {100, 1000, 100000, 1000000, 100000000};
-    std::transform( dataSizesForTrivialFactorial.begin(), dataSizesForTrivialFactorial.end(), std::back_inserter( fixtures ),
+    std::transform( dataSizesForTrivialFactorial.begin(), dataSizesForTrivialFactorial.end(), std::back_inserter( fixtures_ ),
         []( int dataSize )
     {
         typedef std::uniform_int_distribution<int> Distribution;
@@ -45,9 +46,7 @@ void FixtureRunner::CreateTrivialFixtures( std::vector<std::shared_ptr<Fixture>>
     } );
 }
 
-void FixtureRunner::CreateDampedWave2DFixtures(
-    std::vector<std::shared_ptr<Fixture>>& fixtures,
-    std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>>& fixturesWithData )
+void FixtureRunner::CreateDampedWave2DFixtures()
 {
     cl_float frequency = 1.0f;
     const cl_float pi = boost::math::constants::pi<cl_float>();
@@ -61,8 +60,7 @@ void FixtureRunner::CreateDampedWave2DFixtures(
         {DampedWaveFixtureParameters<cl_float>( 1000.0f, 0.1f, 2 * pi*frequency, 0.0f, 1.0f )};
         auto dampedWaveFixture = std::make_shared<DampedWaveFixture<cl_float, SequentialValuesIterator<cl_float>>>( params,
             SequentialValuesIterator<cl_float>( min, step ), dataSize, "sequential input values" );
-        fixtures.push_back( dampedWaveFixture );
-        fixturesWithData.push_back( dampedWaveFixture );
+        fixtures_.push_back( dampedWaveFixture );
     }
     {
         std::vector<DampedWaveFixtureParameters<cl_double>> params =
@@ -72,7 +70,7 @@ void FixtureRunner::CreateDampedWave2DFixtures(
         typedef RandomValuesIterator<cl_double, Distribution> Iterator;
         auto dampedWaveFixture = std::make_shared<DampedWaveFixture<cl_double, Iterator>>( params,
             Distribution( 0.0, 100.0 ), dataSize, "random input values" );
-        fixtures.push_back( dampedWaveFixture );
+        fixtures_.push_back( dampedWaveFixture );
     }
     {
         using namespace half_float::literal;
@@ -84,7 +82,7 @@ void FixtureRunner::CreateDampedWave2DFixtures(
         typedef RandomValuesIterator<half_float::half, Distribution> Iterator;
         auto dampedWaveFixture = std::make_shared<DampedWaveFixture<half_float::half, Iterator>>( params,
             Distribution( 0.0_h, 100.0_h ), dataSize, "random input values" );
-        fixtures.push_back( dampedWaveFixture );
+        fixtures_.push_back( dampedWaveFixture );
     }
 
     {
@@ -105,8 +103,7 @@ void FixtureRunner::CreateDampedWave2DFixtures(
             {
                 auto fixture = std::make_shared<DampedWaveFixture<cl_float, Iterator>>( params,
                     Iterator( Distribution( 0.0f, 50.0f ) ), dataSize, "random input values" );
-                fixtures.push_back( fixture );
-                fixturesWithData.push_back( fixture );
+                fixtures_.push_back( fixture );
             }
         }
         {
@@ -114,16 +111,12 @@ void FixtureRunner::CreateDampedWave2DFixtures(
             typedef RandomValuesIterator<cl_float, Distribution> Iterator;
             auto fixture = std::make_shared<DampedWaveFixture<cl_float, SequentialValuesIterator<cl_float>>>( params,
                 SequentialValuesIterator<cl_float>( min, step ), dataSize, "sequential input values" );
-            fixtures.push_back( fixture );
-            fixturesWithData.push_back( fixture );
+            fixtures_.push_back( fixture );
         }
     }
 }
 
-void FixtureRunner::CreateKochCurveFixtures( 
-    std::vector<std::shared_ptr<Fixture>>& fixtures,
-    std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>>& fixturesWithData,
-    std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>>& fixtureToWriteResultToSVG )
+void FixtureRunner::CreateKochCurveFixtures()
 {
     // TODO it would be great to get images with higher number of iterations but
     // another output method is needed (SVG doesn't work well)
@@ -186,25 +179,19 @@ void FixtureRunner::CreateKochCurveFixtures(
                 auto ptr = std::make_shared<KochCurveFixture<cl_float,
                     cl_float2, cl_float4>>( i, Utils::ConvertDouble4ToFloat4Vectors( curveVariant.curves ),
                         1000.0f, 1000.0f, curveVariant.descriptionSuffix );
-                fixtures.push_back( ptr );
-                fixturesWithData.push_back( ptr );
-                fixtureToWriteResultToSVG.push_back( ptr );
+                fixtures_.push_back( ptr );
             }
             {
                 auto ptr = std::make_shared<KochCurveFixture<cl_double,
                     cl_double2, cl_double4>>( i, curveVariant.curves, 1000.0, 1000.0, 
                         curveVariant.descriptionSuffix );
-                fixtures.push_back( ptr );
-                fixturesWithData.push_back( ptr );
-                fixtureToWriteResultToSVG.push_back( ptr );
+                fixtures_.push_back( ptr );
             }
         }
     }
 }
 
-void FixtureRunner::CreateMultibrotSetFixtures(
-    std::vector<std::shared_ptr<Fixture>>& fixtures,
-    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort>>>& fixturesToWriteDataToPNG )
+void FixtureRunner::CreateMultibrotSetFixtures()
 {
     // TODO add support for negative powers
     std::vector<double> powers = { 1.0, 2.0, 3.0, 7.0, 3.5, 0.1, 0.5 };
@@ -215,14 +202,12 @@ void FixtureRunner::CreateMultibrotSetFixtures(
         {
             auto ptr = std::make_shared<MultibrotFractalFixture<cl_float>>(
                 3000, 3000, realRange.at(0), realRange.at(1), imgRange.at(0), imgRange.at(1), power );
-            fixtures.push_back( ptr );
-            fixturesToWriteDataToPNG.push_back( ptr );
+            fixtures_.push_back( ptr );
         }
         {
             auto ptr = std::make_shared<MultibrotFractalFixture<cl_double>>(
                 2000, 2000, realRange.at(0), realRange.at(1), imgRange.at(0), imgRange.at(1), power );
-            fixtures.push_back( ptr );
-            fixturesToWriteDataToPNG.push_back( ptr );
+            fixtures_.push_back( ptr );
         }
         {
             auto ptr = std::make_shared<MultibrotFractalFixture<half_float::half>>(
@@ -232,39 +217,31 @@ void FixtureRunner::CreateMultibrotSetFixtures(
                 static_cast<half_float::half>( imgRange.at( 0 )),
                 static_cast<half_float::half>( imgRange.at( 1 )),
                 static_cast<half_float::half>( power ));
-            fixtures.push_back( ptr );
-            fixturesToWriteDataToPNG.push_back( ptr );
+            fixtures_.push_back( ptr );
         }
     }
 }
 
-void SetFloatingPointEnvironment()
+void FixtureRunner::SetFloatingPointEnvironment()
 {
     int result = std::fesetround( FE_TONEAREST );
     EXCEPTION_ASSERT( result == 0);
 }
 
-std::vector<boost::compute::device> FixtureRunner::FillDevicesList()
+void FixtureRunner::FillContextsMap()
 {
-    std::vector<boost::compute::device> result;
-    std::vector<boost::compute::platform> platforms = boost::compute::system::platforms();
-    for( boost::compute::platform& platform : platforms )
+    for ( const boost::compute::platform& platform: boost::compute::system::platforms() )
     {
-        auto devices = platform.devices();
-        result.insert( result.end(), devices.cbegin(), devices.cend() );
+        for ( const boost::compute::device& device: platform.devices() )
+        {
+            contexts_.insert( { device.get(), boost::compute::context( device ) } );
+        }
     }
-    return result;
 }
-
-std::unordered_map<cl_device_id, boost::compute::context> FixtureRunner::FillContextsMap(
-    const std::vector<boost::compute::device>& devices )
+void FixtureRunner::Clear()
 {
-    std::unordered_map<cl_device_id, boost::compute::context> result;
-    for ( const boost::compute::device& device: devices )
-    {
-        result.insert( { device.get(), boost::compute::context( device ) } );
-    }
-    return result;
+    fixtures_.clear();
+    contexts_.clear();
 }
 
 void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWriter, 
@@ -274,56 +251,57 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
 
     SetFloatingPointEnvironment();
 
-    std::vector<std::shared_ptr<Fixture>> fixtures;
-    std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>> fixturesWithData;
-    std::vector<std::shared_ptr<FixtureThatReturnsData<long double>>> fixtureToWriteResultToSVG;
-    std::vector<std::shared_ptr<FixtureThatReturnsData<cl_ushort>>> fixturesToWriteDataToPNG;
-
+    Clear();
     if (fixturesToRun.trivialFactorial)
     {
-        CreateTrivialFixtures(fixtures);
+        CreateTrivialFixtures();
     }
     if (fixturesToRun.dampedWave2D)
     {
-        CreateDampedWave2DFixtures(fixtures, fixturesWithData);
+        CreateDampedWave2DFixtures();
     }
     if (fixturesToRun.kochCurve)
     {
-        CreateKochCurveFixtures(fixtures, fixturesWithData, fixtureToWriteResultToSVG );
+        CreateKochCurveFixtures();
     }
     if (fixturesToRun.multibrotSet)
     {
-        CreateMultibrotSetFixtures(fixtures, fixturesToWriteDataToPNG );
+        CreateMultibrotSetFixtures();
     }
 
-    BOOST_LOG_TRIVIAL( info ) << "We have " << fixtures.size() << " fixtures to run";
+    BOOST_LOG_TRIVIAL( info ) << "We have " << fixtures_.size() << " fixtures to run";
 
     typedef double OutputNumericType;
     typedef std::chrono::duration<OutputNumericType, std::micro> OutputDurationType;
     auto targetFixtureExecutionTime = std::chrono::milliseconds( 10 ); // Time how long fixture should execute
     int minIterations = 10; // Minimal number of iterations
 
-    std::vector<boost::compute::device> devicesList = FillDevicesList();
-    std::unordered_map<cl_device_id, boost::compute::context> contextsList =
-        FillContextsMap( devicesList );
+    FillContextsMap();
 
-    for( size_t fixtureIndex = 0; fixtureIndex < fixtures.size(); ++fixtureIndex )
+    for( size_t fixtureIndex = 0; fixtureIndex < fixtures_.size(); ++fixtureIndex )
     {
-        std::shared_ptr<Fixture>& fixture = fixtures.at(fixtureIndex);
+        std::shared_ptr<Fixture>& fixture = fixtures_.at(fixtureIndex);
+        
+        std::string fixtureName = fixture->Description();
+
         fixture->Initialize();
         BenchmarkTimeWriterInterface::BenchmarkFixtureResultForFixture dataForTimeWriter;
         dataForTimeWriter.operationSteps = fixture->GetSteps();
-        dataForTimeWriter.fixtureName = fixture->Description();
+        dataForTimeWriter.fixtureName = fixtureName;
         dataForTimeWriter.elementsCount = fixture->GetElementsCount();
 
-        for( boost::compute::device& device : devicesList )
+        for( boost::compute::platform& platform : boost::compute::system::platforms() )
         {
             dataForTimeWriter.perFixtureResults.push_back( BenchmarkTimeWriterInterface::BenchmarkFixtureResultForPlatform() );
             BenchmarkTimeWriterInterface::BenchmarkFixtureResultForPlatform& perPlatformResults = 
                 dataForTimeWriter.perFixtureResults.back();
 
-            perPlatformResults.platformName = device.platform().name();
+            perPlatformResults.platformName = platform.name();
+            for( const boost::compute::device& device : platform.devices() )
             {
+                // Find corresponding context
+                boost::compute::context& context = contexts_.at( device.get() );
+
                 perPlatformResults.perDeviceResults.push_back( BenchmarkTimeWriterInterface::BenchmarkFixtureResultForDevice() );
                 BenchmarkTimeWriterInterface::BenchmarkFixtureResultForDevice& perDeviceResults =
                     perPlatformResults.perDeviceResults.back();
@@ -344,7 +322,6 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
                             continue;
                         }
                     }
-                    boost::compute::context& context = contextsList.at( device.get() );
                     fixture->InitializeForContext( context );
 
                     std::vector<std::unordered_map<OperationStep, Fixture::Duration>> results;
@@ -401,41 +378,27 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
         fixture->Finalize();
         timeWriter->WriteResultsForFixture( dataForTimeWriter );
 
-        int fixturesLeft = fixtures.size() - fixtureIndex - 1;
+        int fixturesLeft = fixtures_.size() - fixtureIndex - 1;
         if( fixturesLeft > 0 )
         {
             BOOST_LOG_TRIVIAL( info ) << "Fixture \"" << fixture->Description() << "\" finished. "
-                "Left " << fixturesLeft << " fixtures out of " << fixtures.size();
+                "Left " << fixturesLeft << " fixtures out of " << fixtures_.size();
+        }
+
+        try
+        {
+            fixture->WriteResults();
+        }
+        catch( std::exception& e )
+        {
+            //BOOST_LOG_TRIVIAL( error ) << "Caught exception when building SVG document: " << e.what();
+            BOOST_LOG_TRIVIAL( error ) << "Error when writing fixture \"" << fixtureName << "\" results: " << e.what();
         }
 
         // Destroy fixture to release some memory sooner
         fixture.reset();
     }
     timeWriter->Flush();
-
-    for (auto& fixtureWithData: fixturesWithData)
-    {
-        CSVDocument csvDocument( ( fixtureWithData->Description() + ".csv" ).c_str() );
-        csvDocument.AddValues( fixtureWithData->GetResults() );
-        csvDocument.BuildAndWriteToDisk();
-    }
-
-    try
-    {
-        for( auto& fixture : fixtureToWriteResultToSVG )
-        {
-            fixture->WriteResults();
-        }
-    }
-    catch(std::exception& e)
-    {
-        BOOST_LOG_TRIVIAL( error ) << "Caught exception when building SVG document: " << e.what();
-    }
-
-    for (auto& fixture: fixturesToWriteDataToPNG )
-    {
-        fixture->WriteResults();
-    }
 
     BOOST_LOG_TRIVIAL( info ) << "Done";
 }

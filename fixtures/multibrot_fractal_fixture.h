@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fixture_that_returns_data.h"
+#include "fixture.h"
 #include "boost/compute.hpp"
 #include "half_precision_fp.h"
 
@@ -8,12 +8,7 @@
 T should be a floating point type (e.g. float, double or half),
 */
 template<typename T>
-/* FixtureThatReturnsData is used to retrieve data. If we have something like
-FixtureThatReturnsData<T>, then we may have trouble writing multiple values into CSV/SVG/etc.
-Instead we are using long double that is well suiting to store floating point values
-since it can hold any half/float/double value without any precision loss
-*/
-class MultibrotFractalFixture : public FixtureThatReturnsData<cl_ushort>
+class MultibrotFractalFixture : public Fixture
 {
 public:
     explicit MultibrotFractalFixture(
@@ -42,20 +37,6 @@ public:
 
     std::string Description() override;
 
-    virtual std::vector<std::vector<cl_ushort>> GetResults() override
-    {
-        // TODO add more elegant retrieving results for building PNG
-        //return outputData_;
-        return { outputData_ };
-    }
-
-    virtual boost::optional<size_t> GetElementsCount() override
-    {
-        return GetElementsCountInternal();
-    }
-
-    virtual void WriteResults() override;
-
     static size_t MultibrotFractalFixture<T>::CalcMaxSizeInPix( T min, T max );
 
     virtual ~MultibrotFractalFixture()
@@ -77,6 +58,20 @@ private:
     {
         return width_*height_;
     }
+
+    std::vector<std::vector<cl_ushort>> GetResults()
+    {
+        // TODO add more elegant retrieving results for building PNG
+        //return outputData_;
+        return {outputData_};
+    }
+
+    boost::optional<size_t> GetElementsCount() override
+    {
+        return GetElementsCountInternal();
+    }
+
+    void WriteResults();
 };
 
 // Forward declarations of possible variations of this class so we can move implementation
