@@ -1,6 +1,6 @@
 #pragma once
 
-#include <fstream>
+#include <sstream>
 #include <vector>
 #include <string>
 
@@ -30,7 +30,8 @@ public:
     void BuildAndWriteToDisk();
 
 private:
-    std::ofstream stream_;
+    std::ostringstream stream_;
+    std::string fileName_;
     static const char* intro_;
     static const char* outro_;
 };

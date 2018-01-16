@@ -1,5 +1,6 @@
 #include "html_document.h"
 #include <utils.h>
+#include <fstream>
 
 // TODO this class would benefit from HTML template library
 
@@ -24,7 +25,7 @@ const char* HTMLDocument::outro_ = R"(
 )";
 
 HTMLDocument::HTMLDocument( const char* fileName )
-    : stream_(fileName)
+    : fileName_(fileName)
 {
     stream_ << intro_;
 }
@@ -69,6 +70,8 @@ void HTMLDocument::AddHeader( const std::string& text, int level /* = 1 */ )
 
 void HTMLDocument::BuildAndWriteToDisk()
 {
-    stream_ << outro_;
-    stream_.flush();
+    std::ofstream fileStream( fileName_ );
+    fileStream << stream_.str();
+    fileStream << outro_;
+    fileStream.flush();
 }
