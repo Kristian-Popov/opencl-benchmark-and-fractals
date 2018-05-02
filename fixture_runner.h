@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "fixture.h"
-#include "benchmark_time_writer_interface.h"
+#include "benchmark_reporter_interface.h"
 
 class FixtureRunner
 {
@@ -17,7 +17,7 @@ public:
         bool multibrotSet = true;
     };
 
-    void Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWriter, FixturesToRun fixturesToRun );
+    void Run( std::unique_ptr<BenchmarkReporter> timeWriter, FixturesToRun fixturesToRun );
 private:
     void Clear();
     void SetFloatingPointEnvironment();

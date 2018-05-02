@@ -2,8 +2,8 @@
 
 #include <iostream>
 
-#include "stdout_benchmark_time_writer.h"
-#include "html_benchmark_time_writer.h"
+#include "stdout_benchmark_reporter.h"
+#include "html_benchmark_reporter.h"
 #include <cstdlib>
 
 #include <boost/log/core.hpp>
@@ -63,10 +63,10 @@ int main( int argc, char** argv )
     }
 
     bool progress = vm.count( "no-progress" ) == 0;
-    std::unique_ptr<BenchmarkTimeWriterInterface> timeWriter;
+    std::unique_ptr<BenchmarkReporter> timeWriter;
     if( vm.count( "html" ) )
     {
-        timeWriter = std::make_unique<HTMLBenchmarkTimeWriter>( vm["html"].as<std::string>().c_str() );
+        timeWriter = std::make_unique<HTMLBenchmarkReporter>( vm["html"].as<std::string>().c_str() );
     }
     else // This is the default option
     {

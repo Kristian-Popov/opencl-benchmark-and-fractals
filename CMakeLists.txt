@@ -24,8 +24,8 @@ project(OpenCLTestProject)
 add_executable (main 
 	main.cpp 
 	html_document.cpp
-	html_benchmark_time_writer.cpp
-	stdout_benchmark_time_writer.cpp
+	html_benchmark_reporter.cpp
+	stdout_benchmark_reporter.cpp
 	fixture_runner.cpp
 	svg_document.cpp
 	damped_wave_fixture.inl
@@ -38,10 +38,10 @@ add_executable (main
 
 	fixture.h
 	html_document.h
-	html_benchmark_time_writer.h
+	html_benchmark_reporter.h
 	csv_document.h
-	benchmark_time_writer_interface.h
-	stdout_benchmark_time_writer.h
+	benchmark_reporter_interface.h
+	stdout_benchmark_reporter.h
 	fixture_runner.h
 	sequential_values_iterator.h
 	random_values_iterator.h

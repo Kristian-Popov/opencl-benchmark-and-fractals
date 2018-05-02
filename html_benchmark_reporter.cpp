@@ -1,4 +1,4 @@
-#include "html_benchmark_time_writer.h"
+#include "html_benchmark_reporter.h"
 
 #include <unordered_map>
 #include <algorithm>
@@ -6,7 +6,7 @@
 
 #include "utils.h"
 
-const std::unordered_map<long double, std::string> HTMLBenchmarkTimeWriter::avgDurationsUnits =
+const std::unordered_map<long double, std::string> HTMLBenchmarkReporter::avgDurationsUnits =
 {
     { 1e-9, "nanoseconds" },
     { 1e-6, "microseconds" },
@@ -16,7 +16,7 @@ const std::unordered_map<long double, std::string> HTMLBenchmarkTimeWriter::avgD
     { 3600, "hours" }
 };
 
-const std::unordered_map<long double, std::string> HTMLBenchmarkTimeWriter::durationPerElementUnits =
+const std::unordered_map<long double, std::string> HTMLBenchmarkReporter::durationPerElementUnits =
 {
     {1e-9, "nanoseconds/elem."},
     {1e-6, "microseconds/elem."},
@@ -26,7 +26,7 @@ const std::unordered_map<long double, std::string> HTMLBenchmarkTimeWriter::dura
     {3600, "hours/elem."}
 };
 
-const std::unordered_map<long double, std::string> HTMLBenchmarkTimeWriter::elementsPerSecUnits =
+const std::unordered_map<long double, std::string> HTMLBenchmarkReporter::elementsPerSecUnits =
 {
     { 1, "elem./second" },
     { 1e+3, "thousands elem./second"},
@@ -34,14 +34,14 @@ const std::unordered_map<long double, std::string> HTMLBenchmarkTimeWriter::elem
     { 1e+9, "billions elem./second"}
 };
 
-HTMLBenchmarkTimeWriter::HTMLBenchmarkTimeWriter( const char* fileName )
+HTMLBenchmarkReporter::HTMLBenchmarkReporter( const char* fileName )
     : document_( std::make_shared<HTMLDocument>( fileName ) )
 {}
 
-void HTMLBenchmarkTimeWriter::AddOperationsResultsToRow( 
+void HTMLBenchmarkReporter::AddOperationsResultsToRow( 
     const BenchmarkFixtureResultForDevice& deviceData,
     const BenchmarkFixtureResultForFixture& allResults,
-    const HTMLBenchmarkTimeWriter::Units& units,
+    const HTMLBenchmarkReporter::Units& units,
     std::vector<HTMLDocument::CellDescription>& row )
 {
     const std::vector<OperationStep>& steps = allResults.operationSteps;
@@ -96,9 +96,9 @@ void HTMLBenchmarkTimeWriter::AddOperationsResultsToRow(
     }
 }
 
-std::vector<HTMLDocument::CellDescription> HTMLBenchmarkTimeWriter::PrepareFirstRow(
+std::vector<HTMLDocument::CellDescription> HTMLBenchmarkReporter::PrepareFirstRow(
     const BenchmarkFixtureResultForFixture& results,
-    const HTMLBenchmarkTimeWriter::Units& units )
+    const HTMLBenchmarkReporter::Units& units )
 {
     std::string avgDurationTitle = "Duration, " + avgDurationsUnits.at( units.avgDurationUnit );
     typedef HTMLDocument::CellDescription CellDescription;
@@ -124,7 +124,7 @@ std::vector<HTMLDocument::CellDescription> HTMLBenchmarkTimeWriter::PrepareFirst
     return result;
 }
 
-std::vector<HTMLDocument::CellDescription> HTMLBenchmarkTimeWriter::PrepareSecondRow(
+std::vector<HTMLDocument::CellDescription> HTMLBenchmarkReporter::PrepareSecondRow(
     const BenchmarkFixtureResultForFixture& results )
 {
     // This row contains only names of the operation steps. Of we don't have elements count,
@@ -143,7 +143,7 @@ std::vector<HTMLDocument::CellDescription> HTMLBenchmarkTimeWriter::PrepareSecon
     return row;
 }
 
-void HTMLBenchmarkTimeWriter::WriteResultsForFixture( const BenchmarkFixtureResultForFixture& results )
+void HTMLBenchmarkReporter::WriteResultsForFixture( const BenchmarkFixtureResultForFixture& results )
 {
     EXCEPTION_ASSERT( !results.operationSteps.empty() );
     document_->AddHeader( results.fixtureName );
@@ -182,14 +182,14 @@ void HTMLBenchmarkTimeWriter::WriteResultsForFixture( const BenchmarkFixtureResu
     document_->AddTable(rows);
 }
 
-std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationType> HTMLBenchmarkTimeWriter::CalcAverage(
-    const BenchmarkTimeWriterInterface::BenchmarkFixtureResultForOperation& perOperationData,
+std::unordered_map<OperationStep, BenchmarkReporter::OutputDurationType> HTMLBenchmarkReporter::CalcAverage(
+    const BenchmarkReporter::BenchmarkFixtureResultForOperation& perOperationData,
     const std::vector<OperationStep>& steps )
 {
-    std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationType> perOperationAvg;
+    std::unordered_map<OperationStep, BenchmarkReporter::OutputDurationType> perOperationAvg;
     for( OperationStep id : steps )
     {
-        std::vector<BenchmarkTimeWriterInterface::OutputDurationType> perOperationResults;
+        std::vector<BenchmarkReporter::OutputDurationType> perOperationResults;
         if( !perOperationData.empty() )
         {
             std::transform( perOperationData.cbegin(), perOperationData.cend(), std::back_inserter( perOperationResults ),
@@ -210,7 +210,7 @@ std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationTy
     return perOperationAvg;
 }
 
-HTMLBenchmarkTimeWriter::Units HTMLBenchmarkTimeWriter::CalcUnits( const BenchmarkFixtureResultForFixture& results )
+HTMLBenchmarkReporter::Units HTMLBenchmarkReporter::CalcUnits( const BenchmarkFixtureResultForFixture& results )
 {
     Units result;
     std::vector<long double> avgDurationsInSec;
@@ -284,7 +284,7 @@ HTMLBenchmarkTimeWriter::Units HTMLBenchmarkTimeWriter::CalcUnits( const Benchma
     return result;
 }
 
-void HTMLBenchmarkTimeWriter::Flush()
+void HTMLBenchmarkReporter::Flush()
 {
     document_->BuildAndWriteToDisk();
 }

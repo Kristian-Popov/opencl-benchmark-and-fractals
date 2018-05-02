@@ -245,7 +245,7 @@ void FixtureRunner::Clear()
     contexts_.clear();
 }
 
-void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWriter, 
+void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, 
     FixtureRunner::FixturesToRun fixturesToRun )
 {
     BOOST_LOG_TRIVIAL( info ) << "Welcome to OpenCL benchmark.";
@@ -286,15 +286,15 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
         std::string fixtureName = fixture->Description();
 
         fixture->Initialize();
-        BenchmarkTimeWriterInterface::BenchmarkFixtureResultForFixture dataForTimeWriter;
+        BenchmarkReporter::BenchmarkFixtureResultForFixture dataForTimeWriter;
         dataForTimeWriter.operationSteps = fixture->GetSteps();
         dataForTimeWriter.fixtureName = fixtureName;
         dataForTimeWriter.elementsCount = fixture->GetElementsCount();
 
         for( boost::compute::platform& platform : boost::compute::system::platforms() )
         {
-            dataForTimeWriter.perFixtureResults.push_back( BenchmarkTimeWriterInterface::BenchmarkFixtureResultForPlatform() );
-            BenchmarkTimeWriterInterface::BenchmarkFixtureResultForPlatform& perPlatformResults = 
+            dataForTimeWriter.perFixtureResults.push_back( BenchmarkReporter::BenchmarkFixtureResultForPlatform() );
+            BenchmarkReporter::BenchmarkFixtureResultForPlatform& perPlatformResults = 
                 dataForTimeWriter.perFixtureResults.back();
 
             perPlatformResults.platformName = platform.name();
@@ -303,8 +303,8 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
                 // Find corresponding context
                 boost::compute::context& context = contexts_.at( device.get() );
 
-                perPlatformResults.perDeviceResults.push_back( BenchmarkTimeWriterInterface::BenchmarkFixtureResultForDevice() );
-                BenchmarkTimeWriterInterface::BenchmarkFixtureResultForDevice& perDeviceResults =
+                perPlatformResults.perDeviceResults.push_back( BenchmarkReporter::BenchmarkFixtureResultForDevice() );
+                BenchmarkReporter::BenchmarkFixtureResultForDevice& perDeviceResults =
                     perPlatformResults.perDeviceResults.back();
                 perDeviceResults.deviceName = device.name();
 
@@ -346,14 +346,14 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
                         results.push_back( fixture->Execute( context ) );
                     }
 
-                    std::vector<std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationType>> resultsForWriter;
+                    std::vector<std::unordered_map<OperationStep, BenchmarkReporter::OutputDurationType>> resultsForWriter;
                     for( const auto& res : results )
                     {
-                        std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationType> m;
+                        std::unordered_map<OperationStep, BenchmarkReporter::OutputDurationType> m;
                         for( const std::pair<OperationStep, Fixture::Duration>& p : res )
                         {
                             m.insert( std::make_pair( p.first,
-                                std::chrono::duration_cast<BenchmarkTimeWriterInterface::OutputDurationType>( p.second ) ) );
+                                std::chrono::duration_cast<BenchmarkReporter::OutputDurationType>( p.second ) ) );
                         }
                         resultsForWriter.push_back( m );
                     }

@@ -9,7 +9,7 @@
 
 #include "operation_step.h"
 
-class BenchmarkTimeWriterInterface
+class BenchmarkReporter
 {
 public:
     typedef long double OutputNumericType;

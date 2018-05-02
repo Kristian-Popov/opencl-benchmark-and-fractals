@@ -2,13 +2,13 @@
 
 #include <memory>
 
-#include "benchmark_time_writer_interface.h"
+#include "benchmark_reporter_interface.h"
 #include "html_document.h"
 
-class HTMLBenchmarkTimeWriter: public BenchmarkTimeWriterInterface
+class HTMLBenchmarkReporter: public BenchmarkReporter
 {
 public:
-    HTMLBenchmarkTimeWriter( const char* fileName );
+    HTMLBenchmarkReporter( const char* fileName );
 
     virtual void WriteResultsForFixture( const BenchmarkFixtureResultForFixture& results ) override;
 

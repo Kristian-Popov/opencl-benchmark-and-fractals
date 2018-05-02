@@ -1,9 +1,9 @@
 #pragma once
 
 #include "operation_step.h"
-#include "benchmark_time_writer_interface.h"
+#include "benchmark_reporter_interface.h"
 
-class StdoutBenchmarkTimeWriter : public BenchmarkTimeWriterInterface
+class StdoutBenchmarkTimeWriter : public BenchmarkReporter
 {
 public:
     virtual void WriteResultsForFixture( const BenchmarkFixtureResultForFixture& results ) override;

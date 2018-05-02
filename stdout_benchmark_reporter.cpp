@@ -1,4 +1,4 @@
-#include "stdout_benchmark_time_writer.h"
+#include "stdout_benchmark_reporter.h"
 
 #include "utils.h"
 
@@ -37,14 +37,14 @@ void StdoutBenchmarkTimeWriter::WriteResultsForFixture( const BenchmarkFixtureRe
     }
 }
 
-std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationType> StdoutBenchmarkTimeWriter::CalcAverage(
-        const BenchmarkTimeWriterInterface::BenchmarkFixtureResultForOperation& perOperationData,
+std::unordered_map<OperationStep, BenchmarkReporter::OutputDurationType> StdoutBenchmarkTimeWriter::CalcAverage(
+        const BenchmarkReporter::BenchmarkFixtureResultForOperation& perOperationData,
         const std::vector<OperationStep>& steps )
 {
-    std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationType> perOperationAvg;
+    std::unordered_map<OperationStep, BenchmarkReporter::OutputDurationType> perOperationAvg;
     for( OperationStep id : steps )
     {
-        std::vector<BenchmarkTimeWriterInterface::OutputDurationType> perOperationResults;
+        std::vector<BenchmarkReporter::OutputDurationType> perOperationResults;
         EXCEPTION_ASSERT( !perOperationData.empty() );
         std::transform( perOperationData.cbegin(), perOperationData.cend(), std::back_inserter( perOperationResults ),
             [id]( const std::unordered_map<OperationStep, OutputDurationType>& d )
@@ -60,8 +60,8 @@ std::unordered_map<OperationStep, BenchmarkTimeWriterInterface::OutputDurationTy
     return perOperationAvg;
 }
 
-std::unordered_map<OperationStep, std::pair<BenchmarkTimeWriterInterface::OutputDurationType, BenchmarkTimeWriterInterface::OutputDurationType>> StdoutBenchmarkTimeWriter::CalcMinMax(
-    const BenchmarkTimeWriterInterface::BenchmarkFixtureResultForOperation& perOperationData,
+std::unordered_map<OperationStep, std::pair<BenchmarkReporter::OutputDurationType, BenchmarkReporter::OutputDurationType>> StdoutBenchmarkTimeWriter::CalcMinMax(
+    const BenchmarkReporter::BenchmarkFixtureResultForOperation& perOperationData,
     const std::vector<OperationStep>& steps )
 {
     std::unordered_map<OperationStep, std::pair<OutputDurationType, OutputDurationType>> perOperationMinMax;
