@@ -6,12 +6,14 @@ add_library( utils
 	utils.cpp
 	operation_step.cpp
 	program_source_repository.cpp
+	program_build_failed_exception.cpp
 	
 	utils.h
 	operation_step.h
 	half_precision_fp.h
 	program_source_repository.h
 	koch_curve_utils.h
+	program_build_failed_exception.h
 )
 
 target_include_directories (utils PUBLIC ${OpenCL_INCLUDE_DIRS} 

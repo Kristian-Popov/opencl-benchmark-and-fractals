@@ -37,7 +37,6 @@ add_executable (main
 	fixtures/multibrot_fractal_fixture.h
 
 	fixture.h
-	fixture_that_returns_data.h
 	html_document.h
 	html_benchmark_time_writer.h
 	csv_document.h

@@ -1,5 +1,7 @@
 #include "utils.h"
 
+#include "program_build_failed_exception.h"
+
 #include <type_traits>
 
 #include <boost/log/trivial.hpp>
@@ -144,25 +146,14 @@ namespace Utils
         }
         catch( boost::compute::opencl_error& error )
         {
-            std::string buildLog;
-            try // Retrieving these values can cause OpenCL errors, so catch them to write at least something about an error
-            {
-                buildLog = program.build_log();
-            }
-            catch( boost::compute::opencl_error& )
-            {
-            }
-
             if( error.error_code() == CL_BUILD_PROGRAM_FAILURE )
             {
-                //TODO throw special exception and log outside of utils library
-                BOOST_LOG_TRIVIAL( error ) << "Program failed to build on device " <<
-                    context.get_device().name() << std::endl <<
-                    "Kernel source: " << std::endl << allSource << std::endl <<
-                    "Build options: " << buildOptions << std::endl <<
-                    "Build log: " << buildLog << std::endl;
+                throw ProgramBuildFailedException( error, program );
             }
-            throw;
+            else
+            {
+                throw;
+            }
         }
     }
 

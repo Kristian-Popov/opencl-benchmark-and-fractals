@@ -17,6 +17,7 @@
 #include "random_values_iterator.h"
 #include "half_precision_normal_distribution.h"
 #include "svg_document.h"
+#include "program_build_failed_exception.h"
 
 #include "trivial_factorial_fixture.h"
 #include "damped_wave_fixture.h"
@@ -357,6 +358,13 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkTimeWriterInterface> timeWrite
                         resultsForWriter.push_back( m );
                     }
                     perDeviceResults.perOperationResults = resultsForWriter;
+                }
+                catch( ProgramBuildFailedException& e )
+                {
+                    BOOST_LOG_TRIVIAL( error ) << "Program for fixture \"" <<
+                        fixtureName << "\" failed to build on device \"" <<
+                        e.DeviceName() << "\"";
+                    BOOST_LOG_TRIVIAL( debug ) << e.what();
                 }
                 catch( boost::compute::opencl_error& e )
                 {
