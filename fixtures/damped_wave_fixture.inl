@@ -1,6 +1,6 @@
 #pragma once
 
-#include "damped_wave_fixture.h"
+#include "fixtures/damped_wave_fixture.h"
 
 #include <memory>
 #include <random>

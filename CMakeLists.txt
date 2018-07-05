@@ -26,25 +26,26 @@ add_executable (main
 	html_document.cpp
 	html_benchmark_reporter.cpp
 	stdout_benchmark_reporter.cpp
-	fixture_runner.cpp
 	svg_document.cpp
-	damped_wave_fixture.inl
-	fixtures/multibrot_fractal_fixture.cpp
-	
-	trivial_factorial_fixture.h
-	damped_wave_fixture.h
-	koch_curve_fixture.h
-	fixtures/multibrot_fractal_fixture.h
 
-	fixture.h
+	fixture_runner.h
+	fixture_runner.cpp
+
 	html_document.h
 	html_benchmark_reporter.h
 	csv_document.h
 	benchmark_reporter_interface.h
 	stdout_benchmark_reporter.h
-	fixture_runner.h
 	svg_document.h
 	document_writers/png_document_builder.h
+
+	fixtures/fixture.h
+	fixtures/trivial_factorial_fixture.h
+	fixtures/koch_curve_fixture.h
+	fixtures/multibrot_fractal_fixture.cpp
+	fixtures/multibrot_fractal_fixture.h
+	fixtures/damped_wave_fixture.inl
+	fixtures/damped_wave_fixture.h
 
 	iterators/sequential_values_iterator.h
 	iterators/random_values_iterator.h

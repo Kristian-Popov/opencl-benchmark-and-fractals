@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fixture.h"
+#include "fixtures/fixture.h"
 #include "program_source_repository.h"
 #include "koch_curve_utils.h"
 

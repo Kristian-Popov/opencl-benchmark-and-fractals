@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fixture.h"
+#include "fixtures/fixture.h"
 #include "boost/compute.hpp"
 #include "half_precision_fp.h"
 

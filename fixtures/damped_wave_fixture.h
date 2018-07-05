@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fixture.h"
+#include "fixtures/fixture.h"
 
 #pragma pack(push, 1)
 template<typename T>

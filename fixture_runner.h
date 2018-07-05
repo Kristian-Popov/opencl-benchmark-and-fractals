@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "fixture.h"
+#include "fixtures/fixture.h"
 #include "benchmark_reporter_interface.h"
 
 class FixtureRunner

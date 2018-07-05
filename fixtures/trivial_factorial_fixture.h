@@ -4,7 +4,7 @@
 #include <random>
 
 #include "utils.h"
-#include "fixture.h"
+#include "fixtures/fixture.h"
 #include "data_verification_failed_exception.h"
 
 #include <boost/format.hpp>

@@ -20,9 +20,9 @@
 #include "iterators/sequential_values_iterator.h"
 #include "iterators/random_values_iterator.h"
 
-#include "trivial_factorial_fixture.h"
-#include "damped_wave_fixture.h"
-#include "koch_curve_fixture.h"
+#include "fixtures/trivial_factorial_fixture.h"
+#include "fixtures/damped_wave_fixture.h"
+#include "fixtures/koch_curve_fixture.h"
 #include "fixtures/multibrot_fractal_fixture.h"
 
 #include <boost/random/normal_distribution.hpp>
