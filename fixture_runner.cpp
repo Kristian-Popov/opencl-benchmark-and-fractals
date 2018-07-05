@@ -13,11 +13,12 @@
 #include "data_verification_failed_exception.h"
 #include "operation_step.h"
 #include "csv_document.h"
-#include "sequential_values_iterator.h"
-#include "random_values_iterator.h"
 #include "half_precision_normal_distribution.h"
 #include "svg_document.h"
 #include "program_build_failed_exception.h"
+
+#include "iterators/sequential_values_iterator.h"
+#include "iterators/random_values_iterator.h"
 
 #include "trivial_factorial_fixture.h"
 #include "damped_wave_fixture.h"

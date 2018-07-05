@@ -43,10 +43,11 @@ add_executable (main
 	benchmark_reporter_interface.h
 	stdout_benchmark_reporter.h
 	fixture_runner.h
-	sequential_values_iterator.h
-	random_values_iterator.h
 	svg_document.h
 	document_writers/png_document_builder.h
+
+	iterators/sequential_values_iterator.h
+	iterators/random_values_iterator.h
 	)
 
 target_include_directories (main PUBLIC ${CMAKE_SOURCE_DIR}
