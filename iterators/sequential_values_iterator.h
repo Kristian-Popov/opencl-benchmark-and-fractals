@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iterator>
+#include "iterators/data_source.h"
 
 /*
     Iterator that generates sequential values of a given type.
@@ -11,8 +12,9 @@
     This iterator is always referenceable.
 */
 template <typename T>
-class SequentialValuesIterator : 
-    public std::iterator<std::forward_iterator_tag, T>
+class SequentialValuesIterator final :
+    public std::iterator<std::forward_iterator_tag, T>,
+    public DataSource<T>
 {
 public:
     SequentialValuesIterator( T startValue, T step )
@@ -32,9 +34,9 @@ public:
         return !( *this == rhs );
     }
 
-    const T operator*()
+    T operator*()
     {
-        return value_;
+        return Get();
     }
 
     const T operator*() const
@@ -44,7 +46,7 @@ public:
 
     SequentialValuesIterator<T>& operator++()
     {
-        value_ += step_;
+        Increment();
         return *this;
     }
 
@@ -53,6 +55,16 @@ public:
         SequentialValuesIterator<T> temp = *this;
         ++(*this);
         return temp;
+    }
+
+    T Get() override
+    {
+        return value_;
+    }
+
+    void Increment() override
+    {
+        value_ += step_;
     }
 private:
     T value_;

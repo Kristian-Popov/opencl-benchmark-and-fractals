@@ -48,6 +48,7 @@ add_executable (main
 
 	iterators/sequential_values_iterator.h
 	iterators/random_values_iterator.h
+	iterators/data_source.h
 	)
 
 target_include_directories (main PUBLIC ${CMAKE_SOURCE_DIR}

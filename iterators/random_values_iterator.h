@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iterator>
+#include "iterators/data_source.h"
 
 #include <boost/random/taus88.hpp>
 
@@ -12,8 +13,9 @@
     This iterator is always referenceable.
 */
 template <typename T, typename D>
-class RandomValuesIterator : 
-    public std::iterator<std::input_iterator_tag, T>
+class RandomValuesIterator final :
+    public std::iterator<std::input_iterator_tag, T>,
+    public DataSource<T>
 {
 public:
     RandomValuesIterator( const D& distribution )
@@ -33,14 +35,9 @@ public:
         return !( *this == rhs );
     }
 
-    const T operator*()
+    T operator*()
     {
-        return distribution_( generator_ );
-    }
-
-    const T operator*() const
-    {
-        return distribution_( generator_ );
+        return Get();
     }
 
     RandomValuesIterator<T, D>& operator++()
@@ -53,6 +50,16 @@ public:
         RandomValuesIterator<T, D> temp = *this;
         ++(*this);
         return temp;
+    }
+
+    T Get() override
+    {
+        return distribution_( generator_ );
+    }
+
+    void Increment() override
+    {
+        // Do nothing here, next value will be different anyways
     }
 private:
     /* Choosing a random number generator is a bit tricky here.
