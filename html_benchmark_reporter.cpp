@@ -127,10 +127,12 @@ std::vector<HTMLDocument::CellDescription> HTMLBenchmarkReporter::PrepareFirstRo
 std::vector<HTMLDocument::CellDescription> HTMLBenchmarkReporter::PrepareSecondRow(
     const BenchmarkFixtureResultForFixture& results )
 {
-    // This row contains only names of the operation steps. Of we don't have elements count,
+    // This row contains only names of the operation steps. If we don't have elements count,
     // we should have only one set of these names. Otherwise we need three of these sets.
     typedef HTMLDocument::CellDescription CellDescription;
     std::vector<HTMLDocument::CellDescription> row;
+    // TODO something like that would be great (do not add extra sessions of elementsCount is given but equal to 1)
+    //int repetitionsCount = ( results.elementsCount && results.elementsCount.get() > 1 ) ? 3 : 1;
     int repetitionsCount = results.elementsCount ? 3 : 1;
     for (int i = 0; i < repetitionsCount; ++i)
     {
