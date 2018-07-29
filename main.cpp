@@ -4,6 +4,7 @@
 
 #include "stdout_benchmark_reporter.h"
 #include "html_benchmark_reporter.h"
+#include "utils/utils.h"
 #include <cstdlib>
 
 #include <boost/log/core.hpp>
@@ -27,6 +28,7 @@ int main( int argc, char** argv )
         ( "no-damped-wave2d", "do not run a damped wave in 2D fixture. " )
         ( "no-koch-curve", "do not run a Koch curve fixture. " )
         ( "no-multibrot-set", "do not run a Mandelbrot/Multibrot set fixture. " )
+        ( "no-multiprecision-factorial", "do not run multiprecision factorial fixture. " )
         ;
 
     // TODO something is wrong here. For command line arguments line "--html --stdout" only "html" part is present in vm after parsing
@@ -76,6 +78,7 @@ int main( int argc, char** argv )
     log::severity_level minSeverityToIgnore = progress ? log::debug : log::fatal;
     boost::log::core::get()->set_filter
     (
+        // TODO add super verbose mode
         log::severity > minSeverityToIgnore
     );
 
@@ -84,21 +87,23 @@ int main( int argc, char** argv )
     fixturesToRun.dampedWave2D = vm.count( "no-damped-wave2d" ) == 0;
     fixturesToRun.kochCurve = vm.count( "no-koch-curve" ) == 0;
     fixturesToRun.multibrotSet = vm.count( "no-multibrot-set" ) == 0;
+    fixturesToRun.multiprecisionFactorial = vm.count( "no-multiprecision-factorial" ) == 0;
 
     try
     {
         FixtureRunner fixtureRunner;
+        EXCEPTION_ASSERT( timeWriter );
         fixtureRunner.Run( std::move( timeWriter ), fixturesToRun );
     }
     catch(std::exception& e)
     {
         BOOST_LOG_TRIVIAL( fatal ) << "Caught fatal exception: " << e.what();
-        return EXIT_FAILURE;
+        throw;
     }
     catch(...)
     {
         BOOST_LOG_TRIVIAL( fatal ) << "Caught fatal error";
-        return EXIT_FAILURE;
+        throw;
     }
 
     return EXIT_SUCCESS;

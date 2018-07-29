@@ -43,7 +43,7 @@ public:
 
     std::string Description() override;
 
-    void VerifyResults();
+    void VerifyResults( boost::compute::context& context );
 
     virtual boost::optional<size_t> GetElementsCount() override
     {

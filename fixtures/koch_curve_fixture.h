@@ -374,7 +374,7 @@ public:
         return CalcLineCount();
     }
 
-    virtual void VerifyResults() override
+    virtual void VerifyResults( boost::compute::context& context ) override
     {
         // Verify that all points are within viewport (limited by width and height)
         if (!std::all_of(outputData_.cbegin(), outputData_.cend(),

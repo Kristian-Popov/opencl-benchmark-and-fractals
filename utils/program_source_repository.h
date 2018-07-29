@@ -8,4 +8,5 @@ public:
     static std::string GetOpenCLMathSource();
     static std::string GetKochCurveSource();
     static std::string GetGlobalMemoryPoolSource();
+    static std::string GetMultiprecisionMathSource();
 };

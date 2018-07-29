@@ -24,6 +24,7 @@
 #include "fixtures/damped_wave_fixture.h"
 #include "fixtures/koch_curve_fixture.h"
 #include "fixtures/multibrot_fractal_fixture.h"
+#include "fixtures/multiprecision_factorial_fixture.h"
 
 #include <boost/random/normal_distribution.hpp>
 #include <boost/log/trivial.hpp>
@@ -224,6 +225,16 @@ void FixtureRunner::CreateMultibrotSetFixtures()
     }
 }
 
+void FixtureRunner::CreateMultiprecisionFactorialFixtures()
+{
+    std::vector<uint32_t> inputs = { 5, 10, 20, 50, 100, 200, 500, 1000, 10000 };
+    std::transform( inputs.begin(), inputs.end(), std::back_inserter( fixtures_ ),
+        []( uint32_t input )
+    {
+        return std::make_shared<MultiprecisionFactorialFixture>( input );
+    } );
+}
+
 void FixtureRunner::SetFloatingPointEnvironment()
 {
     int result = std::fesetround( FE_TONEAREST );
@@ -269,6 +280,10 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter,
     if (fixturesToRun.multibrotSet)
     {
         CreateMultibrotSetFixtures();
+    }
+    if (fixturesToRun.multiprecisionFactorial)
+    {
+        CreateMultiprecisionFactorialFixtures();
     }
 
     BOOST_LOG_TRIVIAL( info ) << "We have " << fixtures_.size() << " fixtures to run";
@@ -336,11 +351,10 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter,
                         return acc + r.second;
                     } );
                     int iterationCount = static_cast<int>( std::ceil( targetFixtureExecutionTime / totalOperationDuration ) );
-                    //iterationCount = std::max( iterationCount, minIterations );
-                    iterationCount = 1;
+                    iterationCount = std::max( iterationCount, minIterations );
                     EXCEPTION_ASSERT( iterationCount >= 1 );
 
-                    fixture->VerifyResults();
+                    fixture->VerifyResults( context );
 
                     for( int i = 0; i < iterationCount; ++i )
                     {
@@ -362,10 +376,14 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter,
                 }
                 catch( ProgramBuildFailedException& e )
                 {
-                    BOOST_LOG_TRIVIAL( error ) << "Program for fixture \"" <<
+                    std::stringstream stream;
+                    stream << "Program for fixture \"" <<
                         fixtureName << "\" failed to build on device \"" <<
                         e.DeviceName() << "\"";
+                    BOOST_LOG_TRIVIAL( error ) << stream.str();
+                    BOOST_LOG_TRIVIAL( info ) << "Build log: " << std::endl << e.BuildLog();
                     BOOST_LOG_TRIVIAL( debug ) << e.what();
+                    perDeviceResults.failureReason = "OpenCL Program failed to build";
                 }
                 catch( boost::compute::opencl_error& e )
                 {
@@ -381,6 +399,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter,
                 catch( std::exception& e )
                 {
                     BOOST_LOG_TRIVIAL( error ) << "Exception occured: " << e.what();
+                    perDeviceResults.failureReason = e.what();
                 }
             }
         }
@@ -400,7 +419,6 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter,
         }
         catch( std::exception& e )
         {
-            //BOOST_LOG_TRIVIAL( error ) << "Caught exception when building SVG document: " << e.what();
             BOOST_LOG_TRIVIAL( error ) << "Error when writing fixture \"" << fixtureName << "\" results: " << e.what();
         }
 

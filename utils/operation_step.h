@@ -8,7 +8,10 @@ enum class OperationStep
     Calculate,
     CopyOutputDataFromDevice,
     MapOutputData,
-    UnmapOutputData
+    UnmapOutputData,
+    MultiprecisionMultiplyWords,
+    MultiprecisionNormalize,
+    CopyErrors
 };
 
 class OperationStepDescriptionRepository

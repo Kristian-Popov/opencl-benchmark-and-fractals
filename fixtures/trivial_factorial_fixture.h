@@ -118,7 +118,7 @@ public:
         return result;
     }
 
-    virtual void VerifyResults() override
+    virtual void VerifyResults( boost::compute::context& context ) override
     {
         if( outputData_.size() != expectedOutputData_.size() )
         {

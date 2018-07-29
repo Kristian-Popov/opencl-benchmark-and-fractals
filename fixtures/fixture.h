@@ -45,7 +45,7 @@ public:
         Verify execution results
         Called exactly once but for every platform/device.
     */
-    virtual void VerifyResults() {}
+    virtual void VerifyResults( boost::compute::context& context ) {}
 
     virtual std::vector<OperationStep> GetSteps() = 0;
 

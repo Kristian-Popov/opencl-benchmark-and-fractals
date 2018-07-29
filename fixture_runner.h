@@ -15,6 +15,7 @@ public:
         bool dampedWave2D = true;
         bool kochCurve = true;
         bool multibrotSet = true;
+        bool multiprecisionFactorial = true;
     };
 
     void Run( std::unique_ptr<BenchmarkReporter> timeWriter, FixturesToRun fixturesToRun );
@@ -25,6 +26,7 @@ private:
     void CreateDampedWave2DFixtures();
     void CreateKochCurveFixtures();
     void CreateMultibrotSetFixtures();
+    void CreateMultiprecisionFactorialFixtures();
     void FillContextsMap();
 
     std::unordered_map<cl_device_id, boost::compute::context> contexts_;

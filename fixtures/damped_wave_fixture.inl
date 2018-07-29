@@ -199,7 +199,7 @@ std::string DampedWaveFixture<T, I>::Description()
 }
 
 template<typename T, typename I>
-void DampedWaveFixture<T, I>::VerifyResults()
+void DampedWaveFixture<T, I>::VerifyResults( boost::compute::context& context )
 {
     EXCEPTION_ASSERT( !outputData_.empty() );
     EXCEPTION_ASSERT( outputData_.size() == inputData_.size() );

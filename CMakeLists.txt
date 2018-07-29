@@ -37,6 +37,7 @@ add_executable (main
 	benchmark_reporter_interface.h
 	stdout_benchmark_reporter.h
 	svg_document.h
+	kernel_map.h
 	document_writers/png_document_builder.h
 
 	fixtures/fixture.h
@@ -46,6 +47,7 @@ add_executable (main
 	fixtures/multibrot_fractal_fixture.h
 	fixtures/damped_wave_fixture.inl
 	fixtures/damped_wave_fixture.h
+	fixtures/multiprecision_factorial_fixture.h
 
 	iterators/sequential_values_iterator.h
 	iterators/random_values_iterator.h
