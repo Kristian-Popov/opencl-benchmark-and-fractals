@@ -25,7 +25,6 @@ add_executable (main
 	main.cpp 
 	html_document.cpp
 	html_benchmark_reporter.cpp
-	stdout_benchmark_reporter.cpp
 	svg_document.cpp
 
 	fixture_runner.h
@@ -35,7 +34,6 @@ add_executable (main
 	html_benchmark_reporter.h
 	csv_document.h
 	benchmark_reporter_interface.h
-	stdout_benchmark_reporter.h
 	svg_document.h
 	kernel_map.h
 	document_writers/png_document_builder.h

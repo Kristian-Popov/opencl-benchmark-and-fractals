@@ -2,7 +2,6 @@
 
 #include <iostream>
 
-#include "stdout_benchmark_reporter.h"
 #include "html_benchmark_reporter.h"
 #include "utils/utils.h"
 #include <cstdlib>
@@ -12,6 +11,11 @@
 #include <boost/log/expressions.hpp>
 #include <boost/program_options.hpp>
 
+namespace
+{
+    static const std::string defaultOutputFileName( "output.html" );
+}
+
 int main( int argc, char** argv )
 {
     namespace log = boost::log::trivial;
@@ -19,11 +23,9 @@ int main( int argc, char** argv )
     boost::program_options::options_description desc( "Allowed options" );
     desc.add_options()
         ( "help", "produce help message" )
-        ( "html", boost::program_options::value<std::string>(), "write benchmark time to HTML file" )
-        ( "stdout", "write benchmark time to standard output stream. This is the default option. "
-            "Disables progress printing" )
+        ( "html", boost::program_options::value<std::string>(), "file name of resulting HTML file" )
         ( "no-progress", "do not write short information about progress to standard output stream. "
-            "By default this option is on if results are written to any output except standard output stream" )
+            "By default this option is on." )
         ( "no-trivial-factorial", "do not run a trivial factorial fixture. " )
         ( "no-damped-wave2d", "do not run a damped wave in 2D fixture. " )
         ( "no-koch-curve", "do not run a Koch curve fixture. " )
@@ -57,24 +59,15 @@ int main( int argc, char** argv )
         BOOST_LOG_TRIVIAL( fatal ) << desc;
         return EXIT_FAILURE;
     }
-    if( vm.count( "html" ) && vm.count( "stdout" ) ) 
-    {
-        BOOST_LOG_TRIVIAL( fatal ) << "Wrong command line arguments - results can be written to only one place";
-        BOOST_LOG_TRIVIAL( fatal ) << desc;
-        return EXIT_FAILURE;
-    }
 
     bool progress = vm.count( "no-progress" ) == 0;
-    std::unique_ptr<BenchmarkReporter> timeWriter;
+    std::string outputFileName = defaultOutputFileName;
     if( vm.count( "html" ) )
     {
-        timeWriter = std::make_unique<HTMLBenchmarkReporter>( vm["html"].as<std::string>().c_str() );
+        outputFileName = vm["html"].as<std::string>();
     }
-    else // This is the default option
-    {
-        timeWriter = std::make_unique<StdoutBenchmarkTimeWriter>();
-        progress = false;
-    }
+    std::unique_ptr<BenchmarkReporter> timeWriter = std::make_unique<HTMLBenchmarkReporter>( outputFileName.c_str() );
+
     log::severity_level minSeverityToIgnore = progress ? log::debug : log::fatal;
     boost::log::core::get()->set_filter
     (
