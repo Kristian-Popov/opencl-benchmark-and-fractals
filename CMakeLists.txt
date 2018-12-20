@@ -4,10 +4,22 @@ cmake_minimum_required (VERSION 3.1)
 enable_language(CXX)
 
 # Find OpenCL and Boost libraries.
-# It is assumed that Boost can be found either by default location is OS (often a case on Linux) or
-# it is located in <project source root>/contrib/boost
+find_package(OpenCL)
+# If OpenCL was not found, use headers in contrib folder and ICD Loader library
+# (OpenCL.lib or libOpenCL.so)
+if(NOT OpenCL_FOUND)
+	message( "OpenCL SDK not found, reverting to ICD Loader to use as a library" )
+	file( COPY ${CMAKE_SOURCE_DIR}/contrib/OpenCL-Headers/CL
+		DESTINATION ${CMAKE_SOURCE_DIR}/contrib/Khronos-OpenCL-ICD-Loader/inc )
+	add_subdirectory( contrib/Khronos-OpenCL-ICD-Loader )
+	set(OpenCL_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/contrib/OpenCL-Headers/)
+	set(OpenCL_LIBRARY ${CMAKE_SOURCE_DIR}/contrib/Khronos-OpenCL-ICD-Loader/)
+	set(OpenCL_LIBRARIES OpenCL)
+endif()
+
+# Boost should be located in default OS location (often a case on Linux),
+# otherwise set BOOST_ROOT variable
 # Minimal Boost version is 1.65.1
-find_package(OpenCL REQUIRED)
 find_package(Boost 1.65.1 REQUIRED )
 
 # Look for libraries in the following folders
@@ -57,7 +69,7 @@ target_include_directories (main PUBLIC ${CMAKE_SOURCE_DIR}
 	${CMAKE_SOURCE_DIR}/contrib 
 	${Boost_INCLUDE_DIRS} 
 	${CMAKE_SOURCE_DIR}/utils )
-target_link_libraries (main ${OpenCL_LIBRARY} ${Boost_LIBRARIES} utils lodepng)
+target_link_libraries (main ${OpenCL_LIBRARIES} ${Boost_LIBRARIES} utils lodepng)
 
 if (UNIX)
     target_link_libraries (main pthread)

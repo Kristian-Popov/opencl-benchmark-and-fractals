@@ -13,7 +13,7 @@ target_include_directories (unit_tests PUBLIC ${OpenCL_INCLUDE_DIRS}
 	${CMAKE_SOURCE_DIR}/contrib 
 	${Boost_INCLUDE_DIRS} 
 	${CMAKE_SOURCE_DIR}/utils )
-target_link_libraries (unit_tests ${OpenCL_LIBRARY} ${Boost_LIBRARIES} utils)
+target_link_libraries (unit_tests ${OpenCL_LIBRARIES} ${Boost_LIBRARIES} utils)
 
 if (UNIX)
     target_link_libraries (unit_tests pthread)

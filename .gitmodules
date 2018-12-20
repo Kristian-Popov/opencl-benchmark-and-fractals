@@ -4,3 +4,9 @@
 [submodule "contrib/lodepng/source"]
 	path = contrib/lodepng/source
 	url = https://github.com/lvandeve/lodepng.git
+[submodule "contrib/Khronos-OpenCL-ICD-Loader"]
+	path = contrib/Khronos-OpenCL-ICD-Loader
+	url = https://github.com/KhronosGroup/OpenCL-ICD-Loader
+[submodule "contrib/OpenCL-Headers"]
+	path = contrib/OpenCL-Headers
+	url = https://github.com/KhronosGroup/OpenCL-Headers
