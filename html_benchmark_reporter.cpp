@@ -40,7 +40,7 @@ HTMLBenchmarkReporter::HTMLBenchmarkReporter( const char* fileName )
 
 void HTMLBenchmarkReporter::AddOperationsResultsToRow( 
     const BenchmarkFixtureResultForDevice& deviceData,
-    const BenchmarkFixtureResultForFixture& allResults,
+    const BenchmarkResultForFixture& allResults,
     const HTMLBenchmarkReporter::Units& units,
     std::vector<HTMLDocument::CellDescription>& row )
 {

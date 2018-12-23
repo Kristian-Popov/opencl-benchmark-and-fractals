@@ -7,6 +7,7 @@
 #include "fixtures/fixture.h"
 #include "data_verification_failed_exception.h"
 
+#include "boost/compute.hpp"
 #include <boost/format.hpp>
 
 namespace
@@ -29,31 +30,28 @@ __kernel void TrivialFactorial(__global int* input, __global ulong* output)
 }
 )"; 
 
-    const std::string compilerOptions = "-w -Werror";
+    //const std::string compilerOptions = "-w -Werror";
+    const std::string compilerOptions = "-Werror";
 }
 
 template<typename I>
-class TrivialFactorialFixture: public Fixture
+class TrivialFactorialOpenClFixture: public Fixture
 {
 public:
-    TrivialFactorialFixture( const I& inputDataIter, 
-        int dataSize, 
-        const std::string& descriptionSuffix = std::string() )
-        : inputDataIter_( inputDataIter )
+    TrivialFactorialOpenClFixture(
+        const std::shared_ptr<OpenClDevice>& device,
+        const I& inputDataIter, // TODO change to DataSource? Template is completely unneccesary here
+        int dataSize )
+        : device_( device )
+        , inputDataIter_( inputDataIter )
         , dataSize_(dataSize)
-        , descriptionSuffix_( descriptionSuffix )
 	{
 	}
 
     virtual void Initialize() override
     {
         GenerateData();
-    }
-
-    virtual void InitializeForContext( boost::compute::context& context ) override
-    {
-        kernels_.insert( { context.get(),
-            Utils::BuildKernel( "TrivialFactorial", context, trivialFactorialKernelCode, compilerOptions )} );
+        kernel_ = Utils::BuildKernel( "TrivialFactorial", device_->GetContext(), trivialFactorialKernelCode, compilerOptions );
     }
 
     virtual std::vector<OperationStep> GetSteps() override
@@ -70,13 +68,10 @@ public:
         return std::vector<std::string>(); // This fixture doesn't require any special extensions
     }
 
-    std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) override
+    std::unordered_multimap<OperationStep, DurationType> Execute() override
 	{
-        EXCEPTION_ASSERT( context.get_devices().size() == 1 );
-        // create command queue with profiling enabled
-        boost::compute::command_queue queue(
-            context, context.get_device(), boost::compute::command_queue::enable_profiling
-        );
+        boost::compute::context& context = device_->GetContext();
+        boost::compute::command_queue& queue = device_->GetQueue();
 
         std::unordered_multimap<OperationStep, boost::compute::event> events;
 
@@ -88,15 +83,14 @@ public:
             boost::compute::copy_async( inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue ).get_event() 
         } );
 
-        boost::compute::kernel& kernel = kernels_.at( context.get() );
         boost::compute::vector<unsigned long long> output_device_vector( dataSize_, context );
-        kernel.set_arg( 0, input_device_vector );
-        kernel.set_arg( 1, output_device_vector );
+        kernel_.set_arg( 0, input_device_vector );
+        kernel_.set_arg( 1, output_device_vector );
 
         unsigned computeUnitsCount = context.get_device().compute_units();
         size_t localWorkGroupSize = 0;
         events.insert( { OperationStep::Calculate,
-            queue.enqueue_1d_range_kernel( kernel, 0, dataSize_, localWorkGroupSize )
+            queue.enqueue_1d_range_kernel( kernel_, 0, dataSize_, localWorkGroupSize )
         } );
 
         outputData_.resize( dataSize_ );
@@ -105,9 +99,9 @@ public:
 
         lastEvent.wait();
 
-        return Utils::CalculateTotalStepDurations<Duration>( events );
+        return Utils::GetOpenCLEventDurations<DurationType>( events );
 	}
-
+#if 0
     std::string Description() override
     {
         std::string result = "Trivial factorial, " + Utils::FormatQuantityString(dataSize_) + " elements";
@@ -117,8 +111,8 @@ public:
         }
         return result;
     }
-
-    virtual void VerifyResults( boost::compute::context& context ) override
+#endif
+    virtual void VerifyResults() override
     {
         if( outputData_.size() != expectedOutputData_.size() )
         {
@@ -130,30 +124,36 @@ public:
         {
             cl_ulong maxAbsError = *mismatchedValues.first - *mismatchedValues.second;
             throw DataVerificationFailedException( ( boost::format( 
-                "Result verification has failed for fixture \"%1%\". "
-                "Maximum absolute error is %2% for input value %3% "
+                "Result verification has failed for trivial factorial fixture. "
+                "Maximum absolute error is %1% for input value %2% "
                 "(exact equality is expected)." ) %
-                Description() % maxAbsError % *mismatchedValues.first ).str() );
+                maxAbsError % *mismatchedValues.first ).str() );
         }
     }
 
+    std::shared_ptr<DeviceInterface> Device() override
+    {
+        return device_;
+    }
+
+#if 0
     virtual boost::optional<size_t> GetElementsCount() override
     {
         return dataSize_;
     }
-
-    virtual ~TrivialFactorialFixture()
+#endif
+    virtual ~TrivialFactorialOpenClFixture() noexcept
     {
     }
 private:
     const int dataSize_;
     std::vector<int> inputData_;
     std::vector<cl_ulong> expectedOutputData_;
-    static const std::unordered_map<int, cl_ulong> TrivialFactorialFixture::correctFactorialValues_;
+    static const std::unordered_map<int, cl_ulong> TrivialFactorialOpenClFixture::correctFactorialValues_;
     std::vector<cl_ulong> outputData_;
     I inputDataIter_;
-    std::string descriptionSuffix_;
-    std::unordered_map<cl_context, boost::compute::kernel> kernels_;
+    boost::compute::kernel kernel_;
+    const std::shared_ptr<OpenClDevice> device_;
 
     void GenerateData()
     {
@@ -173,7 +173,7 @@ private:
 };
 
 template<typename I>
-const std::unordered_map<int, cl_ulong> TrivialFactorialFixture<I>::correctFactorialValues_ = {
+const std::unordered_map<int, cl_ulong> TrivialFactorialOpenClFixture<I>::correctFactorialValues_ = {
     {0, 1ull},
     {1,  1ull},
     {2,  2ull},

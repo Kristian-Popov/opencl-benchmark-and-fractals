@@ -14,4 +14,5 @@ class DataSource
 public:
     virtual T Get() = 0;
     virtual void Increment() = 0;
+    virtual ~DataSource() {}
 };

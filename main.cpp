@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "html_benchmark_reporter.h"
+#include "reporters/json_benchmark_reporter.h"
 #include "utils/utils.h"
 #include <cstdlib>
 
@@ -13,7 +13,7 @@
 
 namespace
 {
-    static const std::string defaultOutputFileName( "output.html" );
+    static const std::string defaultOutputFileName( "output.json" );
 }
 
 int main( int argc, char** argv )
@@ -23,7 +23,6 @@ int main( int argc, char** argv )
     boost::program_options::options_description desc( "Allowed options" );
     desc.add_options()
         ( "help", "produce help message" )
-        ( "html", boost::program_options::value<std::string>(), "file name of resulting HTML file" )
         ( "no-progress", "do not write short information about progress to standard output stream. "
             "By default this option is on." )
         ( "no-trivial-factorial", "do not run a trivial factorial fixture. " )
@@ -62,11 +61,8 @@ int main( int argc, char** argv )
 
     bool progress = vm.count( "no-progress" ) == 0;
     std::string outputFileName = defaultOutputFileName;
-    if( vm.count( "html" ) )
-    {
-        outputFileName = vm["html"].as<std::string>();
-    }
-    std::unique_ptr<BenchmarkReporter> timeWriter = std::make_unique<HTMLBenchmarkReporter>( outputFileName.c_str() );
+
+    std::unique_ptr<BenchmarkReporter> timeWriter = std::make_unique<JsonBenchmarkReporter>( outputFileName );
 
     log::severity_level minSeverityToIgnore = progress ? log::debug : log::fatal;
     boost::log::core::get()->set_filter
@@ -82,11 +78,15 @@ int main( int argc, char** argv )
     fixturesToRun.multibrotSet = vm.count( "no-multibrot-set" ) == 0;
     fixturesToRun.multiprecisionFactorial = vm.count( "no-multiprecision-factorial" ) == 0;
 
+    FixtureRunner::RunSettings settings;
+    settings.fixturesToRun = fixturesToRun;
+    // TODO fill the rest of properties
+
     try
     {
         FixtureRunner fixtureRunner;
         EXCEPTION_ASSERT( timeWriter );
-        fixtureRunner.Run( std::move( timeWriter ), fixturesToRun );
+        fixtureRunner.Run( std::move( timeWriter ), settings );
     }
     catch(std::exception& e)
     {

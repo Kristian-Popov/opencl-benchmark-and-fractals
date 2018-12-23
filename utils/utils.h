@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <iterator>
+#include <iomanip>
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -144,6 +145,18 @@ namespace Utils
         return result;
     }
 
+    template <typename D>
+    std::unordered_multimap<OperationStep, D> GetOpenCLEventDurations(
+        const std::unordered_multimap<OperationStep, boost::compute::event>& events )
+    {
+        std::unordered_multimap<OperationStep, D> result;
+        for( const std::pair<OperationStep, boost::compute::event>& p : events )
+        {
+            result.emplace( p.first, p.second.duration<D>() );
+        }
+        return result;
+    }
+
     std::string CombineStrings( const std::vector<std::string>& strings, const std::string & delimiter = "\n" );
 
     /*
@@ -169,6 +182,14 @@ namespace Utils
     std::vector<cl_float4> ConvertDouble4ToFloat4Vectors( const std::vector<cl_double4>& vectors );
 
     cl_double4 CombineTwoDouble2Vectors( const cl_double2& a, const cl_double2& b);
+
+    template<typename T>
+    std::string SerializeNumber( T val )
+    {
+        std::ostringstream stream;
+        stream << std::setprecision( std::numeric_limits<T>::max_digits10 ) << std::fixed << val;
+        return stream.str();
+    }
 }
 
 #define EXCEPTION_ASSERT(expr) { if(!(expr)) { throw std::logic_error("Assert \"" #expr "\" failed"); } }

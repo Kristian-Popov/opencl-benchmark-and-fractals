@@ -1,19 +1,17 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 #include <vector>
 #include <unordered_map>
 
+#include "devices/device_interface.h"
 #include "operation_step.h"
-
-#include <boost/optional.hpp>
-#include "boost/compute.hpp"
+#include "reporters/benchmark_results.h"
 
 class Fixture
 {
 public:
-    typedef std::chrono::duration<double, std::nano> Duration;
-
     /*
         Optional method to initialize a fixture.
         Called exactly once before running a fixture.
@@ -23,17 +21,11 @@ public:
     virtual void Initialize() {}
 
     /*
-    Optional method to initialize a fixture for working with a particular OpenCL context.
-    Called once per every device before running a fixture.
-    */
-    virtual void InitializeForContext( boost::compute::context& context ) {}
-
-    /*
     Get a list of required extensions required by this fixture
     */
     virtual std::vector<std::string> GetRequiredExtensions() = 0;
 
-	virtual std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) = 0;
+	virtual std::unordered_multimap<OperationStep, DurationType> Execute() = 0;
 
     /*
         Optional method to finalize a fixture.
@@ -45,11 +37,16 @@ public:
         Verify execution results
         Called exactly once but for every platform/device.
     */
-    virtual void VerifyResults( boost::compute::context& context ) {}
+    virtual void VerifyResults() {}
 
     virtual std::vector<OperationStep> GetSteps() = 0;
 
-    virtual std::string Description() = 0;
+    virtual std::shared_ptr<DeviceInterface> Device() = 0;
+
+    virtual std::string Algorithm()
+    {
+        return std::string();
+    }
 
     /*
         Ask a fixture for a number of input values.
@@ -57,16 +54,16 @@ public:
         or return an empty optional value, that would mean that number of input values
         doesn't make sense for this particular fixture.
     */
-    virtual boost::optional<size_t> GetElementsCount()
+    virtual boost::optional<std::size_t> GetElementsCount()
     {
-        return boost::optional<size_t>();
+        return boost::optional<std::size_t>();
     }
 
     /*
-        Write results of list fixture execution to a file.
+        Store results of fixture to a persistent storage (e.g. graphic file).
         Every fixture may provide its own method, but it is optional.
     */
-    virtual void WriteResults() {}
+    virtual void StoreResults() {}
 
-    virtual ~Fixture() {}
+    virtual ~Fixture() noexcept {}
 };

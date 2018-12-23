@@ -17,6 +17,8 @@ if(NOT OpenCL_FOUND)
 	set(OpenCL_LIBRARIES OpenCL)
 endif()
 
+add_definitions( -DCL_TARGET_OPENCL_VERSION=220 )
+
 # Boost should be located in default OS location (often a case on Linux),
 # otherwise set BOOST_ROOT variable
 # Minimal Boost version is 1.65.1
@@ -35,33 +37,54 @@ project(OpenCLTestProject)
 
 add_executable (main 
 	main.cpp 
-	html_document.cpp
-	html_benchmark_reporter.cpp
+	# html_document.cpp
+	# html_benchmark_reporter.cpp
 	svg_document.cpp
 
 	fixture_runner.h
 	fixture_runner.cpp
 
-	html_document.h
-	html_benchmark_reporter.h
+	# html_document.h
+	# html_benchmark_reporter.h
 	csv_document.h
-	benchmark_reporter_interface.h
 	svg_document.h
 	kernel_map.h
 	document_writers/png_document_builder.h
 
+	devices/device_interface.h
+	devices/opencl_device.h
+	devices/opencl_platform.h
+	devices/platform_interface.h
+	devices/platform_list.h
+
 	fixtures/fixture.h
-	fixtures/trivial_factorial_fixture.h
-	fixtures/koch_curve_fixture.h
-	fixtures/multibrot_fractal_fixture.cpp
-	fixtures/multibrot_fractal_fixture.h
-	fixtures/damped_wave_fixture.inl
-	fixtures/damped_wave_fixture.h
-	fixtures/multiprecision_factorial_fixture.h
+	fixtures/fixture_family.h
+	fixtures/fixture_id.h
+	fixtures/trivial_factorial_opencl_fixture.h
+	# fixtures/koch_curve_fixture.h
+	# fixtures/multibrot_fractal_fixture.cpp
+	# fixtures/multibrot_fractal_fixture.h
+	# fixtures/damped_wave_fixture.inl
+	# fixtures/damped_wave_fixture.h
+	# fixtures/multiprecision_factorial_fixture.h
 
 	iterators/sequential_values_iterator.h
 	iterators/random_values_iterator.h
 	iterators/data_source.h
+
+	indicators/duration_indicator.cpp
+	indicators/duration_indicator.h
+	indicators/indicator_interface.h
+	indicators/indicator_serializer.cpp
+	indicators/indicator_serializer.h
+	indicators/indicator_value_interface.h
+	indicators/string_indicator_value.h
+	indicators/numeric_indicator_value.h
+
+	reporters/benchmark_results.h
+	reporters/json_benchmark_reporter.cpp
+	reporters/json_benchmark_reporter.h
+	reporters/benchmark_reporter.h
 	)
 
 target_include_directories (main PUBLIC ${CMAKE_SOURCE_DIR}
@@ -78,25 +101,17 @@ endif (UNIX)
 set_property(TARGET main PROPERTY CXX_STANDARD 14)
 set_property(TARGET main PROPERTY CXX_STANDARD_REQUIRED ON)
 
-# Many compilers use implicit promotion of single and double precision floating point values to extended precision ones by default
-# This may cause issues with data verification since OpenCL doesn't perform this promotion implicitly
-# TODO this definiteliy doesn't work on g++, some variant of "-mfpmath" should be used instead
-# On VC++: /fp:strict, but still not sure if it is enough
-# target_compile_definitions(main PRIVATE FLT_EVAL_METHOD=0)
 IF(WIN32) # Check if we are on Windows
   if(MSVC) # Check if we are using the Visual Studio compiler
-	# TODO is INTERFACE property correct?
-    #target_compile_definitions(main INTERFACE "/fp:strict")
-	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:strict") # TODO these options doesn't seem to work
   elseif(CMAKE_COMPILER_IS_GNUCXX)
-    message(SEND_ERROR "You are using an unsupported Windows compiler! (GCC)")
+    # message(SEND_ERROR "You are using an unsupported Windows compiler! (GCC)")
   else()
-    message(SEND_ERROR "You are using an unsupported Windows compiler! (Not MSVC or GCC)")
+    # message(SEND_ERROR "You are using an unsupported Windows compiler! (Not MSVC or GCC)")
   endif()
 elseif(UNIX)
-  message(SEND_ERROR "You are on an unsupported platform! (Unix)")
+  # message(SEND_ERROR "You are on an unsupported platform! (Unix)")
 else()
-  message(SEND_ERROR "You are on an unsupported platform! (Not Win32 or Unix)")
+  # message(SEND_ERROR "You are on an unsupported platform! (Not Win32 or Unix)")
 ENDIF()
 
 if (UNIX)

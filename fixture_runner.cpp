@@ -17,18 +17,24 @@
 #include "svg_document.h"
 #include "program_build_failed_exception.h"
 
+#include "devices/opencl_device.h"
+
 #include "iterators/sequential_values_iterator.h"
 #include "iterators/random_values_iterator.h"
 
-#include "fixtures/trivial_factorial_fixture.h"
+#include "fixtures/trivial_factorial_opencl_fixture.h"
+#if 0
 #include "fixtures/damped_wave_fixture.h"
 #include "fixtures/koch_curve_fixture.h"
 #include "fixtures/multibrot_fractal_fixture.h"
 #include "fixtures/multiprecision_factorial_fixture.h"
+#endif
 
+#include "fixtures/fixture_family.h"
+
+#include <boost/algorithm/clamp.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/compute.hpp>
 #include <boost/math/constants/constants.hpp>
 #include "half_precision_fp.h"
 
@@ -37,18 +43,36 @@
 
 void FixtureRunner::CreateTrivialFixtures()
 {
-    const std::vector<int> dataSizesForTrivialFactorial = {100, 1000, 100000, 1000000, 100000000};
-    std::transform( dataSizesForTrivialFactorial.begin(), dataSizesForTrivialFactorial.end(), std::back_inserter( fixtures_ ),
-        []( int dataSize )
+    const std::vector<int> data_sizes = { 100, 1000, 100000, 1000000 };
+    for( int s : data_sizes )
     {
-        typedef std::uniform_int_distribution<int> Distribution;
-        typedef RandomValuesIterator<int, Distribution> Iterator;
-        return std::make_shared<TrivialFactorialFixture<Iterator>>(
-            Iterator( Distribution( 0, 20 ) ),
-            dataSize );
-    } );
+        auto fixture_family = std::make_shared<FixtureFamily>();
+        fixture_family->name = "Trivial factorial, " + Utils::FormatQuantityString( s ) + " elements";
+        fixture_family->operation_steps = {
+            OperationStep::CopyInputDataToDevice,
+            OperationStep::Calculate,
+            OperationStep::CopyOutputDataFromDevice
+        };
+        for( auto& platform : platform_list_.OpenClPlatforms() )
+        {
+            for( auto& device : platform->GetDevices() )
+            {
+                typedef std::uniform_int_distribution<int> Distribution;
+                typedef RandomValuesIterator<int, Distribution> Iterator;
+                fixture_family->fixtures.insert( std::make_pair<const FixtureId, std::shared_ptr<Fixture>>(
+                    FixtureId( fixture_family->name, device, "" ),
+                    std::make_shared<TrivialFactorialOpenClFixture<Iterator>>(
+                        std::dynamic_pointer_cast<OpenClDevice>( device ),
+                        Iterator( Distribution( 0, 20 ) ),
+                        s
+                    )
+                ) );
+            }
+        }
+        fixture_families_.push_back( fixture_family );
+    }
 }
-
+#if 0
 void FixtureRunner::CreateDampedWave2DFixtures()
 {
     cl_float frequency = 1.0f;
@@ -234,41 +258,34 @@ void FixtureRunner::CreateMultiprecisionFactorialFixtures()
         return std::make_shared<MultiprecisionFactorialFixture>( input );
     } );
 }
-
+#endif
 void FixtureRunner::SetFloatingPointEnvironment()
 {
     int result = std::fesetround( FE_TONEAREST );
     EXCEPTION_ASSERT( result == 0);
 }
 
-void FixtureRunner::FillContextsMap()
-{
-    for ( const boost::compute::platform& platform: boost::compute::system::platforms() )
-    {
-        for ( const boost::compute::device& device: platform.devices() )
-        {
-            contexts_.insert( { device.get(), boost::compute::context( device ) } );
-        }
-    }
-}
 void FixtureRunner::Clear()
 {
-    fixtures_.clear();
-    contexts_.clear();
+    fixture_families_.clear();
 }
 
-void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, 
-    FixtureRunner::FixturesToRun fixturesToRun )
+void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSettings settings )
 {
     BOOST_LOG_TRIVIAL( info ) << "Welcome to OpenCL benchmark.";
+
+    EXCEPTION_ASSERT( settings.minIterations >= 1 );
+    EXCEPTION_ASSERT( settings.maxIterations >= 1 );
 
     SetFloatingPointEnvironment();
 
     Clear();
+    FixturesToRun& fixturesToRun = settings.fixturesToRun;
     if (fixturesToRun.trivialFactorial)
     {
         CreateTrivialFixtures();
     }
+#if 0
     if (fixturesToRun.dampedWave2D)
     {
         CreateDampedWave2DFixtures();
@@ -285,145 +302,114 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter,
     {
         CreateMultiprecisionFactorialFixtures();
     }
+#endif
 
-    BOOST_LOG_TRIVIAL( info ) << "We have " << fixtures_.size() << " fixtures to run";
+    BOOST_LOG_TRIVIAL( info ) << "We have " << fixture_families_.size() << " fixture families to run";
 
     typedef double OutputNumericType;
     typedef std::chrono::duration<OutputNumericType, std::micro> OutputDurationType;
-    auto targetFixtureExecutionTime = std::chrono::milliseconds( 10 ); // Time how long fixture should execute
-    int minIterations = 10; // Minimal number of iterations
 
-    FillContextsMap();
-
-    for( size_t fixtureIndex = 0; fixtureIndex < fixtures_.size(); ++fixtureIndex )
+    for( size_t familyIndex = 0; familyIndex < fixture_families_.size(); ++familyIndex )
     {
-        std::shared_ptr<Fixture>& fixture = fixtures_.at(fixtureIndex);
-        
-        std::string fixtureName = fixture->Description();
+        std::shared_ptr<FixtureFamily>& fixtureFamily = fixture_families_.at( familyIndex );
+        std::string fixtureName = fixtureFamily->name;
+        BenchmarkResultForFixtureFamily results;
+        results.fixture_family = fixtureFamily;
 
-        fixture->Initialize();
-        BenchmarkReporter::BenchmarkFixtureResultForFixture dataForTimeWriter;
-        dataForTimeWriter.operationSteps = fixture->GetSteps();
-        dataForTimeWriter.fixtureName = fixtureName;
-        dataForTimeWriter.elementsCount = fixture->GetElementsCount();
+        BOOST_LOG_TRIVIAL( info ) << "Starting fixture family \"" << fixtureName << "\"";
 
-        for( boost::compute::platform& platform : boost::compute::system::platforms() )
+        for( std::pair<const FixtureId, std::shared_ptr<Fixture>>& fixture_data: fixtureFamily->fixtures )
         {
-            dataForTimeWriter.perFixtureResults.push_back( BenchmarkReporter::BenchmarkFixtureResultForPlatform() );
-            BenchmarkReporter::BenchmarkFixtureResultForPlatform& perPlatformResults = 
-                dataForTimeWriter.perFixtureResults.back();
+            const FixtureId& fixture_id = fixture_data.first;
+            std::shared_ptr<Fixture>& fixture = fixture_data.second;
+            BenchmarkResultForFixture fixture_results;
 
-            perPlatformResults.platformName = platform.name();
-            for( const boost::compute::device& device : platform.devices() )
+            BOOST_LOG_TRIVIAL( info ) << "Starting run on device \"" << fixture_id.device()->Name() << "\"";
+
+            fixture->Initialize();
+
+            try
             {
-                // Find corresponding context
-                boost::compute::context& context = contexts_.at( device.get() );
-
-                perPlatformResults.perDeviceResults.push_back( BenchmarkReporter::BenchmarkFixtureResultForDevice() );
-                BenchmarkReporter::BenchmarkFixtureResultForDevice& perDeviceResults =
-                    perPlatformResults.perDeviceResults.back();
-                perDeviceResults.deviceName = device.name();
-
-                try
                 {
-                    {
-                        std::vector<std::string> requiredExtensions = fixture->GetRequiredExtensions();
-                        std::sort( requiredExtensions.begin(), requiredExtensions.end() );
+                    // TODO move this piece of code before initialization
+                    std::vector<std::string> requiredExtensions = fixture->GetRequiredExtensions();
+                    std::sort( requiredExtensions.begin(), requiredExtensions.end() );
 
-                        std::vector<std::string> haveExtensions = device.extensions();
-                        std::sort( haveExtensions.begin(), haveExtensions.end() );
-                        if (!std::includes( haveExtensions.begin(), haveExtensions.end(), 
-                            requiredExtensions.begin(), requiredExtensions.end() ) )
-                        {
-                            perDeviceResults.failureReason = "Required extension(s) are not available";
-                            continue;
-                        }
+                    std::vector<std::string> haveExtensions = fixture->Device()->Extensions();
+                    std::sort( haveExtensions.begin(), haveExtensions.end() );
+                    if( !std::includes( haveExtensions.begin(), haveExtensions.end(),
+                        requiredExtensions.begin(), requiredExtensions.end() ) )
+                    {
+                        fixture_results.failure_reason = "Required extension(s) are not available";
+                        continue;
                     }
-                    fixture->InitializeForContext( context );
-
-                    std::vector<std::unordered_map<OperationStep, Fixture::Duration>> results;
-
-                    // Warm-up for one iteration to get estimation of execution time
-                    std::unordered_map<OperationStep, Fixture::Duration> warmupResult = fixture->Execute( context );
-                    OutputDurationType totalOperationDuration = std::accumulate( warmupResult.begin(), warmupResult.end(), OutputDurationType::zero(),
-                        []( OutputDurationType acc, const std::pair<OperationStep, Fixture::Duration>& r )
-                    {
-                        return acc + r.second;
-                    } );
-                    int iterationCount = static_cast<int>( std::ceil( targetFixtureExecutionTime / totalOperationDuration ) );
-                    iterationCount = std::max( iterationCount, minIterations );
-                    EXCEPTION_ASSERT( iterationCount >= 1 );
-
-                    fixture->VerifyResults( context );
-
-                    for( int i = 0; i < iterationCount; ++i )
-                    {
-                        results.push_back( fixture->Execute( context ) );
-                    }
-
-                    std::vector<std::unordered_map<OperationStep, BenchmarkReporter::OutputDurationType>> resultsForWriter;
-                    for( const auto& res : results )
-                    {
-                        std::unordered_map<OperationStep, BenchmarkReporter::OutputDurationType> m;
-                        for( const std::pair<OperationStep, Fixture::Duration>& p : res )
-                        {
-                            m.insert( std::make_pair( p.first,
-                                std::chrono::duration_cast<BenchmarkReporter::OutputDurationType>( p.second ) ) );
-                        }
-                        resultsForWriter.push_back( m );
-                    }
-                    perDeviceResults.perOperationResults = resultsForWriter;
                 }
-                catch( ProgramBuildFailedException& e )
+
+                std::vector<std::unordered_multimap<OperationStep, DurationType>> durations;
+
+                // Warm-up for one iteration to get estimation of execution time
+                std::unordered_multimap<OperationStep, DurationType> warmupResult = fixture->Execute();
+                durations.push_back( warmupResult );
+                NumericType totalOperationDuration = std::accumulate( warmupResult.begin(), warmupResult.end(), DurationType::zero(),
+                    []( OutputDurationType acc, const std::pair<OperationStep, DurationType>& r )
                 {
-                    std::stringstream stream;
-                    stream << "Program for fixture \"" <<
-                        fixtureName << "\" failed to build on device \"" <<
-                        e.DeviceName() << "\"";
-                    BOOST_LOG_TRIVIAL( error ) << stream.str();
-                    BOOST_LOG_TRIVIAL( info ) << "Build log: " << std::endl << e.BuildLog();
-                    BOOST_LOG_TRIVIAL( debug ) << e.what();
-                    perDeviceResults.failureReason = "OpenCL Program failed to build";
-                }
-                catch( boost::compute::opencl_error& e )
+                    return acc + r.second;
+                } ).count();
+                double iteration_count_double = ( settings.targetFixtureExecutionTime / totalOperationDuration ).count();
+                EXCEPTION_ASSERT( iteration_count_double < std::numeric_limits<int>::max() );
+                int iteration_count = static_cast<int>( std::ceil( iteration_count_double ) );
+                iteration_count = boost::algorithm::clamp( iteration_count, settings.minIterations, settings.maxIterations ) - 1;
+                EXCEPTION_ASSERT( iteration_count >= 0 );
+
+                if( settings.verifyResults )
                 {
-                    // TODO replace with logging
-                    BOOST_LOG_TRIVIAL( error ) << "OpenCL error occured: " << e.what();
-                    perDeviceResults.failureReason = e.what();
+                    fixture->VerifyResults();
                 }
-                catch( DataVerificationFailedException& e )
+
+                for( int i = 0; i < iteration_count; ++i )
                 {
-                    BOOST_LOG_TRIVIAL( error ) << "Data verification failed: " << e.what();
-                    perDeviceResults.failureReason = "Data verification failed";
+                    durations.push_back( fixture->Execute() );
                 }
-                catch( std::exception& e )
-                {
-                    BOOST_LOG_TRIVIAL( error ) << "Exception occured: " << e.what();
-                    perDeviceResults.failureReason = e.what();
-                }
+                fixture_results.durations = durations;
             }
-        }
-        fixture->Finalize();
-        timeWriter->WriteResultsForFixture( dataForTimeWriter );
+            catch( ProgramBuildFailedException& e )
+            {
+                std::stringstream stream;
+                stream << "Program for fixture \"" <<
+                    fixtureName << "\" failed to build on device \"" <<
+                    e.DeviceName() << "\"";
+                BOOST_LOG_TRIVIAL( error ) << stream.str();
+                BOOST_LOG_TRIVIAL( info ) << "Build log: " << std::endl << e.BuildLog();
+                BOOST_LOG_TRIVIAL( debug ) << e.what();
+                fixture_results.failure_reason = "OpenCL Program failed to build";
+            }
+            catch( boost::compute::opencl_error& e )
+            {
+                BOOST_LOG_TRIVIAL( error ) << "OpenCL error occured: " << e.what();
+                fixture_results.failure_reason = e.what();
+            }
+            catch( DataVerificationFailedException& e )
+            {
+                BOOST_LOG_TRIVIAL( error ) << "Data verification failed: " << e.what();
+                fixture_results.failure_reason = "Data verification failed";
+            }
+            catch( std::exception& e )
+            {
+                BOOST_LOG_TRIVIAL( error ) << "Exception occured: " << e.what();
+                fixture_results.failure_reason = e.what();
+            }
 
-        int fixturesLeft = fixtures_.size() - fixtureIndex - 1;
-        if( fixturesLeft > 0 )
-        {
-            BOOST_LOG_TRIVIAL( info ) << "Fixture \"" << fixture->Description() << "\" finished. "
-                "Left " << fixturesLeft << " fixtures out of " << fixtures_.size();
+            // Destroy fixture to release some memory sooner
+            fixture.reset();
+
+            BOOST_LOG_TRIVIAL( info ) << "Finished run on device \"" << fixture_id.device()->Name() << "\"";
+
+            results.benchmark.insert( std::make_pair( fixture_id, fixture_results ) );
         }
 
-        try
-        {
-            fixture->WriteResults();
-        }
-        catch( std::exception& e )
-        {
-            BOOST_LOG_TRIVIAL( error ) << "Error when writing fixture \"" << fixtureName << "\" results: " << e.what();
-        }
+        timeWriter->AddFixtureFamilyResults( results );
 
-        // Destroy fixture to release some memory sooner
-        fixture.reset();
+        BOOST_LOG_TRIVIAL( info ) << "Fixture family \"" << fixtureName << "\" finished successfully.";
     }
     timeWriter->Flush();
 

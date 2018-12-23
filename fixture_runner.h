@@ -3,8 +3,10 @@
 #include <memory>
 #include <vector>
 
+#include "devices/platform_list.h"
 #include "fixtures/fixture.h"
-#include "benchmark_reporter_interface.h"
+#include "fixtures/fixture_family.h"
+#include "reporters/benchmark_reporter.h"
 
 class FixtureRunner
 {
@@ -18,7 +20,17 @@ public:
         bool multiprecisionFactorial = true;
     };
 
-    void Run( std::unique_ptr<BenchmarkReporter> timeWriter, FixturesToRun fixturesToRun );
+    struct RunSettings
+    {
+        FixturesToRun fixturesToRun;
+        int minIterations = 1;
+        int maxIterations = std::numeric_limits<int>::max();
+        DurationType targetFixtureExecutionTime = std::chrono::milliseconds( 100 );
+        bool verifyResults = true;
+        bool storeResults = true;
+    };
+
+    void Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSettings settings );
 private:
     void Clear();
     void SetFloatingPointEnvironment();
@@ -27,8 +39,7 @@ private:
     void CreateKochCurveFixtures();
     void CreateMultibrotSetFixtures();
     void CreateMultiprecisionFactorialFixtures();
-    void FillContextsMap();
 
-    std::unordered_map<cl_device_id, boost::compute::context> contexts_;
-    std::vector<std::shared_ptr<Fixture>> fixtures_;
+    std::vector<std::shared_ptr<FixtureFamily>> fixture_families_;
+    PlatformList platform_list_;
 };
