@@ -45,8 +45,8 @@ public:
         : device_( device )
         , inputDataIter_( inputDataIter )
         , dataSize_(dataSize)
-	{
-	}
+    {
+    }
 
     virtual void Initialize() override
     {
@@ -69,7 +69,7 @@ public:
     }
 
     std::unordered_multimap<OperationStep, DurationType> Execute() override
-	{
+    {
         boost::compute::context& context = device_->GetContext();
         boost::compute::command_queue& queue = device_->GetQueue();
 
@@ -100,7 +100,7 @@ public:
         lastEvent.wait();
 
         return Utils::GetOpenCLEventDurations<DurationType>( events );
-	}
+    }
 #if 0
     std::string Description() override
     {

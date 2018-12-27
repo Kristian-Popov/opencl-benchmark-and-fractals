@@ -8,13 +8,13 @@ find_package(OpenCL)
 # If OpenCL was not found, use headers in contrib folder and ICD Loader library
 # (OpenCL.lib or libOpenCL.so)
 if(NOT OpenCL_FOUND)
-	message( "OpenCL SDK not found, reverting to ICD Loader to use as a library" )
-	file( COPY ${CMAKE_SOURCE_DIR}/contrib/OpenCL-Headers/CL
-		DESTINATION ${CMAKE_SOURCE_DIR}/contrib/Khronos-OpenCL-ICD-Loader/inc )
-	add_subdirectory( contrib/Khronos-OpenCL-ICD-Loader )
-	set(OpenCL_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/contrib/OpenCL-Headers/)
-	set(OpenCL_LIBRARY ${CMAKE_SOURCE_DIR}/contrib/Khronos-OpenCL-ICD-Loader/)
-	set(OpenCL_LIBRARIES OpenCL)
+    message( "OpenCL SDK not found, reverting to ICD Loader to use as a library" )
+    file( COPY ${CMAKE_SOURCE_DIR}/contrib/OpenCL-Headers/CL
+        DESTINATION ${CMAKE_SOURCE_DIR}/contrib/Khronos-OpenCL-ICD-Loader/inc )
+    add_subdirectory( contrib/Khronos-OpenCL-ICD-Loader )
+    set(OpenCL_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/contrib/OpenCL-Headers/)
+    set(OpenCL_LIBRARY ${CMAKE_SOURCE_DIR}/contrib/Khronos-OpenCL-ICD-Loader/)
+    set(OpenCL_LIBRARIES OpenCL)
 endif()
 
 add_definitions( -DCL_TARGET_OPENCL_VERSION=220 )
@@ -35,67 +35,67 @@ add_subdirectory(contrib/lodepng)
 # Add main project
 project(OpenCLTestProject)
 
-add_executable (main 
-	main.cpp 
-	# html_document.cpp
-	# html_benchmark_reporter.cpp
-	svg_document.cpp
+add_executable (main
+    main.cpp
+    # html_document.cpp
+    # html_benchmark_reporter.cpp
+    svg_document.cpp
 
-	fixture_runner.h
-	fixture_runner.cpp
+    fixture_runner.h
+    fixture_runner.cpp
 
-	# html_document.h
-	# html_benchmark_reporter.h
-	csv_document.h
-	svg_document.h
-	kernel_map.h
-	document_writers/png_document_builder.h
+    # html_document.h
+    # html_benchmark_reporter.h
+    csv_document.h
+    svg_document.h
+    kernel_map.h
+    document_writers/png_document_builder.h
 
-	devices/device_interface.h
-	devices/opencl_device.h
-	devices/opencl_platform.h
-	devices/platform_interface.h
-	devices/platform_list.h
+    devices/device_interface.h
+    devices/opencl_device.h
+    devices/opencl_platform.h
+    devices/platform_interface.h
+    devices/platform_list.h
 
-	fixtures/fixture.h
-	fixtures/fixture_family.h
-	fixtures/fixture_id.h
-	fixtures/trivial_factorial_opencl_fixture.h
-	# fixtures/koch_curve_fixture.h
-	# fixtures/multibrot_fractal_fixture.cpp
-	# fixtures/multibrot_fractal_fixture.h
-	# fixtures/damped_wave_fixture.inl
-	# fixtures/damped_wave_fixture.h
-	# fixtures/multiprecision_factorial_fixture.h
+    fixtures/fixture.h
+    fixtures/fixture_family.h
+    fixtures/fixture_id.h
+    fixtures/trivial_factorial_opencl_fixture.h
+    # fixtures/koch_curve_fixture.h
+    # fixtures/multibrot_fractal_fixture.cpp
+    # fixtures/multibrot_fractal_fixture.h
+    # fixtures/damped_wave_fixture.inl
+    # fixtures/damped_wave_fixture.h
+    # fixtures/multiprecision_factorial_fixture.h
 
-	iterators/sequential_values_iterator.h
-	iterators/random_values_iterator.h
-	iterators/data_source.h
+    iterators/sequential_values_iterator.h
+    iterators/random_values_iterator.h
+    iterators/data_source.h
 
-	indicators/duration_indicator.cpp
-	indicators/duration_indicator.h
-	indicators/element_processing_time_indicator.h
-	indicators/element_processing_time_indicator.cpp
-	indicators/indicator_interface.h
-	indicators/indicator_serializer.cpp
-	indicators/indicator_serializer.h
-	indicators/indicator_value_interface.h
-	indicators/string_indicator_value.h
-	indicators/numeric_indicator_value.h
-	indicators/throughput_indicator.h
-	indicators/throughput_indicator.cpp
+    indicators/duration_indicator.cpp
+    indicators/duration_indicator.h
+    indicators/element_processing_time_indicator.h
+    indicators/element_processing_time_indicator.cpp
+    indicators/indicator_interface.h
+    indicators/indicator_serializer.cpp
+    indicators/indicator_serializer.h
+    # indicators/indicator_value_interface.h
+    # indicators/string_indicator_value.h
+    # indicators/numeric_indicator_value.h
+    indicators/throughput_indicator.h
+    indicators/throughput_indicator.cpp
 
-	reporters/benchmark_results.h
-	reporters/json_benchmark_reporter.cpp
-	reporters/json_benchmark_reporter.h
-	reporters/benchmark_reporter.h
-	)
+    reporters/benchmark_results.h
+    reporters/json_benchmark_reporter.cpp
+    reporters/json_benchmark_reporter.h
+    reporters/benchmark_reporter.h
+    )
 
 target_include_directories (main PUBLIC ${CMAKE_SOURCE_DIR}
-	${OpenCL_INCLUDE_DIRS} 
-	${CMAKE_SOURCE_DIR}/contrib 
-	${Boost_INCLUDE_DIRS} 
-	${CMAKE_SOURCE_DIR}/utils )
+    ${OpenCL_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/contrib
+    ${Boost_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/utils )
 target_link_libraries (main ${OpenCL_LIBRARIES} ${Boost_LIBRARIES} utils lodepng)
 
 if (UNIX)

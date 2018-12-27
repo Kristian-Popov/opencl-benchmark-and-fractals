@@ -87,7 +87,7 @@ public:
         const std::string& descriptionSuffix = std::string() )
         : value_( value )
         , descriptionSuffix_( descriptionSuffix )
-	{
+    {
         EXCEPTION_ASSERT( value_ > 1 );
         /*
             A nice empirical rule to get number of bits needed to store result of n!. If
@@ -103,7 +103,7 @@ public:
         double wordsNeeded = ceil( bitsNeeded / 32.0 ); // Size is in words, every word holds 32 bits
         EXCEPTION_ASSERT( wordsNeeded < INT_MAX );
         size_ = static_cast<cl_int>( wordsNeeded );
-	}
+    }
 
     virtual void Initialize() override
     {
@@ -148,7 +148,7 @@ public:
     }
 
     std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) override
-	{
+    {
         EXCEPTION_ASSERT( context.get_devices().size() == 1 );
         boost::compute::command_queue& queue = *( contextSpecificData_.at( context ).queue_ );
 
@@ -208,7 +208,7 @@ public:
         events.insert( { OperationStep::CopyOutputDataFromDevice, retrieveResults.first } );
 
         return Utils::CalculateTotalStepDurations<Duration>( events );
-	}
+    }
 
     std::string Description() override
     {

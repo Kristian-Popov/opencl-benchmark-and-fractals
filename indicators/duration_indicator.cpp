@@ -7,14 +7,14 @@
 
 namespace
 {
-	const char* const kFailureReason = "Failure reason";
-	const char* const kTotalDuration = "Total duration";
+    const char* const kFailureReason = "Failure reason";
+    const char* const kTotalDuration = "Total duration";
 }
 
 void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchmark )
 {
-	operation_steps_ = benchmark.fixture_family->operation_steps;
-	fixture_family_name_ = benchmark.fixture_family->name;
+    operation_steps_ = benchmark.fixture_family->operation_steps;
+    fixture_family_name_ = benchmark.fixture_family->name;
 
     for( auto& fixture_data: benchmark.benchmark )
     {
@@ -22,12 +22,12 @@ void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchm
         FixtureCalculatedData d;
         if( fixture_results.failure_reason )
         {
-			d.failure_reason = fixture_results.failure_reason.value();
-		}
+            d.failure_reason = fixture_results.failure_reason.value();
+        }
         else
         {
             // Calculate duration for every step and total one.
-			DurationType total_duration = DurationType::zero();
+            DurationType total_duration = DurationType::zero();
             for( int stepIndex = 0; stepIndex < operation_steps_.size(); ++stepIndex )
             {
                 OperationStep step = operation_steps_.at( stepIndex );
@@ -65,26 +65,26 @@ void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchm
 
 boost::property_tree::ptree DurationIndicator::SerializeValue()
 {
-	// TODO serialize operation_steps_ and fixture_family_name_?
+    // TODO serialize operation_steps_ and fixture_family_name_?
     namespace pr_tree = boost::property_tree;
-	boost::property_tree::ptree result;
-	for( auto& fixture_data: calculated_ )
-	{
-		boost::property_tree::ptree serialized_fixture_data;
-		if( fixture_data.second.failure_reason )
-		{
-			serialized_fixture_data.put<std::string>( kFailureReason, fixture_data.second.failure_reason.value() );
-		}
-		else
-		{
-			serialized_fixture_data.put<std::string>( kTotalDuration, Utils::SerializeNumber( fixture_data.second.total_duration.count() ) );
-			for( OperationStep step: operation_steps_ )
-			{
-				serialized_fixture_data.put<std::string>( OperationStepDescriptionRepository::GetSerializeId( step ),
+    boost::property_tree::ptree result;
+    for( auto& fixture_data: calculated_ )
+    {
+        boost::property_tree::ptree serialized_fixture_data;
+        if( fixture_data.second.failure_reason )
+        {
+            serialized_fixture_data.put<std::string>( kFailureReason, fixture_data.second.failure_reason.value() );
+        }
+        else
+        {
+            serialized_fixture_data.put<std::string>( kTotalDuration, Utils::SerializeNumber( fixture_data.second.total_duration.count() ) );
+            for( OperationStep step: operation_steps_ )
+            {
+                serialized_fixture_data.put<std::string>( OperationStepDescriptionRepository::GetSerializeId( step ),
                     Utils::SerializeNumber( fixture_data.second.step_durations[step].count() ) );
-			}
-		}
+            }
+        }
         result.push_back( pr_tree::ptree::value_type( fixture_data.first.Serialize(), serialized_fixture_data ) );
-	}
-	return result;
+    }
+    return result;
 }

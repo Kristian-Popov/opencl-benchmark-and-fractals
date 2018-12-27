@@ -15,7 +15,7 @@ std::string OperationStepDescriptionRepository::Get( OperationStep step )
 
 std::string OperationStepDescriptionRepository::GetSerializeId( OperationStep step )
 {
-	return operation_serialize_ids.at( step );
+    return operation_serialize_ids.at( step );
 }
 
 const std::unordered_map<OperationStep, std::string> OperationStepDescriptionRepository::operationDescriptions = {

@@ -8,18 +8,18 @@
 
 namespace
 {
-	// TODO use the same source for unit tests and main application
-	const char* source = R"(
+    // TODO use the same source for unit tests and main application
+    const char* source = R"(
 __kernel void CalcLinesNumberForIterationKernel(__global int* input, __global int* output)
 {
-	size_t id = get_global_id(0);
-	output[id] = CalcLinesNumberForIteration(input[id]);
+    size_t id = get_global_id(0);
+    output[id] = CalcLinesNumberForIteration(input[id]);
 }
 
 __kernel void CalcGlobalIdKernel(__global int2* input, __global int* output)
 {
-	size_t id = get_global_id(0);
-	output[id] = CalcGlobalId(input[id]);
+    size_t id = get_global_id(0);
+    output[id] = CalcGlobalId(input[id]);
 }
 
 /* Verify size and alignment of all fields in structure Line
@@ -32,7 +32,7 @@ __kernel void CalcGlobalIdKernel(__global int2* input, __global int* output)
 __kernel void VerifyLineStructKernel(__global ulong* output)
 {
     Line value = (Line){.coords = {0, 0, 1, 0}, .ids = {0, 0}};
-	output[0] = sizeof(value);
+    output[0] = sizeof(value);
 
     Line lines[2] = { (Line){.coords = {0, 0, 1, 0}, .ids = {0, 0}}, (Line){.coords = {0, 0, 1, 0}, .ids = {0, 0}} };
     output[1] = (uintptr_t)(lines + 1) - (uintptr_t)(lines);

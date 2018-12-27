@@ -15,13 +15,13 @@ public:
         DurationType total_duration = DurationType::zero();
     };
 
-	DurationIndicator() noexcept
-	{}
+    DurationIndicator() noexcept
+    {}
 
     explicit DurationIndicator( const BenchmarkResultForFixtureFamily& benchmark )
     {
-		Calculate( benchmark );
-	}
+        Calculate( benchmark );
+    }
 
     std::unordered_map<FixtureId, FixtureCalculatedData> GetCalculatedData() const noexcept
     {
@@ -30,7 +30,7 @@ public:
 
     boost::property_tree::ptree SerializeValue() override;
 private:
-	void Calculate( const BenchmarkResultForFixtureFamily& benchmark );
+    void Calculate( const BenchmarkResultForFixtureFamily& benchmark );
 
     std::string fixture_family_name_; // TODO is it needed?
     std::vector<OperationStep> operation_steps_;

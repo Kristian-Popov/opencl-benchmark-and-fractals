@@ -8,7 +8,7 @@
 class FixtureId
 {
 public:
-	// TODO process family name at all?
+    // TODO process family name at all?
     FixtureId( const std::string& family_name, const std::shared_ptr<DeviceInterface>& device, const std::string& algorithm )
         : family_name_( family_name )
         , device_( device )
@@ -74,13 +74,13 @@ public:
 
     std::string Serialize() const
     {
-		std::string result = device_->UniqueName();
-		if( !algorithm_.empty() )
-		{
-			result += ", " + algorithm_;
-		}
-		return result;
-	}
+        std::string result = device_->UniqueName();
+        if( !algorithm_.empty() )
+        {
+            result += ", " + algorithm_;
+        }
+        return result;
+    }
 
 private:
     std::string family_name_;

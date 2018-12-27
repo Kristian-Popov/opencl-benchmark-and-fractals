@@ -7,12 +7,12 @@
 
 namespace
 {
-	// TODO use the same source for unit tests and main application
-	const char* source = R"(
+    // TODO use the same source for unit tests and main application
+    const char* source = R"(
 __kernel void Pow2ForIntKernel(__global int* input, __global int* output)
 {
-	size_t id = get_global_id(0);
-	output[id] = Pow2ForInt(input[id]);
+    size_t id = get_global_id(0);
+    output[id] = Pow2ForInt(input[id]);
 }
 )";
 }

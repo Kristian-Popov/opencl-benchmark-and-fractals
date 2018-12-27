@@ -63,7 +63,7 @@ namespace Utils
         return diff <= largest * maxRelDiff;
     }
 
-    long double ChooseConvenientUnit( long double value, 
+    long double ChooseConvenientUnit( long double value,
         const std::vector<long double>& units )
     {
         EXCEPTION_ASSERT( !units.empty() );
@@ -106,7 +106,7 @@ namespace Utils
         }
         EXCEPTION_ASSERT( !counts.empty() );
         // TODO find a unit that occurs most frequently
-		auto resultIter = std::max_element( counts.begin(), counts.end(), 
+        auto resultIter = std::max_element( counts.begin(), counts.end(),
             CompareSecond<long double, int> );
         return resultIter->first;
     }

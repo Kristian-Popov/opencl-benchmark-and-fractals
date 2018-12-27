@@ -25,7 +25,7 @@ public:
     */
     virtual std::vector<std::string> GetRequiredExtensions() = 0;
 
-	virtual std::unordered_multimap<OperationStep, DurationType> Execute() = 0;
+    virtual std::unordered_multimap<OperationStep, DurationType> Execute() = 0;
 
     /*
         Optional method to finalize a fixture.

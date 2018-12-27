@@ -9,23 +9,23 @@ class ElementProcessingTimeIndicator: public IndicatorInterface
 {
 public:
     ElementProcessingTimeIndicator()
-	{}
+    {}
 
     explicit ElementProcessingTimeIndicator( const BenchmarkResultForFixtureFamily& benchmark )
     {
-		Calculate( benchmark );
-	}
+        Calculate( benchmark );
+    }
 
     boost::property_tree::ptree SerializeValue() override;
 private:
-	void Calculate( const BenchmarkResultForFixtureFamily& benchmark );
+    void Calculate( const BenchmarkResultForFixtureFamily& benchmark );
 
-	struct FixtureCalculatedData
-	{
-		std::unordered_map<OperationStep, DurationType> step_durations;
-		boost::optional<std::string> failure_reason;
-		DurationType total_duration = DurationType::zero();
-	};
+    struct FixtureCalculatedData
+    {
+        std::unordered_map<OperationStep, DurationType> step_durations;
+        boost::optional<std::string> failure_reason;
+        DurationType total_duration = DurationType::zero();
+    };
 
     std::unordered_map<FixtureId, FixtureCalculatedData> calculated_;
 };

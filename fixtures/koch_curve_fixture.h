@@ -19,52 +19,52 @@ Requires a definition:
 
 REAL_T_4 MergePointsVectorsToLineVector(REAL_T_2 a, REAL_T_2 b)
 {
-	return (REAL_T_4)(a, b);
+    return (REAL_T_4)(a, b);
 }
 
 /*
-	Multiply matrix 2x2 and 2-component vector.
-	Also called Gemv in BLAS but limited to 2x2 matrices and 2-component vector
-	
-	Matrix should look like this:
-	m.x   m.y
-	m.z   m.w
+    Multiply matrix 2x2 and 2-component vector.
+    Also called Gemv in BLAS but limited to 2x2 matrices and 2-component vector
+
+    Matrix should look like this:
+    m.x   m.y
+    m.z   m.w
 */
 REAL_T_2 MultiplyMatrix2x2AndVector(REAL_T_4 m, REAL_T_2 v)
 {
-	return (REAL_T_2)(m.x*v.x + m.y*v.y, m.z*v.x + m.w*v.y);
+    return (REAL_T_2)(m.x*v.x + m.y*v.y, m.z*v.x + m.w*v.y);
 }
 
 /*
-	Fill an array with 4 transformation matrices.
+    Fill an array with 4 transformation matrices.
 */
 void BuildTransformationMatrices(__private REAL_T_4* transformationMatrices)
 {
-	transformationMatrices[0] = (REAL_T_4)(1.0/3.0, 0, 0, 1.0/3.0);
-	transformationMatrices[1] = (REAL_T_4)(1.0/6.0, -1.0/(2*sqrt(3.0)), 1.0/(2*sqrt(3.0)), 1.0/6.0);
-	transformationMatrices[2] = (REAL_T_4)(1.0/6.0, 1.0/(2*sqrt(3.0)), -1.0/(2*sqrt(3.0)), 1.0/6.0);
-	transformationMatrices[3] = (REAL_T_4)(1.0/3.0, 0, 0, 1.0/3.0);
+    transformationMatrices[0] = (REAL_T_4)(1.0/3.0, 0, 0, 1.0/3.0);
+    transformationMatrices[1] = (REAL_T_4)(1.0/6.0, -1.0/(2*sqrt(3.0)), 1.0/(2*sqrt(3.0)), 1.0/6.0);
+    transformationMatrices[2] = (REAL_T_4)(1.0/6.0, 1.0/(2*sqrt(3.0)), -1.0/(2*sqrt(3.0)), 1.0/6.0);
+    transformationMatrices[3] = (REAL_T_4)(1.0/3.0, 0, 0, 1.0/3.0);
 }
 
 void ProcessLine(Line parentLine, __private REAL_T_4* transformationMatrices,
-	__global Line* storage)
+    __global Line* storage)
 {
-	REAL_T_2 start = parentLine.coords.lo;
-	REAL_T_2 end = parentLine.coords.hi;
-	REAL_T_2 vector = end - start;
-	REAL_T_2 newStart = start;
-	for (int i = 0; i < 4; ++i)
-	{
-		REAL_T_2 newEnd = MultiplyMatrix2x2AndVector(transformationMatrices[i], vector) + newStart;
-		// New iteration number is one more than parent's one,
-		// identifier is calculated using a formula based on a parent's identifier
-		int2 ids = (int2)(parentLine.ids.x + 1, 4*parentLine.ids.y + i);
+    REAL_T_2 start = parentLine.coords.lo;
+    REAL_T_2 end = parentLine.coords.hi;
+    REAL_T_2 vector = end - start;
+    REAL_T_2 newStart = start;
+    for (int i = 0; i < 4; ++i)
+    {
+        REAL_T_2 newEnd = MultiplyMatrix2x2AndVector(transformationMatrices[i], vector) + newStart;
+        // New iteration number is one more than parent's one,
+        // identifier is calculated using a formula based on a parent's identifier
+        int2 ids = (int2)(parentLine.ids.x + 1, 4*parentLine.ids.y + i);
         size_t currentId = CalcGlobalId(ids);
         REAL_T_4 coords = MergePointsVectorsToLineVector(newStart, newEnd);
 
-		storage[currentId] = (Line){ .coords = coords, .ids = ids };
-		newStart = newEnd;
-	}
+        storage[currentId] = (Line){ .coords = coords, .ids = ids };
+        newStart = newEnd;
+    }
 }
 
 /*
@@ -73,20 +73,20 @@ void ProcessLine(Line parentLine, __private REAL_T_4* transformationMatrices,
 */
 void KochCurveCalc(int startIteration, int stopAtIteration, __global Line* linesTempStorage)
 {
-	REAL_T_4 transformationMatrices[4];
-	BuildTransformationMatrices(transformationMatrices);
-	// Calculate total number of intermediate operations needed
-	for (int iterationNumber = startIteration; iterationNumber < stopAtIteration; ++iterationNumber)
-	{
-		int lineCount = CalcLinesNumberForIteration(iterationNumber);
-		for (int i = 0; i < lineCount; ++i)
-		{
+    REAL_T_4 transformationMatrices[4];
+    BuildTransformationMatrices(transformationMatrices);
+    // Calculate total number of intermediate operations needed
+    for (int iterationNumber = startIteration; iterationNumber < stopAtIteration; ++iterationNumber)
+    {
+        int lineCount = CalcLinesNumberForIteration(iterationNumber);
+        for (int i = 0; i < lineCount; ++i)
+        {
             size_t parentLineId = CalcGlobalId((int2)(iterationNumber, i));
 
-			__global Line* parentLine = linesTempStorage + parentLineId;
-			ProcessLine(*parentLine, transformationMatrices, linesTempStorage);
-		}
-	}
+            __global Line* parentLine = linesTempStorage + parentLineId;
+            ProcessLine(*parentLine, transformationMatrices, linesTempStorage);
+        }
+    }
 }
 
 ulong MinSpaceNeededInLineTempStorage(int stopAtIteration)
@@ -95,7 +95,7 @@ ulong MinSpaceNeededInLineTempStorage(int stopAtIteration)
 }
 
 /*
-	Build Koch's curve. This kernel iterates all levels up and including "stopAtIteration".
+    Build Koch's curve. This kernel iterates all levels up and including "stopAtIteration".
 */
 __kernel void KochCurvePrecalculationKernel(int stopAtIteration,
     __global void* linesTempStorage, ulong linesTempStorageSize)
@@ -126,7 +126,7 @@ REAL_T_4 KochCurveTransformLineToCurve(Line line, REAL_T_4 transformMatrix, REAL
     return (REAL_T_4)(newStart, newEnd);
 }
 
-void KochSnowflakeCalc(int stopAtIteration, __global REAL_T_4* curves, int curvesCount, 
+void KochSnowflakeCalc(int stopAtIteration, __global REAL_T_4* curves, int curvesCount,
     __global Line* linesTempStorageConverted,
     __global REAL_T_4* out)
 {
@@ -160,7 +160,7 @@ void KochSnowflakeCalc(int stopAtIteration, __global REAL_T_4* curves, int curve
 */
 __kernel void KochSnowflakeKernel(int stopAtIteration,
     __global REAL_T_4* curves, int curvesCount,
-    __global void* linesTempStorage, ulong linesTempStorageSize, 
+    __global void* linesTempStorage, ulong linesTempStorageSize,
     __global REAL_T_4* out )
 {
     if(linesTempStorageSize < MinSpaceNeededInLineTempStorage(stopAtIteration))
@@ -216,7 +216,7 @@ template<typename T, typename T2, typename T4>
 class KochCurveFixture : public Fixture
 {
 public:
-    explicit KochCurveFixture( 
+    explicit KochCurveFixture(
         int iterationsCount,
         // Vector of lines. Every line becomes a curve that starts at (l.x; l.y) and ends at (l.z; l.w)
         const std::vector<T4>& curves,
@@ -241,8 +241,8 @@ public:
         std::string typeName = KochCurveFixtureConstants<T>::openclTypeName;
         std::string compilerOptions = ( boost::format(
             "%1% -DREAL_T=%2% -DREAL_T_2=%3% -DREAL_T_4=%4%") %
-            baseCompilerOptions % 
-            typeName % 
+            baseCompilerOptions %
+            typeName %
             (typeName+"2") %
             ( typeName + "4" )
             ).str();

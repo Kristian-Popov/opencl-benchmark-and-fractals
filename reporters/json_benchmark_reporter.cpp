@@ -25,14 +25,14 @@ void JsonBenchmarkReporter::AddFixtureFamilyResults( const BenchmarkResultForFix
         indicators.push_back( std::make_shared<ThroughputIndicator>( results ) );
     }
 
-	boost::property_tree::ptree indicator_list;
+    boost::property_tree::ptree indicator_list;
     for( const auto& indicator: indicators )
     {
         auto& d = IndicatorSerializer::Serialize( indicator );
         indicator_list.add_child( d.first, d.second );
     }
 
-	tree_.put_child( results.fixture_family->name, indicator_list );
+    tree_.put_child( results.fixture_family->name, indicator_list );
 }
 
 void JsonBenchmarkReporter::Flush()
