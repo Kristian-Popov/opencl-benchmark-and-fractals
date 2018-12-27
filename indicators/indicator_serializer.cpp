@@ -1,11 +1,19 @@
 #include "indicators/indicator_serializer.h"
 
 #include "indicators/duration_indicator.h"
-#include "indicators/indicator_interface.h"
+#include "indicators/element_processing_time_indicator.h"
+#include "indicators/throughput_indicator.h"
+
+#include <typeindex>
+#include <typeinfo>
 
 namespace
 {
-    const char* const kDurationIndicatorId = "DurationIndicator";
+    static const std::unordered_map<std::type_index, std::string> ids = {
+        {std::type_index( typeid( DurationIndicator ) ), "DurationIndicator"},
+        {std::type_index( typeid( ElementProcessingTimeIndicator ) ), "ElementProcessingTimeIndicator"},
+        {std::type_index( typeid( ThroughputIndicator ) ), "ThroughputIndicator"}
+    };
 }
 
 namespace IndicatorSerializer
@@ -15,11 +23,11 @@ std::pair<std::string, boost::property_tree::ptree> Serialize( const std::shared
 {
     std::pair<std::string, boost::property_tree::ptree> result;
     {
-        auto& ptr = std::dynamic_pointer_cast<DurationIndicator>( p );
-        if( ptr )
+        auto& iter = ids.find( typeid( *p ) );
+        if( iter != ids.cend() )
         {
-            result.first = kDurationIndicatorId;
-            result.second = ptr->SerializeValue();
+            result.first = iter->second;
+            result.second = p->SerializeValue();
             return result;
         }
     }

@@ -187,7 +187,8 @@ namespace Utils
     std::string SerializeNumber( T val )
     {
         std::ostringstream stream;
-        stream << std::setprecision( std::numeric_limits<T>::max_digits10 ) << std::fixed << val;
+        std::streamsize precision = std::max( std::numeric_limits<T>::digits10, std::numeric_limits<T>::max_digits10 );
+        stream << std::setprecision( precision ) << std::fixed << val;
         return stream.str();
     }
 }

@@ -16,7 +16,6 @@ void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchm
 	operation_steps_ = benchmark.fixture_family->operation_steps;
 	fixture_family_name_ = benchmark.fixture_family->name;
 
-	std::map<FixtureId, std::map<int, DurationType>> durations;
     for( auto& fixture_data: benchmark.benchmark )
     {
         const BenchmarkResultForFixture& fixture_results = fixture_data.second;
@@ -48,10 +47,14 @@ void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchm
             }
 
             // Divide durations by amount of iterations
-            total_duration /= fixture_results.durations.size();
+            std::size_t element_count = fixture_results.durations.size();
+            // Very large element counts may cause problems, double and std::size_t may have same size
+            EXCEPTION_ASSERT( element_count <= 1e9 );
+            const double element_count_double = static_cast<double>( element_count );
+            total_duration /= element_count_double;
             for( auto& p: d.step_durations )
             {
-                p.second /= fixture_results.durations.size();
+                p.second /= element_count_double;
             }
 
             d.total_duration = total_duration;
@@ -82,7 +85,6 @@ boost::property_tree::ptree DurationIndicator::SerializeValue()
 			}
 		}
         result.push_back( pr_tree::ptree::value_type( fixture_data.first.Serialize(), serialized_fixture_data ) );
-		//result.put_child( ,  );
 	}
 	return result;
 }

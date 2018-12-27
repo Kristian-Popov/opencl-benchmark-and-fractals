@@ -136,12 +136,6 @@ public:
         return device_;
     }
 
-#if 0
-    virtual boost::optional<size_t> GetElementsCount() override
-    {
-        return dataSize_;
-    }
-#endif
     virtual ~TrivialFactorialOpenClFixture() noexcept
     {
     }

@@ -43,8 +43,8 @@
 
 void FixtureRunner::CreateTrivialFixtures()
 {
-    const std::vector<int> data_sizes = { 100, 1000, 100000, 1000000 };
-    for( int s : data_sizes )
+    const std::vector<int32_t> data_sizes = { 100, 1000, 100000, 1000000 };
+    for( int32_t s : data_sizes )
     {
         auto fixture_family = std::make_shared<FixtureFamily>();
         fixture_family->name = "Trivial factorial, " + Utils::FormatQuantityString( s ) + " elements";
@@ -53,6 +53,7 @@ void FixtureRunner::CreateTrivialFixtures()
             OperationStep::Calculate,
             OperationStep::CopyOutputDataFromDevice
         };
+        fixture_family->element_count = s;
         for( auto& platform : platform_list_.OpenClPlatforms() )
         {
             for( auto& device : platform->GetDevices() )

@@ -1,11 +1,10 @@
-#pragma once
-
-#include "fixtures/fixture_family.h"
-
 #include "reporters/json_benchmark_reporter.h"
 
-#include "indicators/indicator_serializer.h"
+#include "fixtures/fixture_family.h"
 #include "indicators/duration_indicator.h"
+#include "indicators/element_processing_time_indicator.h"
+#include "indicators/indicator_serializer.h"
+#include "indicators/throughput_indicator.h"
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/log/trivial.hpp>
@@ -17,10 +16,22 @@ JsonBenchmarkReporter::JsonBenchmarkReporter( const std::string& file_name )
 
 void JsonBenchmarkReporter::AddFixtureFamilyResults( const BenchmarkResultForFixtureFamily& results )
 {
-	auto& duration_indicator = std::make_shared<DurationIndicator>( results );
-    std::pair<std::string, boost::property_tree::ptree> d = IndicatorSerializer::Serialize( duration_indicator );
+    std::vector<std::shared_ptr<IndicatorInterface>> indicators = {
+        std::make_shared<DurationIndicator>( results )
+    };
+    if( results.fixture_family->element_count )
+    {
+        indicators.push_back( std::make_shared<ElementProcessingTimeIndicator>( results ) );
+        indicators.push_back( std::make_shared<ThroughputIndicator>( results ) );
+    }
+
 	boost::property_tree::ptree indicator_list;
-	indicator_list.add_child( d.first, d.second );
+    for( const auto& indicator: indicators )
+    {
+        auto& d = IndicatorSerializer::Serialize( indicator );
+        indicator_list.add_child( d.first, d.second );
+    }
+
 	tree_.put_child( results.fixture_family->name, indicator_list );
 }
 

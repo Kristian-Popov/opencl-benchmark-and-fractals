@@ -49,17 +49,6 @@ public:
     }
 
     /*
-        Ask a fixture for a number of input values.
-        If not applicable to a particular fixture, they may leave this implementation as is
-        or return an empty optional value, that would mean that number of input values
-        doesn't make sense for this particular fixture.
-    */
-    virtual boost::optional<std::size_t> GetElementsCount()
-    {
-        return boost::optional<std::size_t>();
-    }
-
-    /*
         Store results of fixture to a persistent storage (e.g. graphic file).
         Every fixture may provide its own method, but it is optional.
     */
