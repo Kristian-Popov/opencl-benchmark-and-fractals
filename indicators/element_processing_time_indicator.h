@@ -1,5 +1,6 @@
 #include "indicators/indicator_interface.h"
 
+#include "utils/duration.h"
 #include "reporters/benchmark_results.h"
 
 #include <unordered_map>
@@ -22,9 +23,9 @@ private:
 
     struct FixtureCalculatedData
     {
-        std::unordered_map<OperationStep, DurationType> step_durations;
+        std::unordered_map<OperationStep, Duration> step_durations;
         boost::optional<std::string> failure_reason;
-        DurationType total_duration = DurationType::zero();
+        Duration total_duration;
     };
 
     std::unordered_map<FixtureId, FixtureCalculatedData> calculated_;

@@ -1,8 +1,6 @@
 #include "indicators/duration_indicator.h"
 
 #include "fixtures/fixture_family.h"
-#include "indicators/string_indicator_value.h"
-#include "indicators/numeric_indicator_value.h"
 #include <utils.h>
 
 namespace
@@ -27,7 +25,7 @@ void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchm
         else
         {
             // Calculate duration for every step and total one.
-            DurationType total_duration = DurationType::zero();
+            Duration total_duration;
             for( int stepIndex = 0; stepIndex < operation_steps_.size(); ++stepIndex )
             {
                 OperationStep step = operation_steps_.at( stepIndex );
@@ -35,8 +33,8 @@ void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchm
                 for( auto& results: fixture_results.durations )
                 {
                     auto range = results.equal_range( step );
-                    DurationType val = std::accumulate( range.first, range.second, DurationType::zero(), []
-                        ( DurationType lhs, const std::pair<OperationStep, DurationType>& rhs ) -> DurationType
+                    Duration val = std::accumulate( range.first, range.second, Duration(), []
+                        ( Duration lhs, const std::pair<OperationStep, Duration>& rhs ) -> Duration
                         {
                             return lhs + rhs.second;
                         }
@@ -48,13 +46,10 @@ void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchm
 
             // Divide durations by amount of iterations
             std::size_t element_count = fixture_results.durations.size();
-            // Very large element counts may cause problems, double and std::size_t may have same size
-            EXCEPTION_ASSERT( element_count <= 1e9 );
-            const double element_count_double = static_cast<double>( element_count );
-            total_duration /= element_count_double;
+            total_duration /= element_count;
             for( auto& p: d.step_durations )
             {
-                p.second /= element_count_double;
+                p.second /= element_count;
             }
 
             d.total_duration = total_duration;
@@ -77,11 +72,11 @@ boost::property_tree::ptree DurationIndicator::SerializeValue()
         }
         else
         {
-            serialized_fixture_data.put<std::string>( kTotalDuration, Utils::SerializeNumber( fixture_data.second.total_duration.count() ) );
+            serialized_fixture_data.put<std::string>( kTotalDuration, fixture_data.second.total_duration.Serialize() );
             for( OperationStep step: operation_steps_ )
             {
                 serialized_fixture_data.put<std::string>( OperationStepDescriptionRepository::GetSerializeId( step ),
-                    Utils::SerializeNumber( fixture_data.second.step_durations[step].count() ) );
+                    fixture_data.second.step_durations[step].Serialize() );
             }
         }
         result.push_back( pr_tree::ptree::value_type( fixture_data.first.Serialize(), serialized_fixture_data ) );

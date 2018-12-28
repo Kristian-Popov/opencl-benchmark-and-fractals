@@ -1,5 +1,6 @@
 #include "indicators/indicator_interface.h"
 
+#include "utils/duration.h"
 #include "reporters/benchmark_results.h"
 
 #include <unordered_map>
@@ -10,9 +11,9 @@ class DurationIndicator: public IndicatorInterface
 public:
     struct FixtureCalculatedData
     {
-        std::unordered_map<OperationStep, DurationType> step_durations;
+        std::unordered_map<OperationStep, Duration> step_durations;
         boost::optional<std::string> failure_reason; // TODO is it needed in every indicator?
-        DurationType total_duration = DurationType::zero();
+        Duration total_duration;
     };
 
     DurationIndicator() noexcept

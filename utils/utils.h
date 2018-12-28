@@ -13,6 +13,7 @@
 #include <memory>
 #include <unordered_map>
 
+#include "duration.h"
 #include "operation_step.h"
 
 #include "boost/compute.hpp"
@@ -145,17 +146,8 @@ namespace Utils
         return result;
     }
 
-    template <typename D>
-    std::unordered_multimap<OperationStep, D> GetOpenCLEventDurations(
-        const std::unordered_multimap<OperationStep, boost::compute::event>& events )
-    {
-        std::unordered_multimap<OperationStep, D> result;
-        for( const std::pair<OperationStep, boost::compute::event>& p : events )
-        {
-            result.emplace( p.first, p.second.duration<D>() );
-        }
-        return result;
-    }
+    std::unordered_multimap<OperationStep, Duration> GetOpenCLEventDurations(
+        const std::unordered_multimap<OperationStep, boost::compute::event>& events );
 
     std::string CombineStrings( const std::vector<std::string>& strings, const std::string & delimiter = "\n" );
 

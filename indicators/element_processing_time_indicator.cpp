@@ -51,11 +51,11 @@ boost::property_tree::ptree ElementProcessingTimeIndicator::SerializeValue()
         }
         else
         {
-            serialized_fixture_data.put<std::string>( kTotalDuration, Utils::SerializeNumber( fixture_data.second.total_duration.count() ) );
+            serialized_fixture_data.put<std::string>( kTotalDuration, fixture_data.second.total_duration.Serialize() );
             for( auto& step_data: fixture_data.second.step_durations )
             {
                 serialized_fixture_data.put<std::string>( OperationStepDescriptionRepository::GetSerializeId( step_data.first ),
-                    Utils::SerializeNumber( step_data.second.count() ) );
+                    step_data.second.Serialize() );
             }
         }
         result.push_back( pr_tree::ptree::value_type( fixture_data.first.Serialize(), serialized_fixture_data ) );

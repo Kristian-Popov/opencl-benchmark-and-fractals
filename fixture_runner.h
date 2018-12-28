@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "devices/platform_list.h"
+#include "utils/duration.h"
 #include "fixtures/fixture.h"
 #include "fixtures/fixture_family.h"
 #include "reporters/benchmark_reporter.h"
@@ -25,7 +26,7 @@ public:
         FixturesToRun fixturesToRun;
         int minIterations = 1;
         int maxIterations = std::numeric_limits<int>::max();
-        DurationType targetFixtureExecutionTime = std::chrono::milliseconds( 100 );
+        Duration targetFixtureExecutionTime = Duration( std::chrono::milliseconds( 100 ) );
         bool verifyResults = true;
         bool storeResults = true;
     };

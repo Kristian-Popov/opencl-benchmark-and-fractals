@@ -6,8 +6,8 @@
 #include <unordered_map>
 
 #include "devices/device_interface.h"
+#include "utils/duration.h"
 #include "operation_step.h"
-#include "reporters/benchmark_results.h"
 
 class Fixture
 {
@@ -25,7 +25,7 @@ public:
     */
     virtual std::vector<std::string> GetRequiredExtensions() = 0;
 
-    virtual std::unordered_multimap<OperationStep, DurationType> Execute() = 0;
+    virtual std::unordered_multimap<OperationStep, Duration> Execute() = 0;
 
     /*
         Optional method to finalize a fixture.

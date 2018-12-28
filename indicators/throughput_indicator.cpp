@@ -25,9 +25,10 @@ void ThroughputIndicator::Calculate( const BenchmarkResultForFixtureFamily& benc
         }
         else
         {
+            using namespace std::literals::chrono_literals;
             boost::optional<int32_t> element_count = benchmark.fixture_family->element_count;
             EXCEPTION_ASSERT( element_count );
-            double throughput_double = element_count.value() / fixture_results.total_duration.count();
+            double throughput_double = element_count.value() * ( Duration( 1s ) / fixture_results.total_duration );
             EXCEPTION_ASSERT( throughput_double > 0 );
             EXCEPTION_ASSERT( throughput_double < std::numeric_limits<int32_t>::max() );
             d.throughput = static_cast<int32_t>( throughput_double );

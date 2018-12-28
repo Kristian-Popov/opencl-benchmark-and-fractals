@@ -11,6 +11,7 @@
 #include <cfenv>
 
 #include "data_verification_failed_exception.h"
+#include "utils/duration.h"
 #include "operation_step.h"
 #include "csv_document.h"
 #include "half_precision_normal_distribution.h"
@@ -307,9 +308,6 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
 
     BOOST_LOG_TRIVIAL( info ) << "We have " << fixture_families_.size() << " fixture families to run";
 
-    typedef double OutputNumericType;
-    typedef std::chrono::duration<OutputNumericType, std::micro> OutputDurationType;
-
     for( size_t familyIndex = 0; familyIndex < fixture_families_.size(); ++familyIndex )
     {
         std::shared_ptr<FixtureFamily>& fixtureFamily = fixture_families_.at( familyIndex );
@@ -346,19 +344,19 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
                     }
                 }
 
-                std::vector<std::unordered_multimap<OperationStep, DurationType>> durations;
+                std::vector<std::unordered_multimap<OperationStep, Duration>> durations;
 
                 // Warm-up for one iteration to get estimation of execution time
-                std::unordered_multimap<OperationStep, DurationType> warmupResult = fixture->Execute();
+                std::unordered_multimap<OperationStep, Duration> warmupResult = fixture->Execute();
                 durations.push_back( warmupResult );
-                NumericType totalOperationDuration = std::accumulate( warmupResult.begin(), warmupResult.end(), DurationType::zero(),
-                    []( OutputDurationType acc, const std::pair<OperationStep, DurationType>& r )
+                Duration totalOperationDuration = std::accumulate( warmupResult.begin(), warmupResult.end(), Duration(),
+                    []( Duration acc, const std::pair<OperationStep, Duration>& r )
                 {
                     return acc + r.second;
-                } ).count();
-                double iteration_count_double = ( settings.targetFixtureExecutionTime / totalOperationDuration ).count();
-                EXCEPTION_ASSERT( iteration_count_double < std::numeric_limits<int>::max() );
-                int iteration_count = static_cast<int>( std::ceil( iteration_count_double ) );
+                } );
+                uint64_t iteration_count_long = settings.targetFixtureExecutionTime / totalOperationDuration;
+                EXCEPTION_ASSERT( iteration_count_long < std::numeric_limits<int>::max() );
+                int iteration_count = static_cast<int>( iteration_count_long );
                 iteration_count = boost::algorithm::clamp( iteration_count, settings.minIterations, settings.maxIterations ) - 1;
                 EXCEPTION_ASSERT( iteration_count >= 0 );
 
