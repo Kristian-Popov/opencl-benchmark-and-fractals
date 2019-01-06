@@ -62,6 +62,7 @@ public:
         return family_name_;
     }
 
+    // TODO replace with weak_ptr
     std::shared_ptr<DeviceInterface> device() const
     {
         return device_;

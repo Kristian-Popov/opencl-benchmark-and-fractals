@@ -68,6 +68,8 @@ public:
 
     std::string Serialize() const;
 
+    double AsSeconds() const;
+
     friend Duration operator+( Duration lhs, Duration rhs )
     {
         lhs += rhs;

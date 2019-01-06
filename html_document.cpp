@@ -4,7 +4,7 @@
 
 // TODO this class would benefit from HTML template library
 
-const char* HTMLDocument::intro_ = R"(
+const char* HtmlDocument::intro_ = R"(
 <!DOCTYPE html>
 <html>
 <head>
@@ -19,18 +19,18 @@ table, th, td {
 <body>
 )";
 
-const char* HTMLDocument::outro_ = R"(
+const char* HtmlDocument::outro_ = R"(
 </body>
 </html>
 )";
 
-HTMLDocument::HTMLDocument( const char* fileName )
-    : fileName_(fileName)
+HtmlDocument::HtmlDocument( const std::string& file_name )
+    : file_name_( file_name )
 {
     stream_ << intro_;
 }
 
-void HTMLDocument::AddTable( const std::vector<std::vector<CellDescription>>& rows )
+void HtmlDocument::AddTable( const std::vector<std::vector<CellDescription>>& rows )
 {
     stream_ << "<table>";
     for (const std::vector<CellDescription>& row: rows)
@@ -62,16 +62,16 @@ void HTMLDocument::AddTable( const std::vector<std::vector<CellDescription>>& ro
     stream_ << "</table>" << std::endl;
 }
 
-void HTMLDocument::AddHeader( const std::string& text, int level /* = 1 */ )
+void HtmlDocument::AddHeader( const std::string& text, int level /* = 1 */ )
 {
     EXCEPTION_ASSERT( level >= 1 && level <= 6 );
     stream_ << "<h" << level << ">" << text << "</h" << level << ">" << std::endl;
 }
 
-void HTMLDocument::BuildAndWriteToDisk()
+void HtmlDocument::BuildAndWriteToDisk()
 {
-    std::ofstream fileStream( fileName_ );
-    fileStream << stream_.str();
-    fileStream << outro_;
-    fileStream.flush();
+    std::ofstream file_stream( file_name_ );
+    file_stream << stream_.str();
+    file_stream << outro_;
+    file_stream.flush();
 }

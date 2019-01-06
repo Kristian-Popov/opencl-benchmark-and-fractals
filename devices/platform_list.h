@@ -17,7 +17,9 @@ public:
         opencl_platforms_.reserve( opencl_platforms.size() );
         for( boost::compute::platform& platform : opencl_platforms )
         {
-            opencl_platforms_.push_back( std::make_shared<OpenClPlatform>( platform ) );
+            auto& ptr = std::make_shared<OpenClPlatform>( platform );
+            ptr->Initialize();
+            opencl_platforms_.push_back( ptr );
         }
     }
 

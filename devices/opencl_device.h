@@ -7,10 +7,11 @@
 class OpenClDevice: public DeviceInterface
 {
 public:
-    OpenClDevice( const boost::compute::device& computeDevice )
+    OpenClDevice( const boost::compute::device& computeDevice, std::weak_ptr<PlatformInterface> platform )
         : device_( computeDevice )
         , context_( computeDevice )
         , queue_( context_, computeDevice, boost::compute::command_queue::enable_profiling )
+        , platform_( platform )
     {
     }
 
@@ -40,8 +41,13 @@ public:
         return Name();
     }
 
+    std::weak_ptr<PlatformInterface> platform()
+    {
+        return platform_;
+    }
 private:
     boost::compute::device device_;
     boost::compute::context context_;
     boost::compute::command_queue queue_;
+    std::weak_ptr<PlatformInterface> platform_;
 };

@@ -37,15 +37,13 @@ project(OpenCLTestProject)
 
 add_executable (main
     main.cpp
-    # html_document.cpp
-    # html_benchmark_reporter.cpp
+    html_document.cpp
     svg_document.cpp
 
     fixture_runner.h
     fixture_runner.cpp
 
-    # html_document.h
-    # html_benchmark_reporter.h
+    html_document.h
     csv_document.h
     svg_document.h
     kernel_map.h
@@ -89,6 +87,8 @@ add_executable (main
     reporters/json_benchmark_reporter.cpp
     reporters/json_benchmark_reporter.h
     reporters/benchmark_reporter.h
+    reporters/html_benchmark_reporter.cpp
+    reporters/html_benchmark_reporter.h
     )
 
 target_include_directories (main PUBLIC ${CMAKE_SOURCE_DIR}
