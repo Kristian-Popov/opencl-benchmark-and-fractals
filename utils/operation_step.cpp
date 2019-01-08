@@ -12,7 +12,7 @@ std::string OperationStepDescriptionRepository::Get( OperationStep step )
         return "Unknown operation";
     }
 }
-
+// TODO can this be replaced with to_json?
 std::string OperationStepDescriptionRepository::GetSerializeId( OperationStep step )
 {
     return operation_serialize_ids.at( step );

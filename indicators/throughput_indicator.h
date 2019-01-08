@@ -22,7 +22,7 @@ public:
         Calculate( benchmark );
     }
 
-    boost::property_tree::ptree SerializeValue() override;
+    nlohmann::json SerializeValue() override;
 
     std::unordered_map<FixtureId, FixtureCalculatedData> GetCalculatedData() const noexcept
     {

@@ -58,28 +58,27 @@ void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchm
     }
 }
 
-boost::property_tree::ptree DurationIndicator::SerializeValue()
+nlohmann::json DurationIndicator::SerializeValue()
 {
     // TODO serialize operation_steps_ and fixture_family_name_?
-    namespace pr_tree = boost::property_tree;
-    boost::property_tree::ptree result;
+    nlohmann::json result;
     for( auto& fixture_data: calculated_ )
     {
-        boost::property_tree::ptree serialized_fixture_data;
+        nlohmann::json serialized_fixture_data;
         if( fixture_data.second.failure_reason )
         {
-            serialized_fixture_data.put<std::string>( kFailureReason, fixture_data.second.failure_reason.value() );
+            serialized_fixture_data[kFailureReason] = fixture_data.second.failure_reason.value();
         }
         else
         {
-            serialized_fixture_data.put<std::string>( kTotalDuration, fixture_data.second.total_duration.Serialize() );
+            serialized_fixture_data[kTotalDuration] = fixture_data.second.total_duration;
             for( OperationStep step: operation_steps_ )
             {
-                serialized_fixture_data.put<std::string>( OperationStepDescriptionRepository::GetSerializeId( step ),
-                    fixture_data.second.step_durations[step].Serialize() );
+                serialized_fixture_data[OperationStepDescriptionRepository::GetSerializeId( step )] =
+                    fixture_data.second.step_durations[step];
             }
         }
-        result.push_back( pr_tree::ptree::value_type( fixture_data.first.Serialize(), serialized_fixture_data ) );
+        result[fixture_data.first.Serialize()] = serialized_fixture_data;
     }
     return result;
 }

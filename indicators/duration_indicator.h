@@ -29,7 +29,7 @@ public:
         return calculated_;
     }
 
-    boost::property_tree::ptree SerializeValue() override;
+    nlohmann::json SerializeValue() override;
 private:
     void Calculate( const BenchmarkResultForFixtureFamily& benchmark );
 

@@ -7,13 +7,19 @@ Duration::Duration( const boost::compute::event& event )
 {
 }
 
-std::string Duration::Serialize() const
-{
-    // TODO is it a good choice? Or Utils::SerializeNumber is needed?
-    return std::to_string( duration_.count() );
-}
-
 double Duration::AsSeconds() const
 {
     return std::chrono::duration_cast<std::chrono::duration<double>>( duration_ ).count();
+}
+
+void to_json( json& j, const Duration& p )
+{
+    j = p.duration().count();
+}
+
+void from_json( const json& j, Duration& p )
+{
+    double val{ 0.0 };
+    j.get_to( val );
+    p = Duration{ std::chrono::duration<double, std::nano>( val ) };
 }

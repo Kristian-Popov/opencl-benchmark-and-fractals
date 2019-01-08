@@ -3,6 +3,10 @@
 #include <chrono>
 #include <string>
 
+#include "nlohmann/json.hpp"
+
+using nlohmann::json;
+
 namespace boost
 {
     namespace compute
@@ -66,9 +70,12 @@ public:
         return *this;
     }
 
-    std::string Serialize() const;
-
     double AsSeconds() const;
+
+    std::chrono::duration<double, std::nano> duration() const noexcept
+    {
+        return duration_;
+    }
 
     friend Duration operator+( Duration lhs, Duration rhs )
     {
@@ -115,3 +122,6 @@ private:
 
     InternalType duration_;
 };
+
+void to_json( json& j, const Duration& p );
+void from_json( const json& j, Duration& p );

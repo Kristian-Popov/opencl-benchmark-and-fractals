@@ -2,7 +2,7 @@
 
 #include "reporters/benchmark_reporter.h"
 
-#include <boost/property_tree/ptree.hpp>
+#include "nlohmann/json.hpp"
 
 class JsonBenchmarkReporter: public BenchmarkReporter
 {
@@ -18,5 +18,5 @@ public:
 private:
     std::string file_name_;
     bool pretty_ = true; // TODO make configurable?
-    boost::property_tree::ptree tree_;
+    nlohmann::json tree_;
 };

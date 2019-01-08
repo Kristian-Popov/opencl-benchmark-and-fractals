@@ -37,22 +37,21 @@ void ThroughputIndicator::Calculate( const BenchmarkResultForFixtureFamily& benc
     }
 }
 
-boost::property_tree::ptree ThroughputIndicator::SerializeValue()
+nlohmann::json ThroughputIndicator::SerializeValue()
 {
-    namespace pr_tree = boost::property_tree;
-    boost::property_tree::ptree result;
+    nlohmann::json result;
     for( auto& fixture_data: calculated_ )
     {
-        boost::property_tree::ptree serialized_fixture_data;
+        nlohmann::json serialized_fixture_data;
         if( fixture_data.second.failure_reason )
         {
-            serialized_fixture_data.put<std::string>( kFailureReason, fixture_data.second.failure_reason.value() );
+            serialized_fixture_data[kFailureReason] = fixture_data.second.failure_reason.value();
         }
         else
         {
-            serialized_fixture_data.put<std::string>( kThroughput, Utils::SerializeNumber( fixture_data.second.throughput ) );
+            serialized_fixture_data[kThroughput] = fixture_data.second.throughput;
         }
-        result.push_back( pr_tree::ptree::value_type( fixture_data.first.Serialize(), serialized_fixture_data ) );
+        result[fixture_data.first.Serialize()] = serialized_fixture_data;
     }
     return result;
 }

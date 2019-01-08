@@ -18,10 +18,10 @@ namespace
 
 namespace IndicatorSerializer
 {
-
-std::pair<std::string, boost::property_tree::ptree> Serialize( const std::shared_ptr<IndicatorInterface>& p )
+// TODO move this code to JSON reporter? It's too small and inconvenient to use
+std::pair<std::string, nlohmann::json> Serialize( const std::shared_ptr<IndicatorInterface>& p )
 {
-    std::pair<std::string, boost::property_tree::ptree> result;
+    std::pair<std::string, nlohmann::json> result;
     {
         auto& iter = ids.find( typeid( *p ) );
         if( iter != ids.cend() )
@@ -34,7 +34,7 @@ std::pair<std::string, boost::property_tree::ptree> Serialize( const std::shared
     throw std::runtime_error( "Don't know how to serialize indicator" );
 }
 
-std::pair<std::string, std::shared_ptr<IndicatorInterface>> Deserialize( const boost::property_tree::ptree& ptree )
+std::pair<std::string, std::shared_ptr<IndicatorInterface>> Deserialize( const nlohmann::json& ptree )
 {
     std::pair<std::string, std::shared_ptr<IndicatorInterface>> result;
     //std::string indicator_id = ptree.get<std::string>(  )

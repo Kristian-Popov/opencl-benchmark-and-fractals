@@ -10,3 +10,6 @@
 [submodule "contrib/OpenCL-Headers"]
 	path = contrib/OpenCL-Headers
 	url = https://github.com/KhronosGroup/OpenCL-Headers
+[submodule "utils/contrib/nlohmann-json"]
+	path = utils/contrib/nlohmann-json
+	url = https://github.com/nlohmann/json.git
