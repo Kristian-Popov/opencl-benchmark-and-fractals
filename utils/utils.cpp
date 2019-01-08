@@ -63,6 +63,7 @@ namespace Utils
         return diff <= largest * maxRelDiff;
     }
 
+    // TODO rework to a more convenient class?
     long double ChooseConvenientUnit( long double value,
         const std::vector<long double>& units )
     {

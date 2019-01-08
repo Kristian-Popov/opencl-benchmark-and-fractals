@@ -8,6 +8,12 @@
 class ThroughputIndicator: public IndicatorInterface
 {
 public:
+    struct FixtureCalculatedData
+    {
+        boost::optional<std::string> failure_reason;
+        int32_t throughput = 0;
+    };
+
     ThroughputIndicator()
     {}
 
@@ -17,14 +23,13 @@ public:
     }
 
     boost::property_tree::ptree SerializeValue() override;
+
+    std::unordered_map<FixtureId, FixtureCalculatedData> GetCalculatedData() const noexcept
+    {
+        return calculated_;
+    }
 private:
     void Calculate( const BenchmarkResultForFixtureFamily& benchmark );
-
-    struct FixtureCalculatedData
-    {
-        boost::optional<std::string> failure_reason;
-        int32_t throughput = 0;
-    };
 
     std::unordered_map<FixtureId, FixtureCalculatedData> calculated_;
 };
