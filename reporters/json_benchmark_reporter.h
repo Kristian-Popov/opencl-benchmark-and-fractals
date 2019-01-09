@@ -4,10 +4,14 @@
 
 #include "nlohmann/json.hpp"
 
+class PlatformList;
+
 class JsonBenchmarkReporter: public BenchmarkReporter
 {
 public:
     JsonBenchmarkReporter( const std::string& file_name );
+
+    void Initialize( const PlatformList& platform_list ) override;
 
     void AddFixtureFamilyResults( const BenchmarkResultForFixtureFamily& results ) override;
 

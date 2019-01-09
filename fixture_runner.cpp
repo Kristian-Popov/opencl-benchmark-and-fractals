@@ -281,6 +281,8 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
 
     SetFloatingPointEnvironment();
 
+    timeWriter->Initialize( platform_list_ );
+
     Clear();
     FixturesToRun& fixturesToRun = settings.fixturesToRun;
     if (fixturesToRun.trivialFactorial)
