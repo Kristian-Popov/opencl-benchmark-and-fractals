@@ -39,8 +39,6 @@ public:
     */
     virtual void VerifyResults() {}
 
-    virtual std::vector<OperationStep> GetSteps() = 0;
-
     virtual std::shared_ptr<DeviceInterface> Device() = 0;
 
     virtual std::string Algorithm()

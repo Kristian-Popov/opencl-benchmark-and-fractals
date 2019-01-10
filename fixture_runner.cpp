@@ -63,9 +63,9 @@ void FixtureRunner::CreateTrivialFixtures()
                 typedef RandomValuesIterator<int, Distribution> Iterator;
                 fixture_family->fixtures.insert( std::make_pair<const FixtureId, std::shared_ptr<Fixture>>(
                     FixtureId( fixture_family->name, device, "" ),
-                    std::make_shared<TrivialFactorialOpenClFixture<Iterator>>(
+                    std::make_shared<TrivialFactorialOpenClFixture>(
                         std::dynamic_pointer_cast<OpenClDevice>( device ),
-                        Iterator( Distribution( 0, 20 ) ),
+                        std::make_shared<Iterator>( Distribution( 0, 20 ) ),
                         s
                     )
                 ) );

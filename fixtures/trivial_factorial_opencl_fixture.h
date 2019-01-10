@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "fixtures/fixture.h"
 #include "data_verification_failed_exception.h"
+#include "iterators/data_source_adaptor.h"
 
 #include "boost/compute.hpp"
 #include <boost/format.hpp>
@@ -30,20 +31,18 @@ __kernel void TrivialFactorial(__global int* input, __global ulong* output)
 }
 )"; 
 
-    //const std::string compilerOptions = "-w -Werror";
     const std::string compilerOptions = "-Werror";
 }
 
-template<typename I>
 class TrivialFactorialOpenClFixture: public Fixture
 {
 public:
     TrivialFactorialOpenClFixture(
         const std::shared_ptr<OpenClDevice>& device,
-        const I& inputDataIter, // TODO change to DataSource? Template is completely unneccesary here
+        const std::shared_ptr<DataSource<int>>& input_data_source,
         int dataSize )
         : device_( device )
-        , inputDataIter_( inputDataIter )
+        , input_data_source_( input_data_source )
         , dataSize_(dataSize)
     {
     }
@@ -52,15 +51,6 @@ public:
     {
         GenerateData();
         kernel_ = Utils::BuildKernel( "TrivialFactorial", device_->GetContext(), trivialFactorialKernelCode, compilerOptions );
-    }
-
-    virtual std::vector<OperationStep> GetSteps() override
-    {
-        return {
-            OperationStep::CopyInputDataToDevice,
-            OperationStep::Calculate,
-            OperationStep::CopyOutputDataFromDevice
-        };
     }
 
     virtual std::vector<std::string> GetRequiredExtensions() override
@@ -101,17 +91,7 @@ public:
 
         return Utils::GetOpenCLEventDurations( events );
     }
-#if 0
-    std::string Description() override
-    {
-        std::string result = "Trivial factorial, " + Utils::FormatQuantityString(dataSize_) + " elements";
-        if (!descriptionSuffix_.empty())
-        {
-            result += ", " + descriptionSuffix_;
-        }
-        return result;
-    }
-#endif
+
     virtual void VerifyResults() override
     {
         if( outputData_.size() != expectedOutputData_.size() )
@@ -145,14 +125,14 @@ private:
     std::vector<cl_ulong> expectedOutputData_;
     static const std::unordered_map<int, cl_ulong> TrivialFactorialOpenClFixture::correctFactorialValues_;
     std::vector<cl_ulong> outputData_;
-    I inputDataIter_;
+    std::shared_ptr<DataSource<int>> input_data_source_;
     boost::compute::kernel kernel_;
     const std::shared_ptr<OpenClDevice> device_;
 
     void GenerateData()
     {
         inputData_.resize(dataSize_);
-        std::copy_n( inputDataIter_, dataSize_, inputData_.begin() );
+        std::copy_n( DataSourceAdaptor<int>{ input_data_source_ }, dataSize_, inputData_.begin() );
 
         // Verify that all input values are in range [0, 20]
         EXCEPTION_ASSERT(std::all_of( inputData_.begin(), inputData_.end(), [] (int i) { return i >= 0 && i <= 20; } ));
@@ -166,8 +146,7 @@ private:
     }
 };
 
-template<typename I>
-const std::unordered_map<int, cl_ulong> TrivialFactorialOpenClFixture<I>::correctFactorialValues_ = {
+const std::unordered_map<int, cl_ulong> TrivialFactorialOpenClFixture::correctFactorialValues_ = {
     {0, 1ull},
     {1,  1ull},
     {2,  2ull},
