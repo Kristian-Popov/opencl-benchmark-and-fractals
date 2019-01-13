@@ -12,7 +12,6 @@ public:
     struct FixtureCalculatedData
     {
         std::unordered_map<OperationStep, Duration> step_durations;
-        boost::optional<std::string> failure_reason;
         Duration total_duration;
     };
 

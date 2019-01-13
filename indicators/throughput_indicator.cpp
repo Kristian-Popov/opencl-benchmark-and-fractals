@@ -6,7 +6,6 @@
 
 namespace
 {
-    const char* const kFailureReason = "Failure reason";
     const char* const kThroughput = "Throughput";
 }
 
@@ -18,13 +17,10 @@ void ThroughputIndicator::Calculate( const BenchmarkResultForFixtureFamily& benc
     for( auto& fixture_data: durations )
     {
         const auto& fixture_results = fixture_data.second;
-        FixtureCalculatedData d;
-        if( fixture_results.failure_reason )
+        if( fixture_results.total_duration != Duration() ) // Calculate data only if duration is not zero
         {
-            d.failure_reason = fixture_results.failure_reason;
-        }
-        else
-        {
+            FixtureCalculatedData d;
+
             using namespace std::literals::chrono_literals;
             boost::optional<int32_t> element_count = benchmark.fixture_family->element_count;
             EXCEPTION_ASSERT( element_count );
@@ -32,8 +28,8 @@ void ThroughputIndicator::Calculate( const BenchmarkResultForFixtureFamily& benc
             EXCEPTION_ASSERT( throughput_double > 0 );
             EXCEPTION_ASSERT( throughput_double < std::numeric_limits<int32_t>::max() );
             d.throughput = static_cast<int32_t>( throughput_double );
+            calculated_.insert( std::make_pair( fixture_data.first, d ) );
         }
-        calculated_.insert( std::make_pair( fixture_data.first, d ) );
     }
 }
 
@@ -43,14 +39,7 @@ nlohmann::json ThroughputIndicator::SerializeValue()
     for( auto& fixture_data: calculated_ )
     {
         nlohmann::json serialized_fixture_data;
-        if( fixture_data.second.failure_reason )
-        {
-            serialized_fixture_data[kFailureReason] = fixture_data.second.failure_reason.value();
-        }
-        else
-        {
-            serialized_fixture_data[kThroughput] = fixture_data.second.throughput;
-        }
+        serialized_fixture_data[kThroughput] = fixture_data.second.throughput;
         result[fixture_data.first.Serialize()] = serialized_fixture_data;
     }
     return result;

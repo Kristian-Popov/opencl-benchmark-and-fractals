@@ -7,6 +7,7 @@
 #include "fixtures/fixture_family.h"
 #include "indicators/duration_indicator.h"
 #include "indicators/element_processing_time_indicator.h"
+#include "indicators/failure_indicator.h"
 #include "indicators/indicator_serializer.h"
 #include "indicators/throughput_indicator.h"
 
@@ -53,7 +54,8 @@ void JsonBenchmarkReporter::AddFixtureFamilyResults( const BenchmarkResultForFix
 {
     using nlohmann::json;
     std::vector<std::shared_ptr<IndicatorInterface>> indicators = {
-        std::make_shared<DurationIndicator>( results )
+        std::make_shared<DurationIndicator>( results ),
+        std::make_shared<FailureIndicator>( results ),
     };
     if( results.fixture_family->element_count )
     {

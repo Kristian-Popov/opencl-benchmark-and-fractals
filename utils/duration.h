@@ -72,6 +72,16 @@ public:
 
     double AsSeconds() const;
 
+    bool operator==( const Duration& rhs ) const noexcept
+    {
+        return duration_ == rhs.duration_;
+    }
+
+    bool operator!=( const Duration& rhs ) const noexcept
+    {
+        return !( *this == rhs );
+    }
+
     std::chrono::duration<double, std::nano> duration() const noexcept
     {
         return duration_;

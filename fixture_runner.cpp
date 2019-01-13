@@ -390,16 +390,29 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
             try
             {
                 {
-                    // TODO move this piece of code before initialization
                     std::vector<std::string> requiredExtensions = fixture->GetRequiredExtensions();
                     std::sort( requiredExtensions.begin(), requiredExtensions.end() );
 
                     std::vector<std::string> haveExtensions = fixture->Device()->Extensions();
                     std::sort( haveExtensions.begin(), haveExtensions.end() );
-                    if( !std::includes( haveExtensions.begin(), haveExtensions.end(),
-                        requiredExtensions.begin(), requiredExtensions.end() ) )
+
+                    std::vector<std::string> missed_extensions;
+                    std::set_difference(
+                        requiredExtensions.cbegin(), requiredExtensions.cend(),
+                        haveExtensions.cbegin(), haveExtensions.cend(),
+                        std::back_inserter( missed_extensions )
+                    );
+                    if( !missed_extensions.empty() )
                     {
                         fixture_results.failure_reason = "Required extension(s) are not available";
+                        // Destroy fixture to release some memory sooner
+                        fixture.reset();
+
+                        BOOST_LOG_TRIVIAL( warning ) << "Device \"" << fixture_id.device()->Name() <<
+                            "\" doesn't support extensions needed for fixture: " << Utils::VectorToString( missed_extensions );
+
+                        results.benchmark.insert( std::make_pair( fixture_id, fixture_results ) );
+
                         continue;
                     }
                 }

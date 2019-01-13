@@ -5,24 +5,18 @@
 
 namespace
 {
-    const char* const kFailureReason = "Failure reason";
     const char* const kTotalDuration = "Total duration";
 }
 
 void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchmark )
 {
     operation_steps_ = benchmark.fixture_family->operation_steps;
-    fixture_family_name_ = benchmark.fixture_family->name;
 
     for( auto& fixture_data: benchmark.benchmark )
     {
         const BenchmarkResultForFixture& fixture_results = fixture_data.second;
         FixtureCalculatedData d;
-        if( fixture_results.failure_reason )
-        {
-            d.failure_reason = fixture_results.failure_reason.value();
-        }
-        else
+        if( !fixture_results.durations.empty() )
         {
             // Calculate duration for every step and total one.
             Duration total_duration;
@@ -54,29 +48,26 @@ void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchm
 
             d.total_duration = total_duration;
         }
-        calculated_.insert( std::make_pair( fixture_data.first, d ) );
+
+        // Store data only if total duration is larger than zero
+        if( d.total_duration != Duration() )
+        {
+            calculated_.insert( std::make_pair( fixture_data.first, d ) );
+        }
     }
 }
 
 nlohmann::json DurationIndicator::SerializeValue()
 {
-    // TODO serialize operation_steps_ and fixture_family_name_?
     nlohmann::json result;
     for( auto& fixture_data: calculated_ )
     {
         nlohmann::json serialized_fixture_data;
-        if( fixture_data.second.failure_reason )
+        serialized_fixture_data[kTotalDuration] = fixture_data.second.total_duration;
+        for( OperationStep step: operation_steps_ )
         {
-            serialized_fixture_data[kFailureReason] = fixture_data.second.failure_reason.value();
-        }
-        else
-        {
-            serialized_fixture_data[kTotalDuration] = fixture_data.second.total_duration;
-            for( OperationStep step: operation_steps_ )
-            {
-                serialized_fixture_data[OperationStepDescriptionRepository::GetSerializeId( step )] =
-                    fixture_data.second.step_durations[step];
-            }
+            serialized_fixture_data[OperationStepDescriptionRepository::GetSerializeId( step )] =
+                fixture_data.second.step_durations[step];
         }
         result[fixture_data.first.Serialize()] = serialized_fixture_data;
     }

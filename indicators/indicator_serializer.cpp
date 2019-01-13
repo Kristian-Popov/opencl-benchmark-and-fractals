@@ -2,6 +2,7 @@
 
 #include "indicators/duration_indicator.h"
 #include "indicators/element_processing_time_indicator.h"
+#include "indicators/failure_indicator.h"
 #include "indicators/throughput_indicator.h"
 
 #include <typeindex>
@@ -12,7 +13,8 @@ namespace
     static const std::unordered_map<std::type_index, std::string> ids = {
         {std::type_index( typeid( DurationIndicator ) ), "DurationIndicator"},
         {std::type_index( typeid( ElementProcessingTimeIndicator ) ), "ElementProcessingTimeIndicator"},
-        {std::type_index( typeid( ThroughputIndicator ) ), "ThroughputIndicator"}
+        {std::type_index( typeid( ThroughputIndicator ) ), "ThroughputIndicator"},
+        {std::type_index( typeid( FailureIndicator ) ), "FailureIndicator"}
     };
 }
 

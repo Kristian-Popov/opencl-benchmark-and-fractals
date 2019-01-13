@@ -10,7 +10,6 @@ class ThroughputIndicator: public IndicatorInterface
 public:
     struct FixtureCalculatedData
     {
-        boost::optional<std::string> failure_reason;
         int32_t throughput = 0;
     };
 

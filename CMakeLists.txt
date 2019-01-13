@@ -74,6 +74,8 @@ add_executable (main
     indicators/duration_indicator.h
     indicators/element_processing_time_indicator.h
     indicators/element_processing_time_indicator.cpp
+    indicators/failure_indicator.cpp
+    indicators/failure_indicator.h
     indicators/indicator_interface.h
     indicators/indicator_serializer.cpp
     indicators/indicator_serializer.h

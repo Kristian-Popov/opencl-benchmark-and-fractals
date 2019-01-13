@@ -12,7 +12,6 @@ public:
     struct FixtureCalculatedData
     {
         std::unordered_map<OperationStep, Duration> step_durations;
-        boost::optional<std::string> failure_reason; // TODO is it needed in every indicator?
         Duration total_duration;
     };
 
@@ -33,7 +32,6 @@ public:
 private:
     void Calculate( const BenchmarkResultForFixtureFamily& benchmark );
 
-    std::string fixture_family_name_; // TODO is it needed?
     std::vector<OperationStep> operation_steps_;
     std::unordered_map<FixtureId, FixtureCalculatedData> calculated_;
 };
