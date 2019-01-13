@@ -87,8 +87,8 @@ add_executable (main
     reporters/json_benchmark_reporter.cpp
     reporters/json_benchmark_reporter.h
     reporters/benchmark_reporter.h
-    reporters/html_benchmark_reporter.cpp
-    reporters/html_benchmark_reporter.h
+    # reporters/html_benchmark_reporter.cpp
+    # reporters/html_benchmark_reporter.h
     )
 
 target_include_directories (main PUBLIC ${CMAKE_SOURCE_DIR}

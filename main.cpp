@@ -3,7 +3,6 @@
 #include <iostream>
 
 #include "reporters/json_benchmark_reporter.h"
-#include "reporters/html_benchmark_reporter.h"
 #include "utils/utils.h"
 #include <cstdlib>
 
@@ -14,9 +13,7 @@
 
 namespace
 {
-    static const char* defaultOutputFileName( "output." );
-    static const char* json_extension( "json" );
-    static const char* html_extension( "html" );
+    static const std::string defaultOutputFileName( "output.json" );
 }
 
 int main( int argc, char** argv )
@@ -33,7 +30,6 @@ int main( int argc, char** argv )
         ( "no-koch-curve", "do not run a Koch curve fixture. " )
         ( "no-multibrot-set", "do not run a Mandelbrot/Multibrot set fixture. " )
         ( "no-multiprecision-factorial", "do not run multiprecision factorial fixture. " )
-        ( "html", "store benchmark results to HTML file instead of JSON. " )
         ;
 
     // TODO something is wrong here. For command line arguments line "--html --stdout" only "html" part is present in vm after parsing
@@ -66,18 +62,7 @@ int main( int argc, char** argv )
     bool progress = vm.count( "no-progress" ) == 0;
     std::string outputFileName = defaultOutputFileName;
 
-    std::unique_ptr<BenchmarkReporter> timeWriter;
-    if( vm.count( "html" ) > 0 )
-    {
-        // TODO add logging of information about benchmark reporter
-        outputFileName += html_extension;
-        timeWriter = std::make_unique<HtmlBenchmarkReporter>( outputFileName );
-    }
-    else
-    {
-        outputFileName += json_extension;
-        timeWriter = std::make_unique<JsonBenchmarkReporter>( outputFileName );
-    }
+    std::unique_ptr<BenchmarkReporter> timeWriter = std::make_unique<JsonBenchmarkReporter>( outputFileName );
 
     log::severity_level minSeverityToIgnore = progress ? log::debug : log::fatal;
     boost::log::core::get()->set_filter
