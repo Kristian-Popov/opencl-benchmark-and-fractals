@@ -1,12 +1,17 @@
 #pragma once
 
+#include <fstream>
 #include <vector>
 
 class CSVDocument
 {
 public:
-    CSVDocument( const char* fileName )
-        : stream_(fileName)
+    CSVDocument( const char* file_name )
+        : stream_( file_name )
+    {}
+
+    CSVDocument( const std::string& file_name )
+        : stream_( file_name )
     {}
 
     template<typename T>

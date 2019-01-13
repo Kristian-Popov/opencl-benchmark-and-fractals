@@ -36,6 +36,7 @@ private:
     void Clear();
     void SetFloatingPointEnvironment();
     void CreateTrivialFixtures();
+    template<typename T>
     void CreateDampedWave2DFixtures();
     void CreateKochCurveFixtures();
     void CreateMultibrotSetFixtures();

@@ -134,18 +134,6 @@ namespace Utils
         const std::string& buildOptions = std::string(),
         const std::vector<std::string>& extensions = std::vector<std::string>() );
 
-    template <typename D>
-    std::unordered_map<OperationStep, D> CalculateTotalStepDurations( 
-         const std::unordered_multimap<OperationStep, boost::compute::event>& events )
-    {
-        std::unordered_map<OperationStep, D> result;
-        for (const std::pair<OperationStep, boost::compute::event>& p: events )
-        {
-            result[p.first] += p.second.duration<D>();
-        }
-        return result;
-    }
-
     std::unordered_multimap<OperationStep, Duration> GetOpenCLEventDurations(
         const std::unordered_multimap<OperationStep, boost::compute::event>& events );
 

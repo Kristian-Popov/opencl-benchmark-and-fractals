@@ -23,9 +23,9 @@
 #include "iterators/sequential_values_iterator.h"
 #include "iterators/random_values_iterator.h"
 
+#include "fixtures/damped_wave_opencl_fixture.h"
 #include "fixtures/trivial_factorial_opencl_fixture.h"
 #if 0
-#include "fixtures/damped_wave_fixture.h"
 #include "fixtures/koch_curve_fixture.h"
 #include "fixtures/multibrot_fractal_fixture.h"
 #include "fixtures/multiprecision_factorial_fixture.h"
@@ -39,8 +39,32 @@
 #include <boost/math/constants/constants.hpp>
 #include "half_precision_fp.h"
 
-// TODO enable only on relevant compilers
-#pragma STDC FENV_ACCESS on
+namespace
+{
+    template<typename T>
+    struct TypeInfo
+    {
+        //static constexpr char* const description = "unknown";
+    };
+
+    template<>
+    struct TypeInfo<float>
+    {
+        static constexpr char* const description = "float";
+    };
+
+    template<>
+    struct TypeInfo<double>
+    {
+        static constexpr char* const description = "double";
+    };
+
+    template<>
+    struct TypeInfo<half_float::half>
+    {
+        static constexpr const char* description = "half precision";
+    };
+}
 
 void FixtureRunner::CreateTrivialFixtures()
 {
@@ -74,23 +98,56 @@ void FixtureRunner::CreateTrivialFixtures()
         fixture_families_.push_back( fixture_family );
     }
 }
-#if 0
+
+template<typename T>
 void FixtureRunner::CreateDampedWave2DFixtures()
 {
-    cl_float frequency = 1.0f;
-    const cl_float pi = boost::math::constants::pi<cl_float>();
+    T frequency = static_cast<T>( 1.0 );
+    const T pi = boost::math::constants::pi<T>();
 
-    cl_float min = -10.0f;
-    cl_float max = 10.0f;
-    cl_float step = 0.001f;
+    T min = static_cast<T>( -10.0 );
+    T max = static_cast<T>( 10.0 );
+    T step = static_cast<T>( 0.001 );
+    // TODO change to int32_t?
     size_t dataSize = static_cast<size_t>( ( max - min ) / step ); // TODO something similar can be useful in Utils
     {
-        std::vector<DampedWaveFixtureParameters<cl_float>> params =
-        {DampedWaveFixtureParameters<cl_float>( 1000.0f, 0.1f, 2 * pi*frequency, 0.0f, 1.0f )};
-        auto dampedWaveFixture = std::make_shared<DampedWaveFixture<cl_float, SequentialValuesIterator<cl_float>>>( params,
-            SequentialValuesIterator<cl_float>( min, step ), dataSize, "sequential input values" );
-        fixtures_.push_back( dampedWaveFixture );
+        std::vector<DampedWaveFixtureParameters<T>> params = {DampedWaveFixtureParameters<T>{
+            static_cast<T>( 1000.0 ),
+            static_cast<T>( 0.1 ),
+            static_cast<T>( 2 * pi*frequency ),
+            static_cast<T>( 0.0 ),
+            static_cast<T>( 1.0 )
+        }};
+        auto fixture_family = std::make_shared<FixtureFamily>();
+        fixture_family->name = ( boost::format( "Damped wave, %1%, %2% values, %3% parameters, sequential input data" ) %
+            TypeInfo<T>::description %
+            Utils::FormatQuantityString( dataSize ) %
+            Utils::FormatQuantityString( params.size() ) ).str();
+        fixture_family->operation_steps = {
+            OperationStep::CopyInputDataToDevice,
+            OperationStep::Calculate,
+            OperationStep::CopyOutputDataFromDevice
+        };
+        fixture_family->element_count = dataSize;
+        for( auto& platform : platform_list_.OpenClPlatforms() )
+        {
+            for( auto& device : platform->GetDevices() )
+            {
+                fixture_family->fixtures.insert( std::make_pair<const FixtureId, std::shared_ptr<Fixture>>(
+                    FixtureId( fixture_family->name, device, "" ),
+                    std::make_shared<DampedWaveOpenClFixture<T>>(
+                        std::dynamic_pointer_cast<OpenClDevice>( device ),
+                        params,
+                        std::make_shared<SequentialValuesIterator<T>>( min, step ),
+                        dataSize,
+                        fixture_family->name
+                    )
+                ) );
+            }
+        }
+        fixture_families_.push_back( fixture_family );
     }
+#if 0
     {
         std::vector<DampedWaveFixtureParameters<cl_double>> params =
         {DampedWaveFixtureParameters<cl_double>( 1000.0, 0.1, 2 * pi*frequency, 0.0, 1.0 )};
@@ -143,8 +200,9 @@ void FixtureRunner::CreateDampedWave2DFixtures()
             fixtures_.push_back( fixture );
         }
     }
+#endif
 }
-
+#if 0
 void FixtureRunner::CreateKochCurveFixtures()
 {
     // TODO it would be great to get images with higher number of iterations but
@@ -289,11 +347,13 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
     {
         CreateTrivialFixtures();
     }
-#if 0
-    if (fixturesToRun.dampedWave2D)
+    if( fixturesToRun.dampedWave2D )
     {
-        CreateDampedWave2DFixtures();
+        CreateDampedWave2DFixtures<float>();
+        CreateDampedWave2DFixtures<double>();
+        CreateDampedWave2DFixtures<half_float::half>();
     }
+#if 0
     if (fixturesToRun.kochCurve)
     {
         CreateKochCurveFixtures();
@@ -327,8 +387,6 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
 
             BOOST_LOG_TRIVIAL( info ) << "Starting run on device \"" << fixture_id.device()->Name() << "\"";
 
-            fixture->Initialize();
-
             try
             {
                 {
@@ -345,6 +403,8 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
                         continue;
                     }
                 }
+
+                fixture->Initialize();
 
                 std::vector<std::unordered_multimap<OperationStep, Duration>> durations;
 
@@ -365,6 +425,11 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
                 if( settings.verifyResults )
                 {
                     fixture->VerifyResults();
+                }
+
+                if( settings.storeResults )
+                {
+                    fixture->StoreResults();
                 }
 
                 for( int i = 0; i < iteration_count; ++i )

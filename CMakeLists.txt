@@ -55,6 +55,8 @@ add_executable (main
     devices/platform_interface.h
     devices/platform_list.h
 
+    fixtures/damped_wave_opencl_fixture.cpp
+    fixtures/damped_wave_opencl_fixture.h
     fixtures/fixture.h
     fixtures/fixture_family.h
     fixtures/fixture_id.h
@@ -62,8 +64,6 @@ add_executable (main
     # fixtures/koch_curve_fixture.h
     # fixtures/multibrot_fractal_fixture.cpp
     # fixtures/multibrot_fractal_fixture.h
-    # fixtures/damped_wave_fixture.inl
-    # fixtures/damped_wave_fixture.h
     # fixtures/multiprecision_factorial_fixture.h
 
     iterators/sequential_values_iterator.h

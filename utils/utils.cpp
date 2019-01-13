@@ -120,7 +120,21 @@ namespace Utils
         std::string allSource;
         for( const std::string& extension : extensions )
         {
-            allSource += ( boost::format( "#pragma OPENCL EXTENSION %1% : enable\n" ) % extension ).str();
+            std::string f;
+            // TODO implement a more generic solutions for optional extensions
+            // that became optional core features
+            if( extension == "cl_khr_fp64" )
+            {
+                f = R"(#if __OPENCL_VERSION__ <= CL_VERSION_1_1
+    #pragma OPENCL EXTENSION %1% : enable
+#endif
+)";
+            }
+            else
+            {
+                f = "#pragma OPENCL EXTENSION %1% : enable\n";
+            }
+            allSource += ( boost::format( f ) % extension ).str();
         }
         allSource += source;
 
