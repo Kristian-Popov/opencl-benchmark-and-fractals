@@ -240,6 +240,13 @@ __kernel void MultiprecisionMultPhase2(
 )";
 #endif
 
+    const char* kCommonSource = R"(
+// Some OpenCL implementations don't implement that macro (yikes!)
+#ifndef NULL
+#   define NULL ((void*)0)
+#endif
+)";
+
     const char* openclMathSource = R"(
 int Pow2ForInt(int x)
 {
@@ -431,20 +438,24 @@ __kernel void MultiprecisionMultWithSingleWord(
 
 std::string ProgramSourceRepository::GetOpenCLMathSource()
 {
-    return openclMathSource;
+    return Utils::CombineStrings( { kCommonSource, openclMathSource } );
 }
 
 std::string ProgramSourceRepository::GetKochCurveSource()
 {
-    return Utils::CombineStrings( { GetOpenCLMathSource(), GetGlobalMemoryPoolSource(), kochCurveSource } );
+    return Utils::CombineStrings( { kCommonSource,
+        GetOpenCLMathSource(),
+        GetGlobalMemoryPoolSource(),
+        kochCurveSource
+    } );
 }
 
 std::string ProgramSourceRepository::GetGlobalMemoryPoolSource()
 {
-    return globalMemoryPoolSource;
+    return Utils::CombineStrings( { kCommonSource, globalMemoryPoolSource } );
 }
 
 std::string ProgramSourceRepository::GetMultiprecisionMathSource()
 {
-    return multiprecisionMathSource;
+    return Utils::CombineStrings( { kCommonSource, multiprecisionMathSource } );
 }
