@@ -53,7 +53,7 @@ int main( int argc, char** argv )
     }
     boost::program_options::notify( vm );
 
-    if( vm.count( "help" ) ) 
+    if( vm.count( "help" ) )
     {
         BOOST_LOG_TRIVIAL( fatal ) << desc;
         return EXIT_FAILURE;
@@ -80,9 +80,10 @@ int main( int argc, char** argv )
 
     FixtureRunner::RunSettings settings;
     settings.fixturesToRun = fixturesToRun;
-    settings.debug_mode = false;
-    // TODO make configurable
-    settings.targetFixtureExecutionTime = Duration( std::chrono::milliseconds( 100 ) );
+    settings.debug_mode = true;
+    settings.minIterations = 1;
+    settings.maxIterations = 1;
+
     // TODO fill the rest of properties
 
     try

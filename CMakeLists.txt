@@ -118,3 +118,4 @@ endif (UNIX)
 
 # Add executable projects
 add_subdirectory(benchmark)
+add_subdirectory(run_once_debug)

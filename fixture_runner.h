@@ -26,9 +26,10 @@ public:
         FixturesToRun fixturesToRun;
         int minIterations = 1;
         int maxIterations = std::numeric_limits<int>::max();
-        Duration targetFixtureExecutionTime = Duration( std::chrono::milliseconds( 100 ) );
+        Duration targetFixtureExecutionTime;
         bool verifyResults = true;
         bool storeResults = true;
+        bool debug_mode = false;
     };
 
     void Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSettings settings );
