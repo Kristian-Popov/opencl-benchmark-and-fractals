@@ -13,10 +13,11 @@
 #include "data_verification_failed_exception.h"
 #include "utils/duration.h"
 #include "operation_step.h"
-#include "csv_document.h"
 #include "half_precision_normal_distribution.h"
-#include "svg_document.h"
 #include "program_build_failed_exception.h"
+
+#include "documents/csv_document.h"
+#include "documents/svg_document.h"
 
 #include "devices/opencl_device.h"
 

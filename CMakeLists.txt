@@ -33,21 +33,18 @@ add_subdirectory(unit_tests)
 add_subdirectory(contrib/lodepng)
 
 # Add main project
-project(OpenCLTestProject)
+project(OpenCLBenchmarkSuite CXX)
 
-add_executable (main
-    main.cpp
-    html_document.cpp
-    svg_document.cpp
-
-    fixture_runner.h
+add_library( commonlib
+    data_verification_failed_exception.h
     fixture_runner.cpp
+    fixture_runner.h
+    half_precision_normal_distribution.h
 
-    html_document.h
-    csv_document.h
-    svg_document.h
-    kernel_map.h
-    document_writers/png_document_builder.h
+    documents/csv_document.h
+    documents/png_document_builder.h
+    documents/svg_document.cpp
+    documents/svg_document.h
 
     devices/device_interface.h
     devices/opencl_device.h
@@ -79,9 +76,6 @@ add_executable (main
     indicators/indicator_interface.h
     indicators/indicator_serializer.cpp
     indicators/indicator_serializer.h
-    # indicators/indicator_value_interface.h
-    # indicators/string_indicator_value.h
-    # indicators/numeric_indicator_value.h
     indicators/throughput_indicator.h
     indicators/throughput_indicator.cpp
 
@@ -89,23 +83,21 @@ add_executable (main
     reporters/json_benchmark_reporter.cpp
     reporters/json_benchmark_reporter.h
     reporters/benchmark_reporter.h
-    # reporters/html_benchmark_reporter.cpp
-    # reporters/html_benchmark_reporter.h
-    )
+)
 
-target_include_directories (main PUBLIC ${CMAKE_SOURCE_DIR}
+target_include_directories( commonlib PUBLIC ${CMAKE_SOURCE_DIR}
     ${OpenCL_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/contrib
     ${Boost_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/utils )
-target_link_libraries (main ${OpenCL_LIBRARIES} ${Boost_LIBRARIES} utils lodepng)
+target_link_libraries( commonlib ${OpenCL_LIBRARIES} ${Boost_LIBRARIES} utils lodepng)
 
 if (UNIX)
-    target_link_libraries (main pthread)
+    target_link_libraries( commonlib pthread)
 endif (UNIX)
 
-set_property(TARGET main PROPERTY CXX_STANDARD 14)
-set_property(TARGET main PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET commonlib PROPERTY CXX_STANDARD 14)
+set_property(TARGET commonlib PROPERTY CXX_STANDARD_REQUIRED ON)
 
 IF(WIN32) # Check if we are on Windows
   if(MSVC) # Check if we are using the Visual Studio compiler
@@ -123,3 +115,6 @@ ENDIF()
 if (UNIX)
     # SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fext-numeric-literals" )
 endif (UNIX)
+
+# Add executable projects
+add_subdirectory(benchmark)

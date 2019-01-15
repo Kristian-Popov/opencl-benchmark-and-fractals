@@ -1,6 +1,6 @@
 #pragma once
 
-#include "csv_document.h"
+#include "documents/csv_document.h"
 #include "fixtures/damped_wave_opencl_fixture.h"
 #include "half_precision_fp.h"
 #include "utils.h"
