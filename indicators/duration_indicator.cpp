@@ -10,8 +10,6 @@ namespace
 
 void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchmark )
 {
-    operation_steps_ = benchmark.fixture_family->operation_steps;
-
     for( auto& fixture_data: benchmark.benchmark )
     {
         const BenchmarkResultForFixture& fixture_results = fixture_data.second;
@@ -20,21 +18,35 @@ void DurationIndicator::Calculate( const BenchmarkResultForFixtureFamily& benchm
         {
             // Calculate duration for every step and total one.
             Duration total_duration;
-            for( int stepIndex = 0; stepIndex < operation_steps_.size(); ++stepIndex )
-            {
-                OperationStep step = operation_steps_.at( stepIndex );
 
-                for( auto& results: fixture_results.durations )
+            for( auto& iter_results : fixture_results.durations )
+            {
+                for( auto& step_results : iter_results )
                 {
-                    auto range = results.equal_range( step );
-                    Duration val = std::accumulate( range.first, range.second, Duration(), []
-                        ( Duration lhs, const std::pair<OperationStep, Duration>& rhs ) -> Duration
+                    d.step_durations[step_results.first] += step_results.second;
+                    total_duration += step_results.second;
+                    {
+                        auto iter = d.step_min_durations.find( step_results.first );
+                        if( iter == d.step_min_durations.end() )
                         {
-                            return lhs + rhs.second;
+                            iter = d.step_min_durations.emplace( step_results.first, Duration::Max() ).first;
                         }
-                    );
-                    d.step_durations[step] += val;
-                    total_duration += val;
+                        if( step_results.second < iter->second )
+                        {
+                            iter->second = step_results.second;
+                        }
+                    }
+                    {
+                        auto iter = d.step_max_durations.find( step_results.first );
+                        if( iter == d.step_max_durations.end() )
+                        {
+                            iter = d.step_max_durations.emplace( step_results.first, Duration::Min() ).first;
+                        }
+                        if( step_results.second > iter->second )
+                        {
+                            iter->second = step_results.second;
+                        }
+                    }
                 }
             }
 
@@ -64,10 +76,12 @@ nlohmann::json DurationIndicator::SerializeValue()
     {
         nlohmann::json serialized_fixture_data;
         serialized_fixture_data[kTotalDuration] = fixture_data.second.total_duration;
-        for( OperationStep step: operation_steps_ )
+        for( auto& step_data: fixture_data.second.step_durations )
         {
-            serialized_fixture_data[OperationStepDescriptionRepository::GetSerializeId( step )] =
-                fixture_data.second.step_durations[step];
+            const std::string step_name = OperationStepDescriptionRepository::GetSerializeId( step_data.first );
+            serialized_fixture_data[step_name]["average"] = step_data.second;
+            serialized_fixture_data[step_name]["min"] = fixture_data.second.step_min_durations.at( step_data.first );
+            serialized_fixture_data[step_name]["max"] = fixture_data.second.step_max_durations.at( step_data.first );
         }
         result[fixture_data.first.Serialize()] = serialized_fixture_data;
     }

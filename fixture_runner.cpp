@@ -74,11 +74,6 @@ void FixtureRunner::CreateTrivialFixtures()
     {
         auto fixture_family = std::make_shared<FixtureFamily>();
         fixture_family->name = "Trivial factorial, " + Utils::FormatQuantityString( s ) + " elements";
-        fixture_family->operation_steps = {
-            OperationStep::CopyInputDataToDevice,
-            OperationStep::Calculate,
-            OperationStep::CopyOutputDataFromDevice
-        };
         fixture_family->element_count = s;
         for( auto& platform : platform_list_.OpenClPlatforms() )
         {
@@ -126,11 +121,6 @@ void FixtureRunner::CreateDampedWave2DFixtures()
             TypeInfo<T>::description %
             Utils::FormatQuantityString( dataSize ) %
             Utils::FormatQuantityString( params.size() ) ).str();
-        fixture_family->operation_steps = {
-            OperationStep::CopyInputDataToDevice,
-            OperationStep::Calculate,
-            OperationStep::CopyOutputDataFromDevice
-        };
         fixture_family->element_count = dataSize;
         for( auto& platform : platform_list_.OpenClPlatforms() )
         {
@@ -163,11 +153,6 @@ void FixtureRunner::CreateDampedWave2DFixtures()
             TypeInfo<T>::description %
             Utils::FormatQuantityString( dataSize ) %
             Utils::FormatQuantityString( params.size() ) ).str();
-        fixture_family->operation_steps = {
-            OperationStep::CopyInputDataToDevice,
-            OperationStep::Calculate,
-            OperationStep::CopyOutputDataFromDevice
-        };
         fixture_family->element_count = dataSize;
         for( auto& platform : platform_list_.OpenClPlatforms() )
         {
@@ -210,11 +195,6 @@ void FixtureRunner::CreateDampedWave2DFixtures()
             TypeInfo<T>::description %
             Utils::FormatQuantityString( dataSize ) %
             Utils::FormatQuantityString( params.size() ) ).str();
-        fixture_family->operation_steps = {
-            OperationStep::CopyInputDataToDevice,
-            OperationStep::Calculate,
-            OperationStep::CopyOutputDataFromDevice
-        };
         fixture_family->element_count = dataSize;
         for( auto& platform : platform_list_.OpenClPlatforms() )
         {
@@ -254,11 +234,6 @@ void FixtureRunner::CreateDampedWave2DFixtures()
             TypeInfo<T>::description %
             Utils::FormatQuantityString( dataSize ) %
             Utils::FormatQuantityString( params.size() ) ).str();
-        fixture_family->operation_steps = {
-            OperationStep::CopyInputDataToDevice,
-            OperationStep::Calculate,
-            OperationStep::CopyOutputDataFromDevice
-        };
         fixture_family->element_count = dataSize;
         for( auto& platform : platform_list_.OpenClPlatforms() )
         {

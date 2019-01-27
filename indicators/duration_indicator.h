@@ -12,6 +12,8 @@ public:
     struct FixtureCalculatedData
     {
         std::unordered_map<OperationStep, Duration> step_durations;
+        std::unordered_map<OperationStep, Duration> step_min_durations;
+        std::unordered_map<OperationStep, Duration> step_max_durations;
         Duration total_duration;
     };
 
@@ -32,6 +34,5 @@ public:
 private:
     void Calculate( const BenchmarkResultForFixtureFamily& benchmark );
 
-    std::vector<OperationStep> operation_steps_;
     std::unordered_map<FixtureId, FixtureCalculatedData> calculated_;
 };
