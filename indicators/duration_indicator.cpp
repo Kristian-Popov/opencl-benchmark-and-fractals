@@ -78,7 +78,7 @@ nlohmann::json DurationIndicator::SerializeValue()
         serialized_fixture_data[kTotalDuration] = fixture_data.second.total_duration;
         for( auto& step_data: fixture_data.second.step_durations )
         {
-            const std::string step_name = OperationStepDescriptionRepository::GetSerializeId( step_data.first );
+            const std::string step_name = OperationStepIds::Get( step_data.first );
             serialized_fixture_data[step_name]["average"] = step_data.second;
             serialized_fixture_data[step_name]["min"] = fixture_data.second.step_min_durations.at( step_data.first );
             serialized_fixture_data[step_name]["max"] = fixture_data.second.step_max_durations.at( step_data.first );

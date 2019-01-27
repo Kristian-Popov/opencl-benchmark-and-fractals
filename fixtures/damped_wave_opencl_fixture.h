@@ -56,7 +56,7 @@ public:
 
     std::vector<std::string> GetRequiredExtensions() override;
 
-    std::unordered_multimap<OperationStep, Duration> Execute() override;
+    std::unordered_map<OperationStep, Duration> Execute() override;
 
     void StoreResults() override;
 

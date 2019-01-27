@@ -134,8 +134,8 @@ namespace Utils
         const std::string& buildOptions = std::string(),
         const std::vector<std::string>& extensions = std::vector<std::string>() );
 
-    std::unordered_multimap<OperationStep, Duration> GetOpenCLEventDurations(
-        const std::unordered_multimap<OperationStep, boost::compute::event>& events );
+    std::unordered_map<OperationStep, Duration> GetOpenCLEventDurations(
+        const std::unordered_map<OperationStep, boost::compute::event>& events );
 
     std::string CombineStrings( const std::vector<std::string>& strings, const std::string & delimiter = "\n" );
 

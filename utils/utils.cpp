@@ -208,10 +208,10 @@ namespace Utils
         return { a.x, a.y, b.x, b.y };
     }
 
-    std::unordered_multimap<OperationStep, Duration> GetOpenCLEventDurations(
-        const std::unordered_multimap<OperationStep, boost::compute::event>& events )
+    std::unordered_map<OperationStep, Duration> GetOpenCLEventDurations(
+        const std::unordered_map<OperationStep, boost::compute::event>& events )
     {
-        std::unordered_multimap<OperationStep, Duration> result;
+        std::unordered_map<OperationStep, Duration> result;
         for( const std::pair<OperationStep, boost::compute::event>& p : events )
         {
             result.emplace( p.first, Duration( p.second ) );

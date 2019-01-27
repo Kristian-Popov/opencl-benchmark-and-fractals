@@ -58,18 +58,18 @@ public:
         return std::vector<std::string>(); // This fixture doesn't require any special extensions
     }
 
-    std::unordered_multimap<OperationStep, Duration> Execute() override
+    std::unordered_map<OperationStep, Duration> Execute() override
     {
         boost::compute::context& context = device_->GetContext();
         boost::compute::command_queue& queue = device_->GetQueue();
 
-        std::unordered_multimap<OperationStep, boost::compute::event> events;
+        std::unordered_map<OperationStep, boost::compute::event> events;
 
         // create a vector on the device
         boost::compute::vector<int> input_device_vector( dataSize_, context );
 
         // copy data from the host to the device
-        events.insert( { OperationStep::CopyInputDataToDevice, 
+        events.insert( { OperationStep::CopyInputDataToDevice1,
             boost::compute::copy_async( inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue ).get_event() 
         } );
 
@@ -79,13 +79,13 @@ public:
 
         unsigned computeUnitsCount = context.get_device().compute_units();
         size_t localWorkGroupSize = 0;
-        events.insert( { OperationStep::Calculate,
+        events.insert( { OperationStep::Calculate1,
             queue.enqueue_1d_range_kernel( kernel_, 0, dataSize_, localWorkGroupSize )
         } );
 
         outputData_.resize( dataSize_ );
         boost::compute::event lastEvent = boost::compute::copy_async( output_device_vector.begin(), output_device_vector.end(), outputData_.begin(), queue ).get_event();
-        events.insert( { OperationStep::CopyOutputDataFromDevice, lastEvent } );
+        events.insert( { OperationStep::CopyOutputDataFromDevice1, lastEvent } );
 
         lastEvent.wait();
 

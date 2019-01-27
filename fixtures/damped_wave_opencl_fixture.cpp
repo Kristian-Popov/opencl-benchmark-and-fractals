@@ -103,22 +103,22 @@ std::vector<std::string> DampedWaveOpenClFixture<T>::GetRequiredExtensions()
 }
 
 template<typename T>
-std::unordered_multimap<OperationStep, Duration> DampedWaveOpenClFixture<T>::Execute()
+std::unordered_map<OperationStep, Duration> DampedWaveOpenClFixture<T>::Execute()
 {
     boost::compute::context& context = device_->GetContext();
     boost::compute::command_queue& queue = device_->GetQueue();
-    std::unordered_multimap<OperationStep, boost::compute::event> events;
+    std::unordered_map<OperationStep, boost::compute::event> events;
 
     // create a vector on the device
     boost::compute::vector<T> input_device_vector( inputData_.size(), context );
 
     // copy data from the host to the device
-    events.insert( {OperationStep::CopyInputDataToDevice,
+    events.insert( {OperationStep::CopyInputDataToDevice1,
         boost::compute::copy_async( inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue ).get_event()
     } );
 
     boost::compute::vector<Parameters> input_params_vector( params_.size(), context );
-    events.insert( {OperationStep::CopyInputDataToDevice,
+    events.insert( {OperationStep::CopyInputDataToDevice2,
         boost::compute::copy_async( params_.begin(), params_.end(), input_params_vector.begin(), queue ).get_event()
     } );
 
@@ -132,13 +132,13 @@ std::unordered_multimap<OperationStep, Duration> DampedWaveOpenClFixture<T>::Exe
 
     unsigned computeUnitsCount = context.get_device().compute_units();
     size_t localWorkGroupSize = 0;
-    events.insert( {OperationStep::Calculate,
+    events.insert( {OperationStep::Calculate1,
         queue.enqueue_1d_range_kernel( kernel_, 0, inputData_.size(), localWorkGroupSize )
     } );
 
     outputData_.resize( inputData_.size() );
     boost::compute::event lastEvent = boost::compute::copy_async( output_device_vector.begin(), output_device_vector.end(), outputData_.begin(), queue ).get_event();
-    events.insert( {OperationStep::CopyOutputDataFromDevice, lastEvent} );
+    events.insert( {OperationStep::CopyOutputDataFromDevice1, lastEvent} );
 
     lastEvent.wait();
 

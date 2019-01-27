@@ -474,10 +474,10 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
 
                 fixture->Initialize();
 
-                std::vector<std::unordered_multimap<OperationStep, Duration>> durations;
+                std::vector<std::unordered_map<OperationStep, Duration>> durations;
 
                 // Warm-up for one iteration to get estimation of execution time
-                std::unordered_multimap<OperationStep, Duration> warmupResult = fixture->Execute();
+                std::unordered_map<OperationStep, Duration> warmupResult = fixture->Execute();
                 durations.push_back( warmupResult );
                 Duration totalOperationDuration = std::accumulate( warmupResult.begin(), warmupResult.end(), Duration(),
                     []( Duration acc, const std::pair<OperationStep, Duration>& r )

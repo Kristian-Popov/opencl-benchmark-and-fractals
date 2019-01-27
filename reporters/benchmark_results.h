@@ -13,7 +13,7 @@
 
 struct BenchmarkResultForFixture
 {
-    std::vector<std::unordered_multimap<OperationStep, Duration>> durations;
+    std::vector<std::unordered_map<OperationStep, Duration>> durations;
     boost::optional<std::string> failure_reason;
 };
 

@@ -39,7 +39,7 @@ nlohmann::json ElementProcessingTimeIndicator::SerializeValue()
         serialized_fixture_data[kTotalDuration] = fixture_data.second.total_duration;
         for( auto& step_data: fixture_data.second.step_durations )
         {
-            serialized_fixture_data[OperationStepDescriptionRepository::GetSerializeId( step_data.first )] =
+            serialized_fixture_data[OperationStepIds::Get( step_data.first )] =
                 step_data.second;
         }
         result[fixture_data.first.Serialize()] = serialized_fixture_data;
