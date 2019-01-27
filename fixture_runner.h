@@ -37,7 +37,7 @@ private:
     void Clear();
     void SetFloatingPointEnvironment();
     void CreateTrivialFixtures();
-    template<typename T>
+    template<typename T, typename D = std::normal_distribution<T>>
     void CreateDampedWave2DFixtures();
     void CreateKochCurveFixtures();
     void CreateMultibrotSetFixtures();

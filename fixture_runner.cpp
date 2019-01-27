@@ -100,7 +100,7 @@ void FixtureRunner::CreateTrivialFixtures()
     }
 }
 
-template<typename T>
+template<typename T, typename D = std::normal_distribution<T>>
 void FixtureRunner::CreateDampedWave2DFixtures()
 {
     T frequency = static_cast<T>( 1.0 );
@@ -111,6 +111,8 @@ void FixtureRunner::CreateDampedWave2DFixtures()
     T step = static_cast<T>( 0.001 );
     // TODO change to int32_t?
     size_t dataSize = static_cast<size_t>( ( max - min ) / step ); // TODO something similar can be useful in Utils
+
+    std::mt19937 randomValueGenerator;
     {
         std::vector<DampedWaveFixtureParameters<T>> params = {DampedWaveFixtureParameters<T>{
             static_cast<T>( 1000.0 ),
@@ -148,60 +150,137 @@ void FixtureRunner::CreateDampedWave2DFixtures()
         }
         fixture_families_.push_back( fixture_family );
     }
-#if 0
     {
-        std::vector<DampedWaveFixtureParameters<cl_double>> params =
-        {DampedWaveFixtureParameters<cl_double>( 1000.0, 0.1, 2 * pi*frequency, 0.0, 1.0 )};
-
-        typedef std::normal_distribution<cl_double> Distribution;
-        typedef RandomValuesIterator<cl_double, Distribution> Iterator;
-        auto dampedWaveFixture = std::make_shared<DampedWaveFixture<cl_double, Iterator>>( params,
-            Distribution( 0.0, 100.0 ), dataSize, "random input values" );
-        fixtures_.push_back( dampedWaveFixture );
+        std::vector<DampedWaveFixtureParameters<T>> params = {DampedWaveFixtureParameters<T>{
+            static_cast<T>( 1000.0 ),
+            static_cast<T>( 0.1 ),
+            static_cast<T>( 2 * pi*frequency ),
+            static_cast<T>( 0.0 ),
+            static_cast<T>( 1.0 )
+        }};
+        auto fixture_family = std::make_shared<FixtureFamily>();
+        fixture_family->name = ( boost::format( "Damped wave, %1%, %2% values, %3% parameters, random input data" ) %
+            TypeInfo<T>::description %
+            Utils::FormatQuantityString( dataSize ) %
+            Utils::FormatQuantityString( params.size() ) ).str();
+        fixture_family->operation_steps = {
+            OperationStep::CopyInputDataToDevice,
+            OperationStep::Calculate,
+            OperationStep::CopyOutputDataFromDevice
+        };
+        fixture_family->element_count = dataSize;
+        for( auto& platform : platform_list_.OpenClPlatforms() )
+        {
+            for( auto& device : platform->GetDevices() )
+            {
+                fixture_family->fixtures.insert( std::make_pair<const FixtureId, std::shared_ptr<Fixture>>(
+                    FixtureId( fixture_family->name, device, "" ),
+                    std::make_shared<DampedWaveOpenClFixture<T>>(
+                        std::dynamic_pointer_cast<OpenClDevice>( device ),
+                        params,
+                        std::make_shared<RandomValuesIterator<T, D>>( D(
+                            static_cast<T>( 0.0 ),
+                            static_cast<T>( 100.0 )
+                        ) ),
+                        dataSize,
+                        fixture_family->name
+                        )
+                    ) );
+            }
+        }
+        fixture_families_.push_back( fixture_family );
     }
-    {
-        using namespace half_float::literal;
-        std::vector<DampedWaveFixtureParameters<half_float::half>> params =
-        {DampedWaveFixtureParameters<half_float::half>( 1000.0_h, 0.1_h, 
-            static_cast<half_float::half>( 2.0_h * pi*frequency ), 0.0_h, 1.0_h )};
-
-        typedef HalfPrecisionNormalDistribution Distribution;
-        typedef RandomValuesIterator<half_float::half, Distribution> Iterator;
-        auto dampedWaveFixture = std::make_shared<DampedWaveFixture<half_float::half, Iterator>>( params,
-            Distribution( 0.0_h, 100.0_h ), dataSize, "random input values" );
-        fixtures_.push_back( dampedWaveFixture );
-    }
-
     {
         const size_t paramsCount = 1000;
-
-        std::vector<DampedWaveFixtureParameters<cl_float>> params;
-        std::mt19937 randomValueGenerator;
-        auto rand = std::bind( std::uniform_real_distribution<cl_float>( 0.0f, 10.0f ), randomValueGenerator );
+        std::vector<DampedWaveFixtureParameters<T>> params;
+        auto rand = std::bind( D( static_cast<T>( 0.0 ), static_cast<T>( 10.0 ) ), randomValueGenerator );
         std::generate_n( std::back_inserter( params ), paramsCount,
             [&rand]()
         {
-            return DampedWaveFixtureParameters<cl_float>( rand(), 0.01f, rand(), rand() - 5.0f, rand() - 5.0f );
+            return DampedWaveFixtureParameters<T>(
+                rand(),
+                static_cast<T>( 0.01 ),
+                rand(),
+                rand() - static_cast<T>( 5.0 ),
+                rand() - static_cast<T>( 5.0 )
+            );
         } );
-
+        auto fixture_family = std::make_shared<FixtureFamily>();
+        fixture_family->name = ( boost::format( "Damped wave, %1%, %2% values, %3% parameters, sequential input data" ) %
+            TypeInfo<T>::description %
+            Utils::FormatQuantityString( dataSize ) %
+            Utils::FormatQuantityString( params.size() ) ).str();
+        fixture_family->operation_steps = {
+            OperationStep::CopyInputDataToDevice,
+            OperationStep::Calculate,
+            OperationStep::CopyOutputDataFromDevice
+        };
+        fixture_family->element_count = dataSize;
+        for( auto& platform : platform_list_.OpenClPlatforms() )
         {
-            typedef std::normal_distribution<cl_float> Distribution;
-            typedef RandomValuesIterator<cl_float, Distribution> Iterator;
+            for( auto& device : platform->GetDevices() )
             {
-                auto fixture = std::make_shared<DampedWaveFixture<cl_float, Iterator>>( params,
-                    Iterator( Distribution( 0.0f, 50.0f ) ), dataSize, "random input values" );
-                fixtures_.push_back( fixture );
+                fixture_family->fixtures.insert( std::make_pair<const FixtureId, std::shared_ptr<Fixture>>(
+                    FixtureId( fixture_family->name, device, "" ),
+                    std::make_shared<DampedWaveOpenClFixture<T>>(
+                        std::dynamic_pointer_cast<OpenClDevice>( device ),
+                        params,
+                        std::make_shared<SequentialValuesIterator<T>>( min, step ),
+                        dataSize,
+                        fixture_family->name
+                        )
+                    ) );
             }
         }
-        {
-            typedef std::normal_distribution<cl_float> Distribution;
-            typedef RandomValuesIterator<cl_float, Distribution> Iterator;
-            auto fixture = std::make_shared<DampedWaveFixture<cl_float, SequentialValuesIterator<cl_float>>>( params,
-                SequentialValuesIterator<cl_float>( min, step ), dataSize, "sequential input values" );
-            fixtures_.push_back( fixture );
-        }
+        fixture_families_.push_back( fixture_family );
     }
-#endif
+    {
+        const size_t paramsCount = 1000;
+        std::vector<DampedWaveFixtureParameters<T>> params;
+        auto rand = std::bind( D( static_cast<T>( 0.0 ), static_cast<T>( 10.0 ) ), randomValueGenerator );
+        std::generate_n( std::back_inserter( params ), paramsCount,
+            [&rand]()
+        {
+            return DampedWaveFixtureParameters<T>(
+                rand(),
+                static_cast<T>( 0.01 ),
+                rand(),
+                rand() - static_cast<T>( 5.0 ),
+                rand() - static_cast<T>( 5.0 )
+                );
+            } );
+        auto fixture_family = std::make_shared<FixtureFamily>();
+        fixture_family->name = ( boost::format( "Damped wave, %1%, %2% values, %3% parameters, random input data" ) %
+            TypeInfo<T>::description %
+            Utils::FormatQuantityString( dataSize ) %
+            Utils::FormatQuantityString( params.size() ) ).str();
+        fixture_family->operation_steps = {
+            OperationStep::CopyInputDataToDevice,
+            OperationStep::Calculate,
+            OperationStep::CopyOutputDataFromDevice
+        };
+        fixture_family->element_count = dataSize;
+        for( auto& platform : platform_list_.OpenClPlatforms() )
+        {
+            for( auto& device : platform->GetDevices() )
+            {
+                fixture_family->fixtures.insert( std::make_pair<const FixtureId, std::shared_ptr<Fixture>>(
+                    FixtureId( fixture_family->name, device, "" ),
+                    std::make_shared<DampedWaveOpenClFixture<T>>(
+                        std::dynamic_pointer_cast<OpenClDevice>( device ),
+                        params,
+                        std::make_shared<RandomValuesIterator<T, D>>( D(
+                            static_cast<T>( 0.0 ),
+                            static_cast<T>( 100.0 )
+                        ) ),
+                        dataSize,
+                        fixture_family->name
+                        )
+                    ) );
+            }
+        }
+        fixture_families_.push_back( fixture_family );
+    }
 }
 #if 0
 void FixtureRunner::CreateKochCurveFixtures()
@@ -352,7 +431,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
     {
         CreateDampedWave2DFixtures<float>();
         CreateDampedWave2DFixtures<double>();
-        CreateDampedWave2DFixtures<half_float::half>();
+        CreateDampedWave2DFixtures<half_float::half, HalfPrecisionNormalDistribution>();
     }
 #if 0
     if (fixturesToRun.kochCurve)
