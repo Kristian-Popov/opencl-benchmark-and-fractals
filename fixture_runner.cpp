@@ -429,7 +429,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
     {
         std::shared_ptr<FixtureFamily>& fixtureFamily = fixture_families_.at( familyIndex );
         std::string fixtureName = fixtureFamily->name;
-        BenchmarkResultForFixtureFamily results;
+        FixtureFamilyBenchmark results;
         results.fixture_family = fixtureFamily;
 
         BOOST_LOG_TRIVIAL( info ) << "Starting fixture family \"" << fixtureName << "\"";
@@ -438,7 +438,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
         {
             const FixtureId& fixture_id = fixture_data.first;
             std::shared_ptr<Fixture>& fixture = fixture_data.second;
-            BenchmarkResultForFixture fixture_results;
+            FixtureBenchmark fixture_results;
 
             BOOST_LOG_TRIVIAL( info ) << "Starting run on device \"" << fixture_id.device()->Name() << "\"";
 

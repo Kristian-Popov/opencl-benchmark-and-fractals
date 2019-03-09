@@ -69,7 +69,7 @@ namespace Utils
     {
         EXCEPTION_ASSERT( !units.empty() );
         EXCEPTION_ASSERT( std::is_sorted( units.begin(), units.end() ) );
-        // First the biggest unit that is smaller than input value
+        // Find the biggest unit that is smaller than input value
         auto resultIter = std::find_if( units.crbegin(), units.crend(),
             [value] (long double unit )
             {

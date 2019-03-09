@@ -13,7 +13,7 @@ public:
 
     void Initialize( const PlatformList& platform_list ) override;
 
-    void AddFixtureFamilyResults( const BenchmarkResultForFixtureFamily& results ) override;
+    void AddFixtureFamilyResults( const FixtureFamilyBenchmark& results ) override;
 
     /*
         Optional method to flush all contents to output

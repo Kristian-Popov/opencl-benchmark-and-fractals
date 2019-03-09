@@ -6,10 +6,6 @@
 
 #include "fixtures/fixture_family.h"
 #include "indicators/duration_indicator.h"
-#include "indicators/element_processing_time_indicator.h"
-#include "indicators/failure_indicator.h"
-#include "indicators/indicator_serializer.h"
-#include "indicators/throughput_indicator.h"
 
 #include <boost/log/trivial.hpp>
 
@@ -19,11 +15,12 @@ namespace
     {
         // TODO replace with some library?
         // Based on https://stackoverflow.com/a/10467633
-        time_t now = time( 0 );
+        time_t now = time( nullptr );
         struct tm tstruct;
         char buf[80];
-        tstruct = *localtime( &now );
-        strftime( buf, sizeof( buf ), "%Y-%m-%d.%X", &tstruct );
+        // TODO gmtime is not thread-safe, do something with that?
+        tstruct = *gmtime( &now );
+        strftime( buf, sizeof( buf ), "%FT%TZ", &tstruct );
         return buf;
     }
 }
@@ -35,9 +32,10 @@ JsonBenchmarkReporter::JsonBenchmarkReporter( const std::string& file_name )
 
 void JsonBenchmarkReporter::Initialize( const PlatformList& platform_list )
 {
-    tree_["base_info"] = {
+    tree_["baseInfo"] = {
         {"about", "This file was built by OpenCL benchmark."},
-        {"time", GetCurrentTimeString()}
+        {"time", GetCurrentTimeString()},
+        {"formatVersion", "0.1.0"}
     };
     for( auto& platform : platform_list.AllPlatforms() )
     {
@@ -46,31 +44,40 @@ void JsonBenchmarkReporter::Initialize( const PlatformList& platform_list )
         {
             devices.push_back( device->UniqueName() );
         }
-        tree_["device_list"][platform->Name()] = devices;
+        tree_["deviceList"][platform->Name()] = devices;
     }
+    tree_["fixtureFamilies"] = json::array();
 }
 
-void JsonBenchmarkReporter::AddFixtureFamilyResults( const BenchmarkResultForFixtureFamily& results )
+void JsonBenchmarkReporter::AddFixtureFamilyResults( const FixtureFamilyBenchmark& results )
 {
     using nlohmann::json;
-    std::vector<std::shared_ptr<IndicatorInterface>> indicators = {
-        std::make_shared<DurationIndicator>( results ),
-        std::make_shared<FailureIndicator>( results ),
-    };
+
+    json fixture_family_tree = {{ "name", results.fixture_family->name }};
     if( results.fixture_family->element_count )
     {
-        indicators.push_back( std::make_shared<ElementProcessingTimeIndicator>( results ) );
-        indicators.push_back( std::make_shared<ThroughputIndicator>( results ) );
+        fixture_family_tree["elementCount"] = results.fixture_family->element_count.value();
     }
 
-    json indicator_list;
-    for( const auto& indicator: indicators )
+    json fixture_tree = json::array();
+    for( auto& data: results.benchmark )
     {
-        auto& d = IndicatorSerializer::Serialize( indicator );
-        indicator_list[d.first] = d.second;
+        DurationIndicator indicator{ data.second };
+        json current_fixture_tree = json::object({{ "name", data.first.Serialize() }});
+
+        if( !indicator.IsEmpty() )
+        {
+            indicator.SerializeValue( current_fixture_tree["duration"] );
+        }
+        if( data.second.failure_reason )
+        {
+            current_fixture_tree["failureReason"] = data.second.failure_reason.value();
+        }
+        fixture_tree.push_back(current_fixture_tree);
     }
 
-    tree_["results"][results.fixture_family->name] = indicator_list;
+    fixture_family_tree["fixtures"] = fixture_tree;
+    tree_["fixtureFamilies"].push_back(fixture_family_tree);
 }
 
 void JsonBenchmarkReporter::Flush()

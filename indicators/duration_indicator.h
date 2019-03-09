@@ -1,38 +1,33 @@
-#include "indicators/indicator_interface.h"
-
 #include "utils/duration.h"
 #include "reporters/benchmark_results.h"
 
 #include <unordered_map>
 #include <boost/optional.hpp>
 
-class DurationIndicator: public IndicatorInterface
+class DurationIndicator
 {
 public:
+    explicit DurationIndicator( const FixtureBenchmark& benchmark )
+    {
+        Calculate( benchmark );
+    }
+
+    void SerializeValue( nlohmann::json& tree );
+
+    bool IsEmpty() const;
+private:
     struct FixtureCalculatedData
     {
         std::unordered_map<OperationStep, Duration> step_durations;
         std::unordered_map<OperationStep, Duration> step_min_durations;
         std::unordered_map<OperationStep, Duration> step_max_durations;
+        std::size_t iteration_count;
+        // Is not serialized, is just a temporary solution to check if duration is empty
+        // TODO check in some better way?
         Duration total_duration;
     };
 
-    DurationIndicator() noexcept
-    {}
+    void Calculate( const FixtureBenchmark& benchmark );
 
-    explicit DurationIndicator( const BenchmarkResultForFixtureFamily& benchmark )
-    {
-        Calculate( benchmark );
-    }
-
-    std::unordered_map<FixtureId, FixtureCalculatedData> GetCalculatedData() const noexcept
-    {
-        return calculated_;
-    }
-
-    nlohmann::json SerializeValue() override;
-private:
-    void Calculate( const BenchmarkResultForFixtureFamily& benchmark );
-
-    std::unordered_map<FixtureId, FixtureCalculatedData> calculated_;
+    FixtureCalculatedData calculated_;
 };

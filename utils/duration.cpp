@@ -14,12 +14,12 @@ double Duration::AsSeconds() const
 
 void to_json( json& j, const Duration& p )
 {
-    j = p.duration().count();
+    j = json::object( {{ "durationDoubleNs", p.duration().count() }} );
 }
 
 void from_json( const json& j, Duration& p )
 {
     double val{ 0.0 };
-    j.get_to( val );
+    j.at( "durationDoubleNs" ).get_to( val );
     p = Duration{ std::chrono::duration<double, std::nano>( val ) };
 }

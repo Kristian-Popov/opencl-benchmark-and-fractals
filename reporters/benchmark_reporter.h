@@ -11,7 +11,7 @@
 class BenchmarkReporter
 {
 public:
-    virtual void AddFixtureFamilyResults( const BenchmarkResultForFixtureFamily& results ) = 0;
+    virtual void AddFixtureFamilyResults( const FixtureFamilyBenchmark& results ) = 0;
 
     virtual void Initialize( const PlatformList& platform_list )
     {}

@@ -11,14 +11,14 @@
 
 #include "boost/optional.hpp"
 
-struct BenchmarkResultForFixture
+struct FixtureBenchmark
 {
     std::vector<std::unordered_map<OperationStep, Duration>> durations;
     boost::optional<std::string> failure_reason;
 };
 
-struct BenchmarkResultForFixtureFamily
+struct FixtureFamilyBenchmark
 {
-    std::unordered_map<FixtureId, BenchmarkResultForFixture> benchmark;
-    std::shared_ptr<FixtureFamily> fixture_family;
+    std::unordered_map<FixtureId, FixtureBenchmark> benchmark;
+    std::shared_ptr<FixtureFamily> fixture_family; // TODO should this be weak_ptr?
 };

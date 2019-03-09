@@ -69,15 +69,6 @@ add_library( commonlib
 
     indicators/duration_indicator.cpp
     indicators/duration_indicator.h
-    indicators/element_processing_time_indicator.h
-    indicators/element_processing_time_indicator.cpp
-    indicators/failure_indicator.cpp
-    indicators/failure_indicator.h
-    indicators/indicator_interface.h
-    indicators/indicator_serializer.cpp
-    indicators/indicator_serializer.h
-    indicators/throughput_indicator.h
-    indicators/throughput_indicator.cpp
 
     reporters/benchmark_results.h
     reporters/json_benchmark_reporter.cpp
