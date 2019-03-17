@@ -2,7 +2,6 @@
 
 #include "fixtures/fixture.h"
 #include "program_source_repository.h"
-#include "koch_curve_utils.h"
 
 #include "boost/compute.hpp"
 
@@ -183,91 +182,70 @@ __kernel void KochSnowflakeKernel(int stopAtIteration,
     {
         static const char* openclTypeName;
         static const char* requiredExtension;
-        static const char* descriptionTypeName;
         static const int maxIterations;
     };
 
     const char* KochCurveFixtureConstants<cl_float>::openclTypeName = "float";
     const char* KochCurveFixtureConstants<cl_float>::requiredExtension = ""; // No extensions needed for single precision arithmetic
-    const char* KochCurveFixtureConstants<cl_float>::descriptionTypeName = "float";
     const int KochCurveFixtureConstants<cl_float>::maxIterations = 20; //TODO update value
 
     const char* KochCurveFixtureConstants<cl_double>::openclTypeName = "double";
     const char* KochCurveFixtureConstants<cl_double>::requiredExtension = "cl_khr_fp64";
-    const char* KochCurveFixtureConstants<cl_double>::descriptionTypeName = "double";
     const int KochCurveFixtureConstants<cl_double>::maxIterations = 20;
 
     // TODO support for half precision could be added by creating an alternate data types,
     // something like half2 and half4
-
-    template<typename T>
-    bool IsPointInViewport(T x, T y, long double width, long double height)
-    {
-        return x >= 0 && y >= 0 && x <= width && y <= height;
-    }
 }
 
 /*
     T should be a floating point type (e.g. float, double or half),
-    T2 should be a vector of 2 elements of the same type,
     T4 should be a vector of 4 elements of the same type,
 */
-template<typename T, typename T2, typename T4>
-class KochCurveFixture : public Fixture
+template<typename T, typename T4>
+class KochCurveOpenClFixture : public Fixture
 {
 public:
-    explicit KochCurveFixture(
+    explicit KochCurveOpenClFixture(
+        const std::shared_ptr<OpenClDevice>& device,
         int iterationsCount,
         // Vector of lines. Every line becomes a curve that starts at (l.x; l.y) and ends at (l.z; l.w)
         const std::vector<T4>& curves,
-        long double width, long double height,
-        const std::string& descriptionSuffix = std::string() )
-        : iterationsCount_(iterationsCount)
+        double width, double height,
+        const std::string& fixture_name
+    )
+        : device_( device )
+        , iterationsCount_(iterationsCount)
         , width_(width)
         , height_(height)
-        , descriptionSuffix_(descriptionSuffix)
         , curves_(curves)
+        , fixture_name_( fixture_name )
     {
-        static_assert( sizeof( T2 ) == 2 * sizeof( T ), "Given wrong second template argument to KochCurveFixture" );
-        static_assert( sizeof( T4 ) == 4 * sizeof( T ), "Given wrong third template argument to KochCurveFixture" );
+        static_assert( sizeof( T4 ) == 4 * sizeof( T ), "Given wrong second template argument to KochCurveOpenClFixture" );
         EXCEPTION_ASSERT( iterationsCount >= 1 && iterationsCount <= KochCurveFixtureConstants<T>::maxIterations );
     }
 
-    //virtual void Initialize() override;
-
-    virtual void InitializeForContext( boost::compute::context& context ) override
+    virtual void Initialize() override
     {
         // TODO all warnings are disabled by -w, remove this option everywhere
-        std::string typeName = KochCurveFixtureConstants<T>::openclTypeName;
-        std::string compilerOptions = ( boost::format(
-            "%1% -DREAL_T=%2% -DREAL_T_2=%3% -DREAL_T_4=%4%") %
-            baseCompilerOptions %
-            typeName %
-            (typeName+"2") %
-            ( typeName + "4" )
+        std::string type_name = KochCurveFixtureConstants<T>::openclTypeName;
+        std::string compiler_options = ( boost::format(
+            "-DREAL_T=%1% -DREAL_T_2=%2% -DREAL_T_4=%3%" ) %
+            type_name %
+            ( type_name + "2" ) %
+            ( type_name + "4" )
             ).str();
-
         std::string source = Utils::CombineStrings( {
             ProgramSourceRepository::GetKochCurveSource(),
             kochCurveProgramCode
         } );
 
-        programs_.insert( {context.get(),
-            Utils::BuildProgram( context, source, compilerOptions,
-                GetRequiredExtensions() )} );
-    }
-
-    virtual std::vector<OperationStep> GetSteps() override
-    {
-        return {
-            OperationStep::Calculate,
-            OperationStep::MapOutputData,
-            OperationStep::UnmapOutputData
-        };
+        program_ = Utils::BuildProgram( device_->GetContext(), source, compiler_options,
+            GetRequiredExtensions() );
     }
 
     virtual std::vector<std::string> GetRequiredExtensions() override
     {
+        // TODO those functions were moved to core, how to activate them for newer OpenCL versions?
         std::string requiredExtension = KochCurveFixtureConstants<T>::requiredExtension;
         std::vector<std::string> result = { "cl_khr_global_int32_base_atomics" };
         if( !requiredExtension.empty() )
@@ -277,15 +255,13 @@ public:
         return result;
     }
 
-    std::unordered_map<OperationStep, Duration> Execute( boost::compute::context& context ) override
+    std::unordered_map<OperationStep, Duration> Execute() override
     {
-        EXCEPTION_ASSERT( context.get_devices().size() == 1 );
+        boost::compute::context& context = device_->GetContext();
+        boost::compute::command_queue& queue = device_->GetQueue();
         outputData_.clear();
-        // create command queue with profiling enabled
-        boost::compute::command_queue queue(
-            context, context.get_device(), boost::compute::command_queue::enable_profiling
-        );
-        std::unordered_multimap<OperationStep, boost::compute::event> events;
+
+        std::unordered_map<OperationStep, boost::compute::event> events;
 
         const size_t lineSizeInBytes = 64; // TODO find a better way to calculate this value to avoid wasting memory
         static_assert( lineSizeInBytes >= sizeof(T4) + 8, "Capacity allocated for one line is not sufficient" );
@@ -293,7 +269,7 @@ public:
         boost::compute::buffer linesTempStorage( context, linesTempStorageSizeInBytes );
         // Precalculation step
         {
-            boost::compute::kernel kernel( programs_.at( context.get() ), "KochCurvePrecalculationKernel" );
+            boost::compute::kernel kernel( program_, "KochCurvePrecalculationKernel" );
             kernel.set_arg( 0, iterationsCount_ );
 
             kernel.set_arg( 1, linesTempStorage );
@@ -305,7 +281,7 @@ public:
             unsigned processingElementsCount = context.get_device().compute_units();
             //unsigned threadsCount = std::max( minThreadsCount, processingElementsCount );
             unsigned threadsCount = 1u;
-            events.insert( {OperationStep::Calculate,
+            events.insert( {OperationStep::Calculate1,
                 queue.enqueue_1d_range_kernel( kernel, 0, threadsCount, 0 )
             } );
         }
@@ -319,7 +295,7 @@ public:
         size_t resultLineCount = CalcLineCount() * curves_.size();
         boost::compute::vector<T4> resultDeviceVector( resultLineCount, context );
         {
-            boost::compute::kernel kernel( programs_.at( context.get() ), "KochSnowflakeKernel" );
+            boost::compute::kernel kernel( program_, "KochSnowflakeKernel" );
             kernel.set_arg( 0, iterationsCount_ );
 
             kernel.set_arg( 1, curvesDeviceVector );
@@ -331,7 +307,7 @@ public:
             kernel.set_arg( 5, resultDeviceVector );
 
             const unsigned threadsCount = CalcLineCount( iterationsCount_ );
-            events.insert( {OperationStep::Calculate,
+            events.insert( {OperationStep::Calculate2,
                 queue.enqueue_1d_range_kernel( kernel, 0, threadsCount, 0 )
             } );
         }
@@ -352,42 +328,34 @@ public:
         events.insert( {OperationStep::UnmapOutputData, lastEvent } );
         lastEvent.wait();
 
-        return Utils::CalculateTotalStepDurations<Fixture::Duration>( events );
+        return Utils::GetOpenCLEventDurations( events );
     }
 
-    std::string Description() override
-    {
-        std::string result = ( boost::format( "Koch curve, %1%, %2% iterations (%3% lines)" ) %
-            KochCurveFixtureConstants<T>::descriptionTypeName %
-            iterationsCount_ %
-            ( CalcLineCount() * curves_.size() )
-            ).str();
-        if( !descriptionSuffix_.empty() )
-        {
-            result += ", " + descriptionSuffix_;
-        }
-        return result;
-    }
-
-    virtual boost::optional<size_t> GetElementsCount() override
-    {
-        return CalcLineCount();
-    }
-
-    virtual void VerifyResults( boost::compute::context& context ) override
+    virtual void VerifyResults() override
     {
         // Verify that all points are within viewport (limited by width and height)
-        if (!std::all_of(outputData_.cbegin(), outputData_.cend(),
-            [&] (const T4& line) -> bool
-            {
-                return IsPointInViewport(line.x, line.y, width_, height_) &&
-                    IsPointInViewport( line.z, line.w, width_, height_ );
-            } ))
+        auto wrong_point = std::find_if( outputData_.cbegin(), outputData_.cend(),
+            [&]( const T4& line ) -> bool
         {
+            return !( IsPointInViewport( line.x, line.y ) && IsPointInViewport( line.z, line.w ) );
+        } );
+        if( wrong_point != outputData_.cend() )
+        {
+            throw DataVerificationFailedException(
+                ( boost::format( "Result verification has failed for Koch curve fixture. "
+                    "At least one line is outside of viewpoint: %1%." ) %
+                    LineToString( *wrong_point )
+                ).str()
+            );
         }
     }
 
-    virtual void WriteResults() override
+    std::shared_ptr<DeviceInterface> Device() override
+    {
+        return device_;
+    }
+
+    virtual void StoreResults() override
     {
         SVGDocument document;
         document.SetSize( width_, height_ );
@@ -400,19 +368,23 @@ public:
                 line.w
             );
         }
-        document.BuildAndWriteToDisk( this->Description() + ".svg" );
+        const std::string file_name = ( boost::format( "%1%, %2%.svg" ) %
+            fixture_name_ %
+            device_->Name() ).str();
+        document.BuildAndWriteToDisk( file_name );
     }
 
-    virtual ~KochCurveFixture()
+    virtual ~KochCurveOpenClFixture()
     {
     }
 private:
+    const std::shared_ptr<OpenClDevice> device_;
     int iterationsCount_;
     std::vector<T4> outputData_;
-    std::string descriptionSuffix_;
-    std::unordered_map<cl_context, boost::compute::program> programs_;
+    boost::compute::program program_;
     std::vector<T4> curves_;
-    long double width_, height_;
+    double width_, height_;
+    const std::string fixture_name_;
 
     size_t CalcLineCount()
     {
@@ -440,22 +412,17 @@ private:
         return CalcTotalLineCount( iterationsCount_ );
     }
 
-    /*
-    Return results in the following form:
+    std::string LineToString( const T4& line )
     {
-    { x1, y1, x2, y2 },
-    ...
+        return ( boost::format( "(%1%; %2%) - (%3%; %4%)" ) %
+            line.x %
+            line.y %
+            line.z %
+            line.w ).str();
     }
-    Every line is one line, where (x1, y1) is starting point and (x2, y2) is ending point
-    */
-    std::vector<std::vector<long double>> GetResults()
+
+    bool IsPointInViewport( T x, T y )
     {
-        std::vector<std::vector<long double>> result;
-        std::transform( outputData_.cbegin(), outputData_.cend(), std::back_inserter( result ),
-            []( const T4& data )
-        {
-            return std::vector<long double>( {data.x, data.y, data.z, data.w} );
-        } );
-        return result;
+        return x >= 0 && y >= 0 && x <= width_ && y <= height_;
     }
 };

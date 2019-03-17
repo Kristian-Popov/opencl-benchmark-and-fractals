@@ -58,7 +58,7 @@ add_library( commonlib
     fixtures/fixture_family.h
     fixtures/fixture_id.h
     fixtures/trivial_factorial_opencl_fixture.h
-    # fixtures/koch_curve_fixture.h
+    fixtures/koch_curve_opencl_fixture.h
     # fixtures/multibrot_fractal_fixture.cpp
     # fixtures/multibrot_fractal_fixture.h
     # fixtures/multiprecision_factorial_fixture.h

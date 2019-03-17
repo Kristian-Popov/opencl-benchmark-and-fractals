@@ -26,8 +26,8 @@
 
 #include "fixtures/damped_wave_opencl_fixture.h"
 #include "fixtures/trivial_factorial_opencl_fixture.h"
+#include "fixtures/koch_curve_opencl_fixture.h"
 #if 0
-#include "fixtures/koch_curve_fixture.h"
 #include "fixtures/multibrot_fractal_fixture.h"
 #include "fixtures/multiprecision_factorial_fixture.h"
 #endif
@@ -257,7 +257,8 @@ void FixtureRunner::CreateDampedWave2DFixtures()
         fixture_families_.push_back( fixture_family );
     }
 }
-#if 0
+
+template<typename T, typename T4>
 void FixtureRunner::CreateKochCurveFixtures()
 {
     // TODO it would be great to get images with higher number of iterations but
@@ -266,8 +267,9 @@ void FixtureRunner::CreateKochCurveFixtures()
     struct CurveVariant
     {
         std::vector<cl_double4> curves;
-        std::string descriptionSuffix;
+        std::string description;
     };
+
     std::vector<CurveVariant> curveVariants;
     {
         std::vector<cl_double4> singleCurve = {{0.0, 0.0, 1000.0, 0.0}};
@@ -277,13 +279,13 @@ void FixtureRunner::CreateKochCurveFixtures()
         };
         std::vector<cl_double4> snowflakeTriangleCurves;
         {
-            cl_double2 A = { 300.0, 646.41 };
-            cl_double2 B = { 500.0, 300.0 };
-            cl_double2 C = { 700.0, 646.41 };
+            cl_double2 A = {300.0, 646.41};
+            cl_double2 B = {500.0, 300.0};
+            cl_double2 C = {700.0, 646.41};
             snowflakeTriangleCurves = {
-                Utils::CombineTwoDouble2Vectors(B, A),
-                Utils::CombineTwoDouble2Vectors(C, B),
-                Utils::CombineTwoDouble2Vectors(A, C)
+                Utils::CombineTwoDouble2Vectors( B, A ),
+                Utils::CombineTwoDouble2Vectors( C, B ),
+                Utils::CombineTwoDouble2Vectors( A, C )
             };
         }
         std::vector<cl_double4> snowflakeSomeFigure = {
@@ -304,35 +306,54 @@ void FixtureRunner::CreateKochCurveFixtures()
                 Utils::CombineTwoDouble2Vectors( C, D ),
             };
         }
-        curveVariants = { 
-            { singleCurve, "single curve" }, 
-            { twoCurvesFace2Face, "two curves" },
-            { snowflakeTriangleCurves, "triangle" },
-            { snowflakeSquareCurves, "square"},
-            { snowflakeSomeFigure, "some figure"}
+        curveVariants = {
+            {singleCurve, "single curve"},
+            {twoCurvesFace2Face, "two curves"},
+            {snowflakeTriangleCurves, "triangle"},
+            {snowflakeSquareCurves, "square"},
+            {snowflakeSomeFigure, "some figure"}
         };
     }
-    
-    for (int i: iterationCountVariants)
+
+    for( int iterations : iterationCountVariants )
     {
-        for (const auto& curveVariant: curveVariants)
+        for( const auto& curveVariant : curveVariants )
         {
+            auto fixture_family = std::make_shared<FixtureFamily>();
+            fixture_family->name = ( boost::format( "Koch curve, %1%, %2% iterations, %3%" ) %
+                TypeInfo<T>::description %
+                iterations %
+                curveVariant.description ).str();
+            // TODO fixture_family->element_count can be calculated but is not trivial
+
+            std::vector<T4> casted_curves;
+            std::transform( curveVariant.curves.cbegin(), curveVariant.curves.cend(),
+                std::back_inserter( casted_curves ),
+                []( const cl_double4& v ) -> T4
             {
-                auto ptr = std::make_shared<KochCurveFixture<cl_float,
-                    cl_float2, cl_float4>>( i, Utils::ConvertDouble4ToFloat4Vectors( curveVariant.curves ),
-                        1000.0f, 1000.0f, curveVariant.descriptionSuffix );
-                fixtures_.push_back( ptr );
-            }
+                return Utils::StaticCastVector4<T4, cl_double4>( v );
+            } );
+
+            for( auto& platform : platform_list_.OpenClPlatforms() )
             {
-                auto ptr = std::make_shared<KochCurveFixture<cl_double,
-                    cl_double2, cl_double4>>( i, curveVariant.curves, 1000.0, 1000.0, 
-                        curveVariant.descriptionSuffix );
-                fixtures_.push_back( ptr );
+                for( auto& device : platform->GetDevices() )
+                {
+                    fixture_family->fixtures.insert( std::make_pair<const FixtureId, std::shared_ptr<Fixture>>(
+                        FixtureId( fixture_family->name, device, "" ),
+                        std::make_shared<KochCurveOpenClFixture<T, T4>>(
+                            std::dynamic_pointer_cast<OpenClDevice>( device ),
+                            iterations, casted_curves,
+                            1000.0, 1000.0,
+                            fixture_family->name
+                        )
+                    ) );
+                }
             }
+            fixture_families_.push_back( fixture_family );
         }
     }
 }
-
+#if 0
 void FixtureRunner::CreateMultibrotSetFixtures()
 {
     // TODO add support for negative powers
@@ -408,11 +429,13 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
         CreateDampedWave2DFixtures<double>();
         CreateDampedWave2DFixtures<half_float::half, HalfPrecisionNormalDistribution>();
     }
-#if 0
     if (fixturesToRun.kochCurve)
     {
-        CreateKochCurveFixtures();
+        CreateKochCurveFixtures<float, cl_float4>();
+        CreateKochCurveFixtures<double, cl_double4>();
+        //CreateKochCurveFixtures<half_float::half, half_float::half[4]>(); // TODO enable
     }
+#if 0
     if (fixturesToRun.multibrotSet)
     {
         CreateMultibrotSetFixtures();
@@ -513,6 +536,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
                     fixtureName << "\" failed to build on device \"" <<
                     e.DeviceName() << "\"";
                 BOOST_LOG_TRIVIAL( error ) << stream.str();
+                BOOST_LOG_TRIVIAL( info ) << "Build options: " << e.BuildOptions();
                 BOOST_LOG_TRIVIAL( info ) << "Build log: " << std::endl << e.BuildLog();
                 BOOST_LOG_TRIVIAL( debug ) << e.what();
                 fixture_results.failure_reason = "OpenCL Program failed to build";

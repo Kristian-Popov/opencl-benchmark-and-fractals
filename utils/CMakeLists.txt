@@ -18,7 +18,6 @@ add_library( utils
     operation_step.h
     half_precision_fp.h
     program_source_repository.h
-    koch_curve_utils.h
     program_build_failed_exception.h
 )
 

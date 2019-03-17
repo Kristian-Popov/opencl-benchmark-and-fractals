@@ -158,8 +158,16 @@ namespace Utils
         return result;
     }
 
-    // TODO add more generic solution?
-    std::vector<cl_float4> ConvertDouble4ToFloat4Vectors( const std::vector<cl_double4>& vectors );
+    template<typename T4, typename U4>
+    T4 StaticCastVector4( const U4& v )
+    {
+        return T4( {
+            static_cast<float>( v.s[0] ),
+            static_cast<float>( v.s[1] ),
+            static_cast<float>( v.s[2] ),
+            static_cast<float>( v.s[3] )
+        } );
+    }
 
     cl_double4 CombineTwoDouble2Vectors( const cl_double2& a, const cl_double2& b);
 

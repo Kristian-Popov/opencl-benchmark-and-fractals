@@ -2,7 +2,6 @@
 
 #include <vector>
 
-#include "koch_curve_utils.h"
 #include "program_source_repository.h"
 #include "utils.h"
 

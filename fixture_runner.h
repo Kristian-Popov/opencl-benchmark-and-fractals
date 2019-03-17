@@ -39,6 +39,7 @@ private:
     void CreateTrivialFixtures();
     template<typename T, typename D = std::normal_distribution<T>>
     void CreateDampedWave2DFixtures();
+    template<typename T, typename T4>
     void CreateKochCurveFixtures();
     void CreateMultibrotSetFixtures();
     void CreateMultiprecisionFactorialFixtures();
