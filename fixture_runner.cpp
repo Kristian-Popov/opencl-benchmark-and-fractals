@@ -27,8 +27,8 @@
 #include "fixtures/damped_wave_opencl_fixture.h"
 #include "fixtures/trivial_factorial_opencl_fixture.h"
 #include "fixtures/koch_curve_opencl_fixture.h"
+#include "fixtures/multibrot/multibrot_opencl_fixture.h"
 #if 0
-#include "fixtures/multibrot_fractal_fixture.h"
 #include "fixtures/multiprecision_factorial_fixture.h"
 #endif
 
@@ -42,6 +42,8 @@
 
 namespace
 {
+    // TODO it is a template specialization but other places use other structures use other methods,
+    // consolidate them somehow?
     template<typename T>
     struct TypeInfo
     {
@@ -64,6 +66,52 @@ namespace
     struct TypeInfo<half_float::half>
     {
         static constexpr const char* description = "half precision";
+    };
+
+    template<typename T>
+    struct MultibrotSetParams
+    {
+        // static constexpr const size_t width_pix;
+        // static constexpr const size_t height_pix;
+    };
+
+    template<>
+    struct MultibrotSetParams<half_float::half>
+    {
+        static constexpr const size_t width_pix = 1000;
+        static constexpr const size_t height_pix = 1000;
+    };
+
+    template<>
+    struct MultibrotSetParams<float>
+    {
+        static constexpr const size_t width_pix = 2000;
+        static constexpr const size_t height_pix = 2000;
+    };
+
+    template<>
+    struct MultibrotSetParams<double>
+    {
+        static constexpr const size_t width_pix = 3000;
+        static constexpr const size_t height_pix = 3000;
+    };
+
+    template<typename P>
+    struct MultibrotResultConstants
+    {
+        // static constexpr const char* pixel_type_description;
+    };
+
+    template<>
+    struct MultibrotResultConstants<cl_uchar>
+    {
+        static constexpr const char* pixel_type_description = "grayscale 8 bit";
+    };
+
+    template<>
+    struct MultibrotResultConstants<cl_ushort>
+    {
+        static constexpr const char* pixel_type_description = "grayscale 16 bit";
     };
 }
 
@@ -353,38 +401,44 @@ void FixtureRunner::CreateKochCurveFixtures()
         }
     }
 }
-#if 0
+
+template<typename T, typename P>
 void FixtureRunner::CreateMultibrotSetFixtures()
 {
-    // TODO add support for negative powers
     std::vector<double> powers = { 1.0, 2.0, 3.0, 7.0, 3.5, 0.1, 0.5 };
-    std::array<double, 2> realRange = {-2.5, 1.5}, imgRange = {-2.0, 2.0};
-
-    for (double power: powers)
+    std::complex<double> min{ -2.5, -2.0 };
+    std::complex<double> max{ 1.5, 2.0 };
+    for( double power: powers )
     {
+        auto fixture_family = std::make_shared<FixtureFamily>();
+        fixture_family->name = ( boost::format( "%1%, %3%, %4%" ) %
+            ( ( power == 2.0 ) ? std::string( "Mandelbrot set" ) : "Multibrot set, power " + std::to_string( power ) ) %
+            power %
+            TypeInfo<T>::description %
+            MultibrotResultConstants<P>::pixel_type_description ).str();
+        fixture_family->element_count = MultibrotSetParams<T>::width_pix * MultibrotSetParams<T>::height_pix;
+
+        for( auto& platform : platform_list_.OpenClPlatforms() )
         {
-            auto ptr = std::make_shared<MultibrotFractalFixture<cl_float>>(
-                3000, 3000, realRange.at(0), realRange.at(1), imgRange.at(0), imgRange.at(1), power );
-            fixtures_.push_back( ptr );
+            for( auto& device : platform->GetDevices() )
+            {
+                fixture_family->fixtures.insert( std::make_pair<const FixtureId, std::shared_ptr<Fixture>>(
+                    FixtureId( fixture_family->name, device, "" ),
+                    std::make_shared<MultibrotOpenClFixture<T, P>>(
+                            std::dynamic_pointer_cast<OpenClDevice>( device ),
+                            MultibrotSetParams<T>::width_pix, MultibrotSetParams<T>::height_pix,
+                            min, max,
+                            power,
+                            fixture_family->name
+                        )
+                ) );
+            }
         }
-        {
-            auto ptr = std::make_shared<MultibrotFractalFixture<cl_double>>(
-                2000, 2000, realRange.at(0), realRange.at(1), imgRange.at(0), imgRange.at(1), power );
-            fixtures_.push_back( ptr );
-        }
-        {
-            auto ptr = std::make_shared<MultibrotFractalFixture<half_float::half>>(
-                1000, 1000, 
-                static_cast<half_float::half>( realRange.at( 0 )), 
-                static_cast<half_float::half>( realRange.at( 1 )),
-                static_cast<half_float::half>( imgRange.at( 0 )),
-                static_cast<half_float::half>( imgRange.at( 1 )),
-                static_cast<half_float::half>( power ));
-            fixtures_.push_back( ptr );
-        }
+        fixture_families_.push_back( fixture_family );
     }
 }
 
+#if 0
 void FixtureRunner::CreateMultiprecisionFactorialFixtures()
 {
     std::vector<uint32_t> inputs = { 5, 10, 20, 50, 100, 200, 500, 1000, 10000 };
@@ -395,6 +449,7 @@ void FixtureRunner::CreateMultiprecisionFactorialFixtures()
     } );
 }
 #endif
+
 void FixtureRunner::SetFloatingPointEnvironment()
 {
     int result = std::fesetround( FE_TONEAREST );
@@ -434,6 +489,16 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
         CreateKochCurveFixtures<float, cl_float4>();
         CreateKochCurveFixtures<double, cl_double4>();
         //CreateKochCurveFixtures<half_float::half, half_float::half[4]>(); // TODO enable
+    }
+    if( fixturesToRun.multibrotSet )
+    {
+        CreateMultibrotSetFixtures<half_float::half, cl_uchar>();
+        CreateMultibrotSetFixtures<float, cl_uchar>();
+        CreateMultibrotSetFixtures<double, cl_uchar>();
+
+        CreateMultibrotSetFixtures<half_float::half, cl_ushort>();
+        CreateMultibrotSetFixtures<float, cl_ushort>();
+        CreateMultibrotSetFixtures<double, cl_ushort>();
     }
 #if 0
     if (fixturesToRun.multibrotSet)

@@ -30,6 +30,11 @@ public:
         return queue_;
     }
 
+    boost::compute::device& device()
+    {
+        return device_;
+    }
+
     std::vector<std::string> Extensions() override
     {
         return device_.extensions();

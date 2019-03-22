@@ -40,6 +40,7 @@ add_library( commonlib
     fixture_runner.cpp
     fixture_runner.h
     half_precision_normal_distribution.h
+    mapped_opencl_buffer.h
 
     documents/csv_document.h
     documents/png_document_builder.h
@@ -59,6 +60,11 @@ add_library( commonlib
     fixtures/fixture_id.h
     fixtures/trivial_factorial_opencl_fixture.h
     fixtures/koch_curve_opencl_fixture.h
+
+    fixtures/multibrot/multibrot_opencl_calculator.cpp
+    fixtures/multibrot/multibrot_opencl_calculator.h
+    fixtures/multibrot/multibrot_opencl_fixture.cpp
+    fixtures/multibrot/multibrot_opencl_fixture.h
     # fixtures/multibrot_fractal_fixture.cpp
     # fixtures/multibrot_fractal_fixture.h
     # fixtures/multiprecision_factorial_fixture.h

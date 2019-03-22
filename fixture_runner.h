@@ -41,8 +41,9 @@ private:
     void CreateDampedWave2DFixtures();
     template<typename T, typename T4>
     void CreateKochCurveFixtures();
-    void CreateMultibrotSetFixtures();
-    void CreateMultiprecisionFactorialFixtures();
+    template<typename T, typename P>
+    void FixtureRunner::CreateMultibrotSetFixtures();
+    //void CreateMultiprecisionFactorialFixtures();
 
     std::vector<std::shared_ptr<FixtureFamily>> fixture_families_;
     PlatformList platform_list_;
