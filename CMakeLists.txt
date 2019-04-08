@@ -27,7 +27,14 @@ find_package(Boost 1.65.1 REQUIRED )
 # Look for libraries in the following folders
 link_directories(${OpenCL_LIBRARY} ${Boost_LIBRARY_DIRS})
 
+# Add nlohmann_json library and disable its unit tests
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+set(JSON_MultipleHeaders ON CACHE INTERNAL "")
+add_subdirectory( contrib/nlohmann-json )
+
 # Add subprojects
+add_subdirectory(multibrot_opencl)
+add_subdirectory(multibrot_console)
 add_subdirectory(utils)
 add_subdirectory(unit_tests)
 add_subdirectory(contrib/lodepng)
@@ -61,12 +68,8 @@ add_library( commonlib
     fixtures/trivial_factorial_opencl_fixture.h
     fixtures/koch_curve_opencl_fixture.h
 
-    fixtures/multibrot/multibrot_opencl_calculator.cpp
-    fixtures/multibrot/multibrot_opencl_calculator.h
     fixtures/multibrot/multibrot_opencl_fixture.cpp
     fixtures/multibrot/multibrot_opencl_fixture.h
-    # fixtures/multibrot_fractal_fixture.cpp
-    # fixtures/multibrot_fractal_fixture.h
     # fixtures/multiprecision_factorial_fixture.h
 
     iterators/sequential_values_iterator.h
@@ -82,12 +85,21 @@ add_library( commonlib
     reporters/benchmark_reporter.h
 )
 
-target_include_directories( commonlib PUBLIC ${CMAKE_SOURCE_DIR}
+target_include_directories( commonlib PUBLIC
+    ${CMAKE_SOURCE_DIR}
     ${OpenCL_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/contrib
     ${Boost_INCLUDE_DIRS}
-    ${CMAKE_SOURCE_DIR}/utils )
-target_link_libraries( commonlib ${OpenCL_LIBRARIES} ${Boost_LIBRARIES} utils lodepng)
+    ${CMAKE_SOURCE_DIR}/utils
+)
+target_link_libraries( commonlib
+    ${OpenCL_LIBRARIES}
+    ${Boost_LIBRARIES}
+    utils
+    lodepng
+    nlohmann_json::nlohmann_json
+    MultibrotOpenCLCalculator
+)
 
 if (UNIX)
     target_link_libraries( commonlib pthread)

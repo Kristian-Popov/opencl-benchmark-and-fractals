@@ -7,7 +7,7 @@
 
 #include "devices/opencl_device.h"
 #include "fixtures/fixture.h"
-#include "fixtures/multibrot/multibrot_opencl_calculator.h"
+#include "multibrot_opencl/multibrot_opencl_calculator.h"
 
 // TODO add support for color and grayscale result, both 8 and 16 bit
 // may be even floating point pixel formal

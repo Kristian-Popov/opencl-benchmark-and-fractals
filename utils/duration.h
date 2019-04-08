@@ -3,9 +3,7 @@
 #include <chrono>
 #include <string>
 
-#include "nlohmann/json.hpp"
-
-using nlohmann::json;
+#include "nlohmann/json_fwd.hpp"
 
 namespace boost
 {
@@ -177,5 +175,6 @@ private:
     InternalType duration_;
 };
 
+using nlohmann::json;
 void to_json( json& j, const Duration& p );
 void from_json( const json& j, Duration& p );

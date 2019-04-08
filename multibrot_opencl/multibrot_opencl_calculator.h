@@ -5,7 +5,7 @@
 
 #include "boost/compute.hpp"
 
-#include "half_precision_fp.h"
+#include <utils/half_precision_fp.h>
 #include <utils/utils.h> // TODO split that header to move EXCEPTION_ASSERT to smaller header
 
 // TODO add support for color and grayscale result, both 8 and 16 bit
@@ -42,7 +42,7 @@ public:
 
         // Verify that previous operation has finished
         // This operation may cause blocking on some OpenCL implementations.
-        // TODO may be if prevvious operation has not completed yet, log a warning and wait for it?
+        // TODO may be if previous operation has not completed yet, log a warning and wait for it?
         if( prev_event_ && prev_event_.status() != CL_COMPLETE )
         {
             throw std::logic_error( "Previous request to calculate and transfer Multibrot data is not yet finished" );
@@ -50,6 +50,18 @@ public:
 
         auto input_min_conv = static_cast<std::complex<T>>( input_min );
         auto input_max_conv = static_cast<std::complex<T>>( input_max );
+
+        std::complex<T> input_diff(
+            static_cast<T>( ( input_max_conv.real() - input_min_conv.real() ) / width_pix ),
+            static_cast<T>( ( input_max_conv.imag() - input_min_conv.imag() ) / height_pix )
+        );
+        if( input_diff.real() == 0 || input_diff.imag() == 0 )
+        {
+            throw std::invalid_argument( "Requested image is too big for current temporary data type." );
+        }
+
+        // TODO we could use set_arg() overload for fundamental types for float and double
+        // types that is easier to use, but have to add a custom overload for half and its vectors
         kernel_.set_arg( 0, sizeof( T ), &input_min_conv );
         kernel_.set_arg( 1, sizeof( T ), &input_max_conv );
         kernel_.set_arg( 2, sizeof( T ), reinterpret_cast<T(&)[2]>( input_min_conv ) + 1 );
@@ -69,9 +81,11 @@ public:
         }
 
         auto copy_future =
-            boost::compute::copy_async( output_device_vector_.cbegin(), output_device_vector_.cbegin() + width_pix * height_pix,
+            boost::compute::copy_async( output_device_vector_.cbegin(),
+                output_device_vector_.cbegin() + ( width_pix * height_pix ),
                 output_iter, queue_ );
         prev_event_ = copy_future.get_event();
+
         return copy_future;
     }
 private:

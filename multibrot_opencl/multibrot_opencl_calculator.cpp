@@ -1,4 +1,4 @@
-#include "fixtures/multibrot/multibrot_opencl_calculator.h"
+#include "multibrot_opencl_calculator.h"
 
 #include <boost/format.hpp>
 
@@ -120,8 +120,7 @@ __kernel void MultibrotSetKernel(REAL_T rmin, REAL_T rmax, REAL_T imin, REAL_T i
     REAL_T rstep = ( rmax - rmin ) / get_global_size(0);
     REAL_T istep = ( imax - imin ) / get_global_size(1);
 
-    // TODO is it inverted by accident?
-    size_t rowWidth = get_global_size(1);
+    size_t rowWidth = get_global_size(0);
     size_t resultIndex = get_global_id(1) * rowWidth + get_global_id(0);
 
     REAL_T real = rmin + get_global_id(0) * rstep;

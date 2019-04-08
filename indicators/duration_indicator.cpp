@@ -3,6 +3,8 @@
 #include "fixtures/fixture_family.h"
 #include <utils.h>
 
+#include "nlohmann/json.hpp"
+
 void DurationIndicator::Calculate( const FixtureBenchmark& benchmark )
 {
     if( !benchmark.durations.empty() )
