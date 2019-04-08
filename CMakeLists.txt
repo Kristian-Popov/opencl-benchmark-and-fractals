@@ -109,6 +109,7 @@ set_property(TARGET commonlib PROPERTY CXX_STANDARD 14)
 set_property(TARGET commonlib PROPERTY CXX_STANDARD_REQUIRED ON)
 
 IF(WIN32) # Check if we are on Windows
+  add_definitions(-DWIN32)
   if(MSVC) # Check if we are using the Visual Studio compiler
   elseif(CMAKE_COMPILER_IS_GNUCXX)
     # message(SEND_ERROR "You are using an unsupported Windows compiler! (GCC)")
@@ -116,14 +117,11 @@ IF(WIN32) # Check if we are on Windows
     # message(SEND_ERROR "You are using an unsupported Windows compiler! (Not MSVC or GCC)")
   endif()
 elseif(UNIX)
+  add_definitions(-DUNIX)
   # message(SEND_ERROR "You are on an unsupported platform! (Unix)")
 else()
   # message(SEND_ERROR "You are on an unsupported platform! (Not Win32 or Unix)")
 ENDIF()
-
-if (UNIX)
-    # SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fext-numeric-literals" )
-endif (UNIX)
 
 # Add executable projects
 add_subdirectory(benchmark)

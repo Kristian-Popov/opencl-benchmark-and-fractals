@@ -15,18 +15,46 @@
 #include <boost/program_options.hpp>
 #include "lodepng/source/lodepng.h"
 
+#ifdef WIN32
+#   include <windows.h>
+#   include <tchar.h>
+#endif
+
 namespace
 {
     constexpr const char* kDefaultSizePix = "10000x10000";
     constexpr const char* kFirstPhaseTempFileRegexpr = R"(^multibrot_\d+_\d+\.png$)";
     constexpr const char* kRowTempFileRegexpr = R"(row_\d+\.png)";
-    // TODO write files to a temporary folder( like / tmp on Linux ) ?
-    constexpr const char* kTempFolder = ".";
+
+#ifdef WIN32
+    boost::filesystem::path FindTempDirectoryWin()
+    {
+        TCHAR temp_buffer[MAX_PATH + 1];
+        GetTempPathA( MAX_PATH + 1, temp_buffer );
+        return boost::filesystem::path{temp_buffer};
+    }
+#endif
+
+    // Find a folder dedicated to temporary files
+    // TODO move this to a separate class or contribute to another library?
+    boost::filesystem::path FindTempDirectory()
+    {
+#ifdef UNIX
+        return "/tmp/multibrot_console/";
+#elif defined WIN32
+        // Cache it, it may be relatively expensive
+        static boost::filesystem::path temp_dir = FindTempDirectoryWin();
+        return temp_dir / "multibrot_console";
+#else
+        // Use a subfolder in current folder on other systems
+        return "./multibrot_console/";
+#endif
+    }
 
     void RemoveTemporaryFiles( const char* regexpr )
     {
-        std::regex regex{ regexpr };
-        for( auto& dir : boost::filesystem::directory_iterator( kTempFolder ) )
+        std::regex regex{regexpr};
+        for( auto& dir : boost::filesystem::directory_iterator( FindTempDirectory() ) )
         {
             if( std::regex_match( dir.path().filename().string(), regex ) )
             {
@@ -38,13 +66,30 @@ namespace
             }
         }
     }
+
+    void PrepareTempFolder()
+    {
+        using namespace boost::filesystem;
+        const path temp_folder = FindTempDirectory();
+        if( exists( temp_folder ) )
+        {
+            if( !is_directory( temp_folder ) )
+            {
+                throw std::runtime_error( "Temporary folder name is taken by another file." );
+            }
+        }
+        else
+        {
+            create_directories( temp_folder );
+        }
+    }
 }
 
 int main( int argc, char** argv )
 {
     namespace log = boost::log::trivial;
 
-    double power = 2.0;
+    double power = 2.0; // TODO make configurable
     std::string size_pix;
     boost::program_options::options_description desc( "Multibrot set plotter - console version." );
     {
@@ -130,6 +175,7 @@ int main( int argc, char** argv )
             total_width, total_height, min, max, power, 200
         };
 
+        PrepareTempFolder();
         BOOST_LOG_TRIVIAL( info ) << "Deleting left-over temporary files from previous operation "
             "multibrot_*_xxxxx.png";
         RemoveTemporaryFiles( kFirstPhaseTempFileRegexpr );
@@ -142,7 +188,7 @@ int main( int argc, char** argv )
         // List of segments stored by their y coordinates
         // TODO is storing segments is needed at all?
         std::unordered_map<size_t, std::vector<ImagePartitioner::Segment>> segments;
-        const boost::filesystem::path temp_folder{ kTempFolder };
+        const boost::filesystem::path temp_folder{ FindTempDirectory() };
 
         calculator.Calculate( [&] (
             const boost::compute::device& device,
@@ -178,9 +224,13 @@ int main( int argc, char** argv )
             // TODO change call to ImageMagick by Magick++ library, that way there's no need
             // to call dangerous method system(), installing it beforehand
             // and possibly can be done in parallel
+            std::string y_str = ( boost::format( "%|05|" ) % row.first ).str();
             BOOST_LOG_TRIVIAL( info ) << "Row building error code is " <<
-                system( ( boost::format( "magick montage multibrot_*_%|05|.png -tile x1 -mode Concatenate "
-                    "row_%|05|.png" ) % row.first % row.first ).str().c_str() );
+                system( ( boost::format( "magick montage %1%/multibrot_*_%2%.png -tile x1 -mode Concatenate "
+                    "%1%/row_%2%.png" ) %
+                    FindTempDirectory() %
+                    y_str
+            ).str().c_str() );
         }
 
         BOOST_LOG_TRIVIAL( info ) << "Deleting temporary files multibrot_*_xxxxx.png";
@@ -188,7 +238,10 @@ int main( int argc, char** argv )
 
         BOOST_LOG_TRIVIAL( info ) << "Started building result image, it may take a while";
         BOOST_LOG_TRIVIAL( info ) << "Result building error code is " <<
-            system( "magick montage row_*.png -tile 1x -mode Concatenate multibrot.png" );
+            system( ( boost::format(
+                "magick montage %1%/row_*.png -tile 1x -mode Concatenate multibrot.png" ) %
+                FindTempDirectory()
+            ).str().c_str() );
 
         BOOST_LOG_TRIVIAL( info ) << "Deleting temporary files row_xxxxx.png";
         RemoveTemporaryFiles( kRowTempFileRegexpr );
