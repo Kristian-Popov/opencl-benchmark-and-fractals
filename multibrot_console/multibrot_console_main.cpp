@@ -3,6 +3,7 @@
 #include <regex>
 #include <string>
 
+#include "coordinate_formatter.h"
 #include "utils/utils.h"
 
 #include "multibrot_opencl/multibrot_parallel_calculator.h"
@@ -67,6 +68,7 @@ namespace
         }
     }
 
+    // TODO move this to a separate class and remove temp folder in its destructor
     void PrepareTempFolder()
     {
         using namespace boost::filesystem;
@@ -89,7 +91,7 @@ int main( int argc, char** argv )
 {
     namespace log = boost::log::trivial;
 
-    double power = 2.0; // TODO make configurable
+    double power = 2.0;
     std::string size_pix;
     boost::program_options::options_description desc( "Multibrot set plotter - console version." );
     {
@@ -169,6 +171,8 @@ int main( int argc, char** argv )
             total_height = std::strtoull( size_pix.c_str() + x_pos + 1, nullptr, 10 );
         }
 
+        CoordinateFormatter formatter{total_width, total_height};
+
         std::complex<double> min{-2.5, -2.0};
         std::complex<double> max{1.5, 2.0};
         MultibrotParallelCalculator calculator{
@@ -203,7 +207,9 @@ int main( int argc, char** argv )
             }
             segment_vector_iter->second.push_back( segment );
 
-            std::string filename = ( boost::format( "multibrot_%|05|_%|05|.png" ) % segment.x % segment.y ).str();
+            std::string filename = ( boost::format( "multibrot_%1%_%2%.png" ) %
+                formatter.Format( segment.x ) % formatter.Format( segment.y )
+            ).str();
             unsigned error = lodepng::encode( ( temp_folder / filename ).string(),
                 result,
                 segment.width_pix, segment.height_pix, LCT_GREY,
@@ -224,12 +230,11 @@ int main( int argc, char** argv )
             // TODO change call to ImageMagick by Magick++ library, that way there's no need
             // to call dangerous method system(), installing it beforehand
             // and possibly can be done in parallel
-            std::string y_str = ( boost::format( "%|05|" ) % row.first ).str();
             BOOST_LOG_TRIVIAL( info ) << "Row building error code is " <<
                 system( ( boost::format( "magick montage %1%/multibrot_*_%2%.png -tile x1 -mode Concatenate "
                     "%1%/row_%2%.png" ) %
                     FindTempDirectory() %
-                    y_str
+                    formatter.Format( row.first )
             ).str().c_str() );
         }
 

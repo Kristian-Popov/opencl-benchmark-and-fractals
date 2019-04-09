@@ -43,6 +43,8 @@ add_subdirectory(contrib/lodepng)
 project(OpenCLBenchmarkSuite CXX)
 
 add_library( commonlib
+    coordinate_formatter.cpp
+    coordinate_formatter.h
     data_verification_failed_exception.h
     fixture_runner.cpp
     fixture_runner.h
