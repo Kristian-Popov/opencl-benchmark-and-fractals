@@ -18,7 +18,7 @@ Requires a definition:
 - POWER_FUNC - name of a function that executes power of Z and adds C
   Function must take the following parameters:
   - Z = (zreal, zimg) - input and output number
-  - zlenSqr - square of absolute value of Z (square)
+  - zlen_sqr - square of absolute value of Z (square)
   - power
   - C = (real, img) - the second addend
   In general this function should do the following mathematical operation:
@@ -26,18 +26,23 @@ Requires a definition:
   Different functions are used for optimisation purposes
 */
 
+// Preprocessor magic based on https://stackoverflow.com/a/1489985
+#define PASTER(x,y,z) x ## y ## z
+#define EVALUATOR(x,y,z)  PASTER(x,y,z)
+#define CONVERT EVALUATOR(convert_, RESULT_T, _sat)
+
 // Universal complex number power function, supports all real powers but the slowest
 void UniversalPowerOfComplex(
     __private REAL_T* restrict zreal,
     __private REAL_T* restrict zimg,
-    const REAL_T zlenSqr,
+    const REAL_T zlen_sqr,
     const REAL_T power,
     const REAL_T real,
     const REAL_T img
 )
 {
     // Formula for z^p is a multi-value function, by we use a basic plane only
-    REAL_T multiplier = powr( (REAL_T)(zlenSqr), (REAL_T)(0.5*power) );
+    REAL_T multiplier = powr( (REAL_T)(zlen_sqr), (REAL_T)(0.5*power) );
     // TODO danger zone here - at first iteration atan2 gets zero as both arguments
     // Fix UB somehow
     REAL_T phi = atan2( *zimg, *zreal );
@@ -49,7 +54,7 @@ void UniversalPowerOfComplex(
 void Power1OfComplex(
     __private REAL_T* restrict zreal,
     __private REAL_T* restrict zimg,
-    const REAL_T zlenSqr,
+    const REAL_T zlen_sqr,
     const REAL_T power,
     const REAL_T real,
     const REAL_T img
@@ -63,7 +68,7 @@ void Power1OfComplex(
 void SquareOfComplex(
     __private REAL_T* restrict zreal,
     __private REAL_T* restrict zimg,
-    const REAL_T zlenSqr,
+    const REAL_T zlen_sqr,
     const REAL_T power,
     const REAL_T real,
     const REAL_T img
@@ -78,7 +83,7 @@ void SquareOfComplex(
 void CubeOfComplex(
     __private REAL_T* restrict zreal,
     __private REAL_T* restrict zimg,
-    const REAL_T zlenSqr,
+    const REAL_T zlen_sqr,
     const REAL_T power,
     const REAL_T real,
     const REAL_T img
@@ -89,23 +94,47 @@ void CubeOfComplex(
     *zreal = zreal_new;
 }
 
-RESULT_T CalcPointOnMultibrotSet( REAL_T real, REAL_T img, REAL_T power )
+/*
+    Calculate number of iterations that point after which point
+    escaped the set.
+    Returns raw number of iterations.
+*/
+REAL_T CalcPointOnMultibrotSet( REAL_T real, REAL_T img, REAL_T power, ushort max_iter_number )
 {
-    RESULT_T iterationNumber = 0;
-    REAL_T escapePointSqr = 2*2;
+    REAL_T iter_number = 0;
     REAL_T zreal = 0;
     REAL_T zimg = 0;
-    REAL_T zlenSqr = 0;
-    while (zlenSqr < escapePointSqr && iterationNumber < MAX_ITER_NUMBER)
+    REAL_T zlen_sqr = 0;
+    while ( zlen_sqr < 2*2 && iter_number < max_iter_number )
     {
-        POWER_FUNC( &zreal, &zimg, zlenSqr, power, real, img );
+        POWER_FUNC( &zreal, &zimg, zlen_sqr, power, real, img );
 
-        zlenSqr = zreal*zreal + zimg*zimg;
-        ++iterationNumber;
+        zlen_sqr = zreal*zreal + zimg*zimg;
+        iter_number += 1;
     }
-    iterationNumber = ( RESULT_MAX / MAX_ITER_NUMBER ) * iterationNumber;
-    iterationNumber = RESULT_MAX - iterationNumber;
-    return iterationNumber;
+    return iter_number;
+}
+
+/*
+    Returns iteration number as is, without conversion.
+    Must be used only when RESULT_T is uchar or ushort.
+*/
+RESULT_T RawIterationNumber( REAL_T iter_number, ushort max_iter_number )
+{
+    return CONVERT( iter_number );
+}
+
+/*
+    Scales iteration number so it uses all available values from 0 to max supported by a given
+    number type.
+    Must be used only when RESULT_T is uchar or ushort.
+    Useful for building grayscale images.
+*/
+RESULT_T ScaleIterationNumber( REAL_T iter_number, ushort max_iter_number )
+{
+    iter_number = ( RESULT_MAX / max_iter_number ) * iter_number;
+    iter_number = RESULT_MAX - iter_number;
+    return CONVERT( iter_number );
 }
 
 /*
@@ -114,18 +143,25 @@ RESULT_T CalcPointOnMultibrotSet( REAL_T real, REAL_T img, REAL_T power )
 
     Output is a pointer to buffer that will contain pixel data. Data format is defined by RESULT_T.
 */
-__kernel void MultibrotSetKernel(REAL_T rmin, REAL_T rmax, REAL_T imin, REAL_T imax, REAL_T power,
-    __global RESULT_T* restrict output)
+__kernel void MultibrotSetKernel(
+    REAL_T rmin, REAL_T imin,
+    REAL_T rmax, REAL_T imax,
+    REAL_T power,
+    ushort max_iter_number,
+    __global RESULT_T* restrict output
+)
 {
     REAL_T rstep = ( rmax - rmin ) / get_global_size(0);
     REAL_T istep = ( imax - imin ) / get_global_size(1);
 
-    size_t rowWidth = get_global_size(0);
-    size_t resultIndex = get_global_id(1) * rowWidth + get_global_id(0);
+    size_t row_width = get_global_size(0);
+    size_t result_index = get_global_id(1) * row_width + get_global_id(0);
 
     REAL_T real = rmin + get_global_id(0) * rstep;
     REAL_T img = imin + get_global_id(1) * istep;
-    output[resultIndex] = CalcPointOnMultibrotSet( real, img, power );
+    REAL_T multibrot_val = CalcPointOnMultibrotSet( real, img, power, max_iter_number );
+    RESULT_T result = PROCESS_ITERATION_NUMBER( multibrot_val, max_iter_number );
+    output[result_index] = result;
 }
 )";
 
@@ -186,12 +222,13 @@ MultibrotOpenClCalculator<T, P>::MultibrotOpenClCalculator(
     std::string compiler_options =
         ( boost::format(
             "-Werror -DREAL_T=%1% -DRESULT_T=%2% -DRESULT_MAX=%3% "
-            "-DMAX_ITER_NUMBER=%4% -DPOWER_FUNC=%5%" ) %
+            "-DMAX_ITER_NUMBER=%4% -DPOWER_FUNC=%5% -DPROCESS_ITERATION_NUMBER=%6%" ) %
         TempValueConstants<T>::opencl_type_name %
         ResultTypeConstants<P>::result_type_name %
         ResultTypeConstants<P>::result_max_val_macro %
         max_iterations_ %
-        SelectPowerFunction()
+        SelectPowerFunction() %
+        "ScaleIterationNumber"
         ).str();
 
     // Collecting required extensions

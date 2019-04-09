@@ -63,12 +63,13 @@ public:
         // TODO we could use set_arg() overload for fundamental types for float and double
         // types that is easier to use, but have to add a custom overload for half and its vectors
         kernel_.set_arg( 0, sizeof( T ), &input_min_conv );
-        kernel_.set_arg( 1, sizeof( T ), &input_max_conv );
-        kernel_.set_arg( 2, sizeof( T ), reinterpret_cast<T(&)[2]>( input_min_conv ) + 1 );
+        kernel_.set_arg( 1, sizeof( T ), reinterpret_cast<T( &)[2]>( input_min_conv ) + 1 );
+        kernel_.set_arg( 2, sizeof( T ), &input_max_conv );
         kernel_.set_arg( 3, sizeof( T ), reinterpret_cast<T(&)[2]>( input_max_conv ) + 1 );
         T power_conv = static_cast<T>( power_ );
         kernel_.set_arg( 4, sizeof( T ), &power_conv );
-        kernel_.set_arg( 5, output_device_vector_.get_buffer() );
+        kernel_.set_arg( 5, max_iterations_ );
+        kernel_.set_arg( 6, output_device_vector_.get_buffer() );
 
         boost::compute::extents<2> workgroup_size = {width_pix, height_pix};
         // In-order queue used, so no need to serialize explicitly
@@ -98,7 +99,7 @@ private:
     size_t max_height_pix_;
     double power_;
     int pixel_bit_depth_;
-    int max_iterations_;
+    cl_ushort max_iterations_;
     boost::compute::kernel kernel_;
     boost::compute::vector<P> output_device_vector_;
     boost::compute::event prev_event_;
