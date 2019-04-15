@@ -114,3 +114,13 @@ template class MultibrotOpenClCalculator<double, cl_uchar>;
 template class MultibrotOpenClCalculator<half_float::half, cl_ushort>;
 template class MultibrotOpenClCalculator<float, cl_ushort>;
 template class MultibrotOpenClCalculator<double, cl_ushort>;
+
+// RGB 8 bit
+template class MultibrotOpenClCalculator<half_float::half, cl_uchar4>;
+template class MultibrotOpenClCalculator<float, cl_uchar4>;
+template class MultibrotOpenClCalculator<double, cl_uchar4>;
+
+// RGB 16 bit
+template class MultibrotOpenClCalculator<half_float::half, cl_ushort4>;
+template class MultibrotOpenClCalculator<float, cl_ushort4>;
+template class MultibrotOpenClCalculator<double, cl_ushort4>;

@@ -23,10 +23,11 @@ namespace std
     };
 }
 
+template<typename P>
 class MultibrotParallelCalculator
 {
 public:
-    typedef cl_uchar ResultType;
+    typedef P ResultType;
     typedef std::function<void(
         const boost::compute::device&,
         const ImagePartitioner::Segment&,
@@ -95,3 +96,8 @@ private:
     static constexpr bool use_gpus_ = true;
     static const Duration target_execution_time_;
 };
+
+template class MultibrotParallelCalculator<cl_uchar>;
+template class MultibrotParallelCalculator<cl_ushort>;
+template class MultibrotParallelCalculator<cl_uchar4>;
+template class MultibrotParallelCalculator<cl_ushort4>;

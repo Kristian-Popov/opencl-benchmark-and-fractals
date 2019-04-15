@@ -8,9 +8,11 @@
 
 #include "utils/utils.h"
 
-const Duration MultibrotParallelCalculator::target_execution_time_ = Duration( std::chrono::seconds( 1 ) );
+template<typename P>
+const Duration MultibrotParallelCalculator<P>::target_execution_time_ = Duration( std::chrono::seconds( 1 ) );
 
-MultibrotParallelCalculator::MultibrotParallelCalculator(
+template<typename P>
+MultibrotParallelCalculator<P>::MultibrotParallelCalculator(
     size_t width_pix, size_t height_pix,
     std::complex<double> input_min,
     std::complex<double> input_max,
@@ -66,7 +68,8 @@ MultibrotParallelCalculator::MultibrotParallelCalculator(
     }
 }
 
-std::complex<double> MultibrotParallelCalculator::CalcComplexVal( size_t x, size_t y )
+template<typename P>
+std::complex<double> MultibrotParallelCalculator<P>::CalcComplexVal( size_t x, size_t y )
 {
     return input_min_ + std::complex<double>{
         ( input_max_.real() - input_min_.real() ) * x / width_pix_,
@@ -74,7 +77,8 @@ std::complex<double> MultibrotParallelCalculator::CalcComplexVal( size_t x, size
     };
 }
 
-void MultibrotParallelCalculator::Calculate( Callback cb )
+template<typename P>
+void MultibrotParallelCalculator<P>::Calculate( Callback cb )
 {
     partitioner_.Reset();
 
@@ -90,7 +94,8 @@ void MultibrotParallelCalculator::Calculate( Callback cb )
     }
 }
 
-void MultibrotParallelCalculator::CalculateFirstPhase( Callback cb )
+template<typename P>
+void MultibrotParallelCalculator<P>::CalculateFirstPhase( Callback cb )
 {
     // TODO implement some more reliable check to prevent infinite loops?
     while( 1 )
@@ -139,7 +144,8 @@ void MultibrotParallelCalculator::CalculateFirstPhase( Callback cb )
     }
 }
 
-void MultibrotParallelCalculator::ProcessOperationResults(
+template<typename P>
+void MultibrotParallelCalculator<P>::ProcessOperationResults(
     std::pair<const boost::compute::device, DeviceState>& device_info,
     Callback cb )
 {
