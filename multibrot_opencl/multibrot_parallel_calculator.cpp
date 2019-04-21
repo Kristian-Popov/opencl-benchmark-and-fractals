@@ -12,15 +12,8 @@ template<typename P>
 const Duration MultibrotParallelCalculator<P>::target_execution_time_ = Duration( std::chrono::seconds( 1 ) );
 
 template<typename P>
-MultibrotParallelCalculator<P>::MultibrotParallelCalculator(
-    size_t width_pix, size_t height_pix,
-    std::complex<double> input_min,
-    std::complex<double> input_max,
-    double power,
-    int max_iterations )
+MultibrotParallelCalculator<P>::MultibrotParallelCalculator( size_t width_pix, size_t height_pix )
     : partitioner_( width_pix, height_pix, fragment_width_pix_, fragment_height_pix_ )
-    , input_min_( input_min )
-    , input_max_( input_max )
     , width_pix_( width_pix )
     , height_pix_( height_pix )
 {
@@ -64,25 +57,31 @@ MultibrotParallelCalculator<P>::MultibrotParallelCalculator(
     for( auto& device: devices )
     {
         // TODO implement automatic resizing of memory buffers?
-        device_states_.emplace( device, DeviceState( device, power, max_iterations ) );
+        device_states_.emplace( device, DeviceState( device ) );
     }
 }
 
 template<typename P>
-std::complex<double> MultibrotParallelCalculator<P>::CalcComplexVal( size_t x, size_t y )
+std::complex<double> MultibrotParallelCalculator<P>::CalcComplexVal(
+    std::complex<double> input_min, std::complex<double> input_max, size_t x, size_t y )
 {
-    return input_min_ + std::complex<double>{
-        ( input_max_.real() - input_min_.real() ) * x / width_pix_,
-        ( input_max_.imag() - input_min_.imag() ) * y / height_pix_,
+    return input_min + std::complex<double>{
+        ( input_max.real() - input_min.real() ) * x / width_pix_,
+        ( input_max.imag() - input_min.imag() ) * y / height_pix_,
     };
 }
 
 template<typename P>
-void MultibrotParallelCalculator<P>::Calculate( Callback cb )
+void MultibrotParallelCalculator<P>::Calculate(
+    std::complex<double> input_min, std::complex<double> input_max,
+    double power,
+    int max_iterations,
+    Callback cb
+)
 {
     partitioner_.Reset();
 
-    CalculateFirstPhase( cb );
+    CalculateFirstPhase( input_min, input_max, power, max_iterations, cb );
 
     // Process all remaining operations
     for( auto& device_state : device_states_ )
@@ -95,7 +94,12 @@ void MultibrotParallelCalculator<P>::Calculate( Callback cb )
 }
 
 template<typename P>
-void MultibrotParallelCalculator<P>::CalculateFirstPhase( Callback cb )
+void MultibrotParallelCalculator<P>::CalculateFirstPhase(
+    std::complex<double> input_min, std::complex<double> input_max,
+    double power,
+    int max_iterations,
+    Callback cb
+)
 {
     // TODO implement some more reliable check to prevent infinite loops?
     while( 1 )
@@ -132,11 +136,14 @@ void MultibrotParallelCalculator<P>::CalculateFirstPhase( Callback cb )
                     boost::compute::event(),
                     segment
                 };
-                std::complex<double> input_min = CalcComplexVal( segment.x, segment.y );
-                std::complex<double> input_max = CalcComplexVal(
+                std::complex<double> min = CalcComplexVal( input_min, input_max,
+                    segment.x, segment.y );
+                std::complex<double> max = CalcComplexVal( input_min, input_max,
                     segment.x + segment.width_pix, segment.y + segment.height_pix );
-                auto future = device_state.second.calculator.Calculate( input_min, input_max,
-                    segment.width_pix, segment.height_pix, device_state.second.output_vector.begin(),
+                auto future = device_state.second.calculator.Calculate( min, max,
+                    segment.width_pix, segment.height_pix,
+                    power, max_iterations,
+                    device_state.second.output_vector.begin(),
                     &device_state.second.prev_operation_info.value().calc_event );
                 device_state.second.prev_operation_info.value().copy_event = future.get_event();
             }

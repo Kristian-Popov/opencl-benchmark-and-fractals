@@ -6,15 +6,12 @@
 
 namespace
 {
-    // TODO due to this organization, all these variables classes collide
-    // with other files, isolate them somehow
     static const char* kMainProgram = R"(
 /*
 Requires a definition:
 - REAL_T floating point type (acceptable types are float and, if device supports, half and double),
 - RESULT_T - type of result pixel component (either uchar or ushort)
 - RESULT_MAX - max value accepted by RESULT_T (either CHAR_MAX or USHRT_MAX)
-- MAX_ITER_NUMBER - max iteration number (should be smaller than or equal to RESULT_MAX)
 - POWER_FUNC - name of a function that executes power of Z and adds C
   Function must take the following parameters:
   - Z = (zreal, zimg) - input and output number
@@ -248,35 +245,35 @@ template<typename T, typename P>
 MultibrotOpenClCalculator<T, P>::MultibrotOpenClCalculator(
     const boost::compute::device& device,
     const boost::compute::context& context,
-    size_t max_width_pix, size_t max_height_pix,
-    double power,
-    int max_iterations
+    size_t max_width_pix, size_t max_height_pix
 )
     : device_( device )
     , context_( context )
     , queue_( context, device, boost::compute::command_queue::enable_profiling )
     , max_width_pix_( max_width_pix )
     , max_height_pix_( max_height_pix )
-    , power_( power )
-    , max_iterations_( max_iterations )
     , output_device_vector_( max_width_pix * max_height_pix, context )
 {
-    // Verify that given max iterations cis valid for given pixel bit depth
-    EXCEPTION_ASSERT( max_iterations_ <= ResultTypeConstants<P>::result_max_val );
+    BuildKernels();
+}
 
-    // Compiler options
-    std::string compiler_options =
-        ( boost::format(
-            "-Werror -DREAL_T=%1% -DRESULT_T=%2% -DRESULT_MAX=%3% "
-            "-DMAX_ITER_NUMBER=%4% -DPOWER_FUNC=%5% %6% " ) %
+template<typename T, typename P>
+std::string MultibrotOpenClCalculator<T, P>::PrepareCompilerOptions( const std::string& power_func )
+{
+    return ( boost::format(
+        "-Werror -DREAL_T=%1% -DRESULT_T=%2% -DRESULT_MAX=%3% "
+        "-DPOWER_FUNC=%4% %5% " ) %
         TempValueConstants<T>::opencl_type_name %
         ResultTypeConstants<P>::result_type_name %
         ResultTypeConstants<P>::result_max_val_macro %
-        max_iterations_ %
-        SelectPowerFunction() %
+        power_func %
         ( ResultTypeConstants<P>::color_enabled ? "-DCOLOR_ENABLED" : "" )
     ).str();
+}
 
+template<typename T, typename P>
+void MultibrotOpenClCalculator<T, P>::BuildKernels()
+{
     // Collecting required extensions
     std::string required_extension = TempValueConstants<T>::required_extension;
     std::vector<std::string> extensions;
@@ -285,24 +282,30 @@ MultibrotOpenClCalculator<T, P>::MultibrotOpenClCalculator(
         extensions.push_back( required_extension );
     }
 
-    kernel_ = Utils::BuildKernel( "MultibrotSetKernel", context_, kMainProgram, compiler_options,
-        extensions );
-}
-
-template<typename T, typename P>
-std::string MultibrotOpenClCalculator<T, P>::SelectPowerFunction()
-{
     static const std::unordered_map<double /* power */, std::string> kFixedPowerFunctions = {
         { 1.0, "Power1OfComplex" },
         { 2.0, "SquareOfComplex" },
         { 3.0, "CubeOfComplex" },
     };
 
-    std::string result{ "UniversalPowerOfComplex" }; // Default universal function
-    auto iter = kFixedPowerFunctions.find( power_ );
-    if( iter != kFixedPowerFunctions.cend() )
+    for( const auto& d: kFixedPowerFunctions )
     {
-        result = iter->second;
+        specialized_kernels_.emplace( d.first,
+            Utils::BuildKernel( "MultibrotSetKernel", context_, kMainProgram,
+                PrepareCompilerOptions( d.second ), extensions )
+        );
     }
-    return result;
+
+    universal_kernel_ = Utils::BuildKernel( "MultibrotSetKernel", context_, kMainProgram,
+        PrepareCompilerOptions( "UniversalPowerOfComplex" ), extensions );
+}
+
+template<typename T, typename P>
+void MultibrotOpenClCalculator<T, P>::ExecutePrecalculateChecks(
+    size_t width_pix, size_t height_pix, int max_iterations )
+{
+    EXCEPTION_ASSERT( width_pix <= max_width_pix_ );
+    EXCEPTION_ASSERT( height_pix <= max_height_pix_ );
+    // Verify that given max iterations is valid for given pixel bit depth
+    EXCEPTION_ASSERT( max_iterations <= ResultTypeConstants<P>::result_max_val );
 }

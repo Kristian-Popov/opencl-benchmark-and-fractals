@@ -19,9 +19,7 @@ public:
     MultibrotOpenClCalculator(
         const boost::compute::device& device,
         const boost::compute::context& context,
-        size_t max_width_pix, size_t max_height_pix,
-        double power,
-        int max_iterations
+        size_t max_width_pix, size_t max_height_pix
     );
 
     // Calculate the given region of Multibrot set.
@@ -33,12 +31,13 @@ public:
         std::complex<double> input_min,
         std::complex<double> input_max,
         size_t width_pix, size_t height_pix,
+        double power,
+        int max_iterations,
         I output_iter,
         boost::compute::event* calc_event
     )
     {
-        EXCEPTION_ASSERT( width_pix <= max_width_pix_ );
-        EXCEPTION_ASSERT( height_pix <= max_height_pix_ );
+        ExecutePrecalculateChecks( width_pix, height_pix, max_iterations );
 
         // Verify that previous operation has finished
         // This operation may cause blocking on some OpenCL implementations.
@@ -62,19 +61,26 @@ public:
 
         // TODO we could use set_arg() overload for fundamental types for float and double
         // types that is easier to use, but have to add a custom overload for half and its vectors
-        kernel_.set_arg( 0, sizeof( T ), &input_min_conv );
-        kernel_.set_arg( 1, sizeof( T ), reinterpret_cast<T( &)[2]>( input_min_conv ) + 1 );
-        kernel_.set_arg( 2, sizeof( T ), &input_max_conv );
-        kernel_.set_arg( 3, sizeof( T ), reinterpret_cast<T(&)[2]>( input_max_conv ) + 1 );
-        T power_conv = static_cast<T>( power_ );
-        kernel_.set_arg( 4, sizeof( T ), &power_conv );
-        kernel_.set_arg( 5, max_iterations_ );
-        kernel_.set_arg( 6, output_device_vector_.get_buffer() );
+        boost::compute::kernel& kernel = universal_kernel_;
+        auto kernel_iter = specialized_kernels_.find( power );
+        if( kernel_iter != specialized_kernels_.end() )
+        {
+            kernel = kernel_iter->second;
+        }
+
+        kernel.set_arg( 0, sizeof( T ), &input_min_conv );
+        kernel.set_arg( 1, sizeof( T ), reinterpret_cast<T( &)[2]>( input_min_conv ) + 1 );
+        kernel.set_arg( 2, sizeof( T ), &input_max_conv );
+        kernel.set_arg( 3, sizeof( T ), reinterpret_cast<T(&)[2]>( input_max_conv ) + 1 );
+        T power_conv = static_cast<T>( power );
+        kernel.set_arg( 4, sizeof( T ), &power_conv );
+        kernel.set_arg( 5, static_cast<cl_ushort>( max_iterations ) );
+        kernel.set_arg( 6, output_device_vector_.get_buffer() );
 
         boost::compute::extents<2> workgroup_size = {width_pix, height_pix};
         // In-order queue used, so no need to serialize explicitly
         boost::compute::event calculate_event =
-            queue_.enqueue_nd_range_kernel( kernel_, 2, nullptr, workgroup_size.data(), nullptr );
+            queue_.enqueue_nd_range_kernel( kernel, 2, nullptr, workgroup_size.data(), nullptr );
 
         if( calc_event != nullptr )
         {
@@ -90,17 +96,18 @@ public:
         return copy_future;
     }
 private:
-    std::string SelectPowerFunction();
+    void BuildKernels();
+    std::string PrepareCompilerOptions( const std::string& power_func );
+    void ExecutePrecalculateChecks( size_t width_pix, size_t height_pix, int max_iterations );
 
     boost::compute::device device_;
     boost::compute::context context_;
     boost::compute::command_queue queue_;
     size_t max_width_pix_;
     size_t max_height_pix_;
-    double power_;
     int pixel_bit_depth_;
-    cl_ushort max_iterations_;
-    boost::compute::kernel kernel_;
+    std::unordered_map<double /* power */, boost::compute::kernel> specialized_kernels_;
+    boost::compute::kernel universal_kernel_;
     boost::compute::vector<P> output_device_vector_;
     boost::compute::event prev_event_;
 };

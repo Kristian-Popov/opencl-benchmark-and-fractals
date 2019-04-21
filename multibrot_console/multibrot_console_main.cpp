@@ -113,7 +113,7 @@ namespace
         std::complex<double> min{-2.5, -2.0};
         std::complex<double> max{1.5, 2.0};
         MultibrotParallelCalculator<P> calculator{
-            total_width, total_height, min, max, power, max_iterations
+            total_width, total_height,
         };
 
         PrepareTempFolder();
@@ -131,7 +131,7 @@ namespace
         std::unordered_map<size_t, std::vector<ImagePartitioner::Segment>> segments;
         const boost::filesystem::path temp_folder{FindTempDirectory()};
 
-        calculator.Calculate( [&](
+        calculator.Calculate( min, max, power, max_iterations, [&](
             const boost::compute::device& device,
             const ImagePartitioner::Segment& segment,
             const P* result )

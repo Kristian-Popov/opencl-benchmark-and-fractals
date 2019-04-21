@@ -33,15 +33,16 @@ public:
         const ImagePartitioner::Segment&,
         const ResultType*)> Callback;
     MultibrotParallelCalculator(
-        size_t width_pix, size_t height_pix,
-        std::complex<double> input_min,
-        std::complex<double> input_max,
-        double power,
-        int max_iterations
+        size_t width_pix, size_t height_pix
     );
 
     // TODO how callback should be provided, by value or reference?
-    void Calculate( Callback cb );
+    void Calculate(
+        std::complex<double> input_min, std::complex<double> input_max,
+        double power,
+        int max_iterations,
+        Callback cb
+    );
 private:
     typedef float TempValueType;
     typedef MultibrotOpenClCalculator<TempValueType, ResultType> Calculator;
@@ -61,27 +62,26 @@ private:
         size_t processed_pixels = 0;
         boost::optional<PrevOperationInfo> prev_operation_info;
 
-        DeviceState(
-            const boost::compute::device& device,
-            double power,
-            int max_iterations )
+        DeviceState( const boost::compute::device& device )
             : calculator( device, boost::compute::context{device},
-                max_segment_width_pix_, max_segment_height_pix_,
-                power, max_iterations )
+                max_segment_width_pix_, max_segment_height_pix_ )
             , output_vector( max_segment_width_pix_ * max_segment_height_pix_ )
         {}
     };
 
-    std::complex<double> CalcComplexVal( size_t x, size_t y );
+    std::complex<double> CalcComplexVal( std::complex<double> input_min, std::complex<double> input_max, size_t x, size_t y );
     void ProcessOperationResults(
         std::pair<const boost::compute::device, DeviceState>& device_info,
         Callback cb );
-    void CalculateFirstPhase( Callback cb );
+    void CalculateFirstPhase(
+        std::complex<double> input_min, std::complex<double> input_max,
+        double power,
+        int max_iterations,
+        Callback cb
+    );
 
     std::unordered_map<boost::compute::device, DeviceState> device_states_;
     ImagePartitioner partitioner_;
-    std::complex<double> input_min_;
-    std::complex<double> input_max_;
     size_t width_pix_;
     size_t height_pix_;
     static constexpr size_t fragment_width_pix_ = 100;

@@ -52,8 +52,7 @@ template<typename T, typename P>
 void MultibrotOpenClFixture<T, P>::Initialize()
 {
     calculator_ = std::make_unique<MultibrotOpenClCalculator<T, P>>(
-        device_->device(), device_->GetContext(), width_pix_, height_pix_, power_,
-        ResultTypeConstants<cl_uchar>::max_iterations
+        device_->device(), device_->GetContext(), width_pix_, height_pix_
     );
 }
 
@@ -74,7 +73,9 @@ std::unordered_map<OperationStep, Duration> MultibrotOpenClFixture<T, P>::Execut
 {
     boost::compute::event calc_event;
     auto copy_future = calculator_->Calculate(
-        input_min_, input_max_, width_pix_, height_pix_, output_data_.begin(), &calc_event
+        input_min_, input_max_, width_pix_, height_pix_,
+        power_, ResultTypeConstants<cl_uchar>::max_iterations,
+        output_data_.begin(), &calc_event
     );
 
     copy_future.wait();
