@@ -13,32 +13,30 @@ template<typename T>
 struct DampedWaveFixtureParameters
 {
     T amplitude = 0;
-    T dampingRatio = 0;
-    T angularFrequency = 0;
+    T damping_ratio = 0;
+    T angular_frequency = 0;
     T phase = 0;
     T shift = 0;
 
-    DampedWaveFixtureParameters( T amplitude_, T dampingRatio_, T angularFrequency_, T phase_, T shift_ )
-        : amplitude( amplitude_ )
-        , dampingRatio( dampingRatio_ )
-        , angularFrequency( angularFrequency_ )
-        , phase( phase_ )
-        , shift( shift_ )
+    DampedWaveFixtureParameters( T _amplitude, T _damping_ratio, T _angular_frequency, T _phase, T _shift )
+        : amplitude( _amplitude )
+        , damping_ratio( _damping_ratio )
+        , angular_frequency( _angular_frequency )
+        , phase( _phase )
+        , shift( _shift )
     {
     }
 };
 //#pragma pack(pop)
 
 /*
-paramSet.amplitude * exp(-paramSet.dampingRatio * t) *
-cos(paramSet.angularFrequency * t + paramSet.phase);
+param_set.amplitude * exp(-param_set.damping_ratio * t) *
+cos(param_set.angular_frequency * t + param_set.phase);
     Damped wave fixture
     ( A1 * exp(-D1 * t) * cos( F1 * t + P1 ) ) + ...
     Note that this fixture doesn't verify results since we may get very different
-    results in edge value between CPU and OpenCL implementation (it's even
+    results in edge values between CPU and OpenCL implementation (it's even
     compiler dependent).
-    TODO add absolute/relative difference indicators to calculate
-    max deviation.
 */
 template<typename T>
 class DampedWaveOpenClFixture : public Fixture
@@ -48,7 +46,7 @@ public:
         const std::shared_ptr<OpenClDevice>& device,
         const std::vector<DampedWaveFixtureParameters<T>>& params,
         const std::shared_ptr<DataSource<T>>& input_data_source,
-        size_t dataSize,
+        size_t data_size,
         const std::string& fixture_name
     );
 
@@ -68,18 +66,15 @@ private:
     typedef DampedWaveFixtureParameters<T> Parameters;
 
     const std::shared_ptr<OpenClDevice> device_;
-    std::vector<T> inputData_;
-    std::vector<T> outputData_;
+    std::vector<T> input_data_;
+    std::vector<T> output_data_;
     std::vector<Parameters> params_;
     std::shared_ptr<DataSource<T>> input_data_source_;
-    size_t dataSize_;
+    size_t data_size_;
     boost::compute::kernel kernel_;
     std::string fixture_name_;
 
     void GenerateData();
-#if 0
-    T CalcExpectedValue( T x ) const;
-#endif
     /*
     Return results in the following form:
     {

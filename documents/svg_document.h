@@ -2,10 +2,10 @@
 
 #include <boost/property_tree/ptree.hpp>
 
-class SVGDocument
+class SvgDocument
 {
 public:
-    SVGDocument();
+    SvgDocument();
 
     /*
         Add line that starts at (x1, y1) and ends at (x2, y2)

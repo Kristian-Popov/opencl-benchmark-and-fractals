@@ -13,7 +13,7 @@
 
 namespace
 {
-    const char* trivialFactorialKernelCode = R"(
+    const char* kTrivialFactorialKernelCode = R"(
 ulong FactorialImplementation(int val)
 {
     ulong result = 1;
@@ -31,7 +31,7 @@ __kernel void TrivialFactorial(__global int* input, __global ulong* output)
 }
 )"; 
 
-    const std::string compilerOptions = "-Werror";
+    constexpr const char* const kCompilerOptions = "-Werror";
 }
 
 class TrivialFactorialOpenClFixture: public Fixture
@@ -40,17 +40,17 @@ public:
     TrivialFactorialOpenClFixture(
         const std::shared_ptr<OpenClDevice>& device,
         const std::shared_ptr<DataSource<int>>& input_data_source,
-        int dataSize )
+        int data_size )
         : device_( device )
         , input_data_source_( input_data_source )
-        , dataSize_(dataSize)
+        , data_size_(data_size)
     {
     }
 
     virtual void Initialize() override
     {
         GenerateData();
-        kernel_ = Utils::BuildKernel( "TrivialFactorial", device_->GetContext(), trivialFactorialKernelCode, compilerOptions );
+        kernel_ = Utils::BuildKernel( "TrivialFactorial", device_->GetContext(), kTrivialFactorialKernelCode, kCompilerOptions );
     }
 
     virtual std::vector<std::string> GetRequiredExtensions() override
@@ -66,48 +66,46 @@ public:
         std::unordered_map<OperationStep, boost::compute::event> events;
 
         // create a vector on the device
-        boost::compute::vector<int> input_device_vector( dataSize_, context );
+        boost::compute::vector<int> input_device_vector( data_size_, context );
 
         // copy data from the host to the device
         events.insert( { OperationStep::CopyInputDataToDevice1,
-            boost::compute::copy_async( inputData_.begin(), inputData_.end(), input_device_vector.begin(), queue ).get_event() 
+            boost::compute::copy_async( input_data_.begin(), input_data_.end(), input_device_vector.begin(), queue ).get_event()
         } );
 
-        boost::compute::vector<unsigned long long> output_device_vector( dataSize_, context );
+        boost::compute::vector<unsigned long long> output_device_vector( data_size_, context );
         kernel_.set_arg( 0, input_device_vector );
         kernel_.set_arg( 1, output_device_vector );
 
-        unsigned computeUnitsCount = context.get_device().compute_units();
-        size_t localWorkGroupSize = 0;
         events.insert( { OperationStep::Calculate1,
-            queue.enqueue_1d_range_kernel( kernel_, 0, dataSize_, localWorkGroupSize )
+            queue.enqueue_1d_range_kernel( kernel_, 0, data_size_, 0 )
         } );
 
-        outputData_.resize( dataSize_ );
-        boost::compute::event lastEvent = boost::compute::copy_async( output_device_vector.begin(), output_device_vector.end(), outputData_.begin(), queue ).get_event();
-        events.insert( { OperationStep::CopyOutputDataFromDevice1, lastEvent } );
+        output_data_.resize( data_size_ );
+        boost::compute::event last_event = boost::compute::copy_async( output_device_vector.begin(), output_device_vector.end(), output_data_.begin(), queue ).get_event();
+        events.insert( { OperationStep::CopyOutputDataFromDevice1, last_event } );
 
-        lastEvent.wait();
+        last_event.wait();
 
         return Utils::GetOpenCLEventDurations( events );
     }
 
     virtual void VerifyResults() override
     {
-        if( outputData_.size() != expectedOutputData_.size() )
+        if( output_data_.size() != expected_output_data_.size() )
         {
             throw std::runtime_error( ( boost::format( "Result verification has failed for fixture \"%1%\". "
                 "Output data count is another from expected one." ) ).str() );
         }
-        auto mismatchedValues = std::mismatch( outputData_.cbegin(), outputData_.cend(), expectedOutputData_.cbegin(), expectedOutputData_.cend() );
-        if( mismatchedValues.first != outputData_.cend() )
+        auto mismatched_values = std::mismatch( output_data_.cbegin(), output_data_.cend(), expected_output_data_.cbegin(), expected_output_data_.cend() );
+        if( mismatched_values.first != output_data_.cend() )
         {
-            cl_ulong maxAbsError = *mismatchedValues.first - *mismatchedValues.second;
+            cl_ulong max_abs_error = *mismatched_values.first - *mismatched_values.second;
             throw DataVerificationFailedException( ( boost::format( 
                 "Result verification has failed for trivial factorial fixture. "
                 "Maximum absolute error is %1% for input value %2% "
                 "(exact equality is expected)." ) %
-                maxAbsError % *mismatchedValues.first ).str() );
+                max_abs_error % *mismatched_values.first ).str() );
         }
     }
 
@@ -120,33 +118,33 @@ public:
     {
     }
 private:
-    const int dataSize_;
-    std::vector<int> inputData_;
-    std::vector<cl_ulong> expectedOutputData_;
-    static const std::unordered_map<int, cl_ulong> TrivialFactorialOpenClFixture::correctFactorialValues_;
-    std::vector<cl_ulong> outputData_;
+    const int data_size_;
+    std::vector<int> input_data_;
+    std::vector<cl_ulong> expected_output_data_;
+    static const std::unordered_map<int, cl_ulong> TrivialFactorialOpenClFixture::correct_factorial_values_;
+    std::vector<cl_ulong> output_data_;
     std::shared_ptr<DataSource<int>> input_data_source_;
     boost::compute::kernel kernel_;
     const std::shared_ptr<OpenClDevice> device_;
 
     void GenerateData()
     {
-        inputData_.resize(dataSize_);
-        std::copy_n( DataSourceAdaptor<int>{ input_data_source_ }, dataSize_, inputData_.begin() );
+        input_data_.resize(data_size_);
+        std::copy_n( DataSourceAdaptor<int>{ input_data_source_ }, data_size_, input_data_.begin() );
 
         // Verify that all input values are in range [0, 20]
-        EXCEPTION_ASSERT(std::all_of( inputData_.begin(), inputData_.end(), [] (int i) { return i >= 0 && i <= 20; } ));
+        EXCEPTION_ASSERT(std::all_of( input_data_.begin(), input_data_.end(), [] (int i) { return i >= 0 && i <= 20; } ));
 
-        expectedOutputData_.reserve(dataSize_);
-        std::transform( inputData_.begin(), inputData_.end(), std::back_inserter(expectedOutputData_), 
+        expected_output_data_.reserve(data_size_);
+        std::transform( input_data_.begin(), input_data_.end(), std::back_inserter(expected_output_data_),
             [this] (int i)
             {
-                return correctFactorialValues_.at(i);
+                return correct_factorial_values_.at(i);
             } );
     }
 };
 
-const std::unordered_map<int, cl_ulong> TrivialFactorialOpenClFixture::correctFactorialValues_ = {
+const std::unordered_map<int, cl_ulong> TrivialFactorialOpenClFixture::correct_factorial_values_ = {
     {0, 1ull},
     {1,  1ull},
     {2,  2ull},

@@ -1,4 +1,6 @@
-#include "fixtures/multibrot/multibrot_opencl_fixture.h"
+#include "fixtures/multibrot_opencl_fixture.h"
+
+#include "opencl_type_traits.h"
 
 #include "lodepng/source/lodepng.h"
 
@@ -6,15 +8,6 @@
 
 namespace
 {
-    template<typename T>
-    struct TempValueConstants {
-        static const char* required_extension;
-    };
-
-    const char* TempValueConstants<half_float::half>::required_extension = "cl_khr_fp16";
-    const char* TempValueConstants<float>::required_extension = "";
-    const char* TempValueConstants<double>::required_extension = "cl_khr_fp64";
-
     template<typename P>
     struct ResultTypeConstants
     {
@@ -59,13 +52,7 @@ void MultibrotOpenClFixture<T, P>::Initialize()
 template<typename T, typename P>
 std::vector<std::string> MultibrotOpenClFixture<T, P>::GetRequiredExtensions()
 {
-    std::string requiredExtension = TempValueConstants<T>::required_extension;
-    std::vector<std::string> result;
-    if( !requiredExtension.empty() )
-    {
-        result.push_back( requiredExtension );
-    }
-    return result;
+    return CollectExtensions<T>();
 }
 
 template<typename T, typename P>

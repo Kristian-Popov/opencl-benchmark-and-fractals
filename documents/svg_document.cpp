@@ -4,20 +4,20 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/log/trivial.hpp>
 
-SVGDocument::SVGDocument()
+SvgDocument::SvgDocument()
 {
     tree_.put( "svg.<xmlattr>.xmlns", "http://www.w3.org/2000/svg" );
     tree_.put( "svg.<xmlattr>.xmlns:xlink", "http://www.w3.org/1999/xlink" );
     tree_.put( "svg.<xmlattr>.stroke", "black" );
 }
 
-void SVGDocument::SetSize( long double width, long double height )
+void SvgDocument::SetSize( long double width, long double height )
 {
     tree_.put( "svg.<xmlattr>.width", width );
     tree_.put( "svg.<xmlattr>.height", height );
 }
 
-void SVGDocument::AddLine( long double x1, long double y1, long double x2, long double y2 )
+void SvgDocument::AddLine( long double x1, long double y1, long double x2, long double y2 )
 {
     boost::property_tree::ptree node;
     node.put( "<xmlattr>.x1", FormatValue( x1 ) );
@@ -27,7 +27,7 @@ void SVGDocument::AddLine( long double x1, long double y1, long double x2, long 
     tree_.add_child( "svg.line", node );
 }
 
-void SVGDocument::BuildAndWriteToDisk( const std::string& filename )
+void SvgDocument::BuildAndWriteToDisk( const std::string& filename )
 {
     try
     {
@@ -40,7 +40,7 @@ void SVGDocument::BuildAndWriteToDisk( const std::string& filename )
     }
 }
 
-std::string SVGDocument::FormatValue( long double v )
+std::string SvgDocument::FormatValue( long double v )
 {
     return std::to_string( v );
 }

@@ -8,7 +8,6 @@
 #include <stdexcept>
 #include <algorithm>
 #include <random>
-#include <cfenv>
 
 #include "data_verification_failed_exception.h"
 #include "utils/duration.h"
@@ -27,10 +26,7 @@
 #include "fixtures/damped_wave_opencl_fixture.h"
 #include "fixtures/trivial_factorial_opencl_fixture.h"
 #include "fixtures/koch_curve_opencl_fixture.h"
-#include "fixtures/multibrot/multibrot_opencl_fixture.h"
-#if 0
-#include "fixtures/multiprecision_factorial_fixture.h"
-#endif
+#include "fixtures/multibrot_opencl_fixture.h"
 
 #include "fixtures/fixture_family.h"
 
@@ -44,30 +40,6 @@ namespace
 {
     // TODO it is a template specialization but other places use other structures use other methods,
     // consolidate them somehow?
-    template<typename T>
-    struct TypeInfo
-    {
-        //static constexpr char* const description = "unknown";
-    };
-
-    template<>
-    struct TypeInfo<float>
-    {
-        static constexpr char* const description = "float";
-    };
-
-    template<>
-    struct TypeInfo<double>
-    {
-        static constexpr char* const description = "double";
-    };
-
-    template<>
-    struct TypeInfo<half_float::half>
-    {
-        static constexpr const char* description = "half precision";
-    };
-
     template<typename T>
     struct MultibrotSetParams
     {
@@ -153,7 +125,7 @@ void FixtureRunner::CreateDampedWave2DFixtures()
     T max = static_cast<T>( 10.0 );
     T step = static_cast<T>( 0.001 );
     // TODO change to int32_t?
-    size_t dataSize = static_cast<size_t>( ( max - min ) / step ); // TODO something similar can be useful in Utils
+    size_t data_size = static_cast<size_t>( ( max - min ) / step ); // TODO something similar can be useful in Utils
 
     std::mt19937 randomValueGenerator;
     {
@@ -166,10 +138,10 @@ void FixtureRunner::CreateDampedWave2DFixtures()
         }};
         auto fixture_family = std::make_shared<FixtureFamily>();
         fixture_family->name = ( boost::format( "Damped wave, %1%, %2% values, %3% parameters, sequential input data" ) %
-            TypeInfo<T>::description %
-            Utils::FormatQuantityString( dataSize ) %
+            OpenClTypeTraits<T>::short_description %
+            Utils::FormatQuantityString( data_size ) %
             Utils::FormatQuantityString( params.size() ) ).str();
-        fixture_family->element_count = dataSize;
+        fixture_family->element_count = data_size;
         for( auto& platform : platform_list_.OpenClPlatforms() )
         {
             for( auto& device : platform->GetDevices() )
@@ -180,7 +152,7 @@ void FixtureRunner::CreateDampedWave2DFixtures()
                         std::dynamic_pointer_cast<OpenClDevice>( device ),
                         params,
                         std::make_shared<SequentialValuesIterator<T>>( min, step ),
-                        dataSize,
+                        data_size,
                         fixture_family->name
                     )
                 ) );
@@ -198,10 +170,10 @@ void FixtureRunner::CreateDampedWave2DFixtures()
         }};
         auto fixture_family = std::make_shared<FixtureFamily>();
         fixture_family->name = ( boost::format( "Damped wave, %1%, %2% values, %3% parameters, random input data" ) %
-            TypeInfo<T>::description %
-            Utils::FormatQuantityString( dataSize ) %
+            OpenClTypeTraits<T>::short_description %
+            Utils::FormatQuantityString( data_size ) %
             Utils::FormatQuantityString( params.size() ) ).str();
-        fixture_family->element_count = dataSize;
+        fixture_family->element_count = data_size;
         for( auto& platform : platform_list_.OpenClPlatforms() )
         {
             for( auto& device : platform->GetDevices() )
@@ -215,7 +187,7 @@ void FixtureRunner::CreateDampedWave2DFixtures()
                             static_cast<T>( 0.0 ),
                             static_cast<T>( 100.0 )
                         ) ),
-                        dataSize,
+                        data_size,
                         fixture_family->name
                         )
                     ) );
@@ -240,10 +212,10 @@ void FixtureRunner::CreateDampedWave2DFixtures()
         } );
         auto fixture_family = std::make_shared<FixtureFamily>();
         fixture_family->name = ( boost::format( "Damped wave, %1%, %2% values, %3% parameters, sequential input data" ) %
-            TypeInfo<T>::description %
-            Utils::FormatQuantityString( dataSize ) %
+            OpenClTypeTraits<T>::short_description %
+            Utils::FormatQuantityString( data_size ) %
             Utils::FormatQuantityString( params.size() ) ).str();
-        fixture_family->element_count = dataSize;
+        fixture_family->element_count = data_size;
         for( auto& platform : platform_list_.OpenClPlatforms() )
         {
             for( auto& device : platform->GetDevices() )
@@ -254,7 +226,7 @@ void FixtureRunner::CreateDampedWave2DFixtures()
                         std::dynamic_pointer_cast<OpenClDevice>( device ),
                         params,
                         std::make_shared<SequentialValuesIterator<T>>( min, step ),
-                        dataSize,
+                        data_size,
                         fixture_family->name
                         )
                     ) );
@@ -279,10 +251,10 @@ void FixtureRunner::CreateDampedWave2DFixtures()
             } );
         auto fixture_family = std::make_shared<FixtureFamily>();
         fixture_family->name = ( boost::format( "Damped wave, %1%, %2% values, %3% parameters, random input data" ) %
-            TypeInfo<T>::description %
-            Utils::FormatQuantityString( dataSize ) %
+            OpenClTypeTraits<T>::short_description %
+            Utils::FormatQuantityString( data_size ) %
             Utils::FormatQuantityString( params.size() ) ).str();
-        fixture_family->element_count = dataSize;
+        fixture_family->element_count = data_size;
         for( auto& platform : platform_list_.OpenClPlatforms() )
         {
             for( auto& device : platform->GetDevices() )
@@ -296,7 +268,7 @@ void FixtureRunner::CreateDampedWave2DFixtures()
                             static_cast<T>( 0.0 ),
                             static_cast<T>( 100.0 )
                         ) ),
-                        dataSize,
+                        data_size,
                         fixture_family->name
                         )
                     ) );
@@ -311,14 +283,14 @@ void FixtureRunner::CreateKochCurveFixtures()
 {
     // TODO it would be great to get images with higher number of iterations but
     // another output method is needed (SVG doesn't work well)
-    const std::vector<int> iterationCountVariants = {1, 3, 7};
+    const std::vector<int> iteration_count_variants = {1, 3, 7};
     struct CurveVariant
     {
         std::vector<cl_double4> curves;
         std::string description;
     };
 
-    std::vector<CurveVariant> curveVariants;
+    std::vector<CurveVariant> curve_variants;
     {
         std::vector<cl_double4> singleCurve = {{0.0, 0.0, 1000.0, 0.0}};
         std::vector<cl_double4> twoCurvesFace2Face = {
@@ -354,7 +326,7 @@ void FixtureRunner::CreateKochCurveFixtures()
                 Utils::CombineTwoDouble2Vectors( C, D ),
             };
         }
-        curveVariants = {
+        curve_variants = {
             {singleCurve, "single curve"},
             {twoCurvesFace2Face, "two curves"},
             {snowflakeTriangleCurves, "triangle"},
@@ -363,19 +335,19 @@ void FixtureRunner::CreateKochCurveFixtures()
         };
     }
 
-    for( int iterations : iterationCountVariants )
+    for( int iterations : iteration_count_variants )
     {
-        for( const auto& curveVariant : curveVariants )
+        for( const auto& curve_variant : curve_variants )
         {
             auto fixture_family = std::make_shared<FixtureFamily>();
             fixture_family->name = ( boost::format( "Koch curve, %1%, %2% iterations, %3%" ) %
-                TypeInfo<T>::description %
+                OpenClTypeTraits<T>::short_description %
                 iterations %
-                curveVariant.description ).str();
+                curve_variant.description ).str();
             // TODO fixture_family->element_count can be calculated but is not trivial
 
             std::vector<T4> casted_curves;
-            std::transform( curveVariant.curves.cbegin(), curveVariant.curves.cend(),
+            std::transform( curve_variant.curves.cbegin(), curve_variant.curves.cend(),
                 std::back_inserter( casted_curves ),
                 []( const cl_double4& v ) -> T4
             {
@@ -414,7 +386,7 @@ void FixtureRunner::CreateMultibrotSetFixtures()
         fixture_family->name = ( boost::format( "%1%, %3%, %4%" ) %
             ( ( power == 2.0 ) ? std::string( "Mandelbrot set" ) : "Multibrot set, power " + std::to_string( power ) ) %
             power %
-            TypeInfo<T>::description %
+            OpenClTypeTraits<T>::short_description %
             MultibrotResultConstants<P>::pixel_type_description ).str();
         fixture_family->element_count = MultibrotSetParams<T>::width_pix * MultibrotSetParams<T>::height_pix;
 
@@ -438,59 +410,39 @@ void FixtureRunner::CreateMultibrotSetFixtures()
     }
 }
 
-#if 0
-void FixtureRunner::CreateMultiprecisionFactorialFixtures()
-{
-    std::vector<uint32_t> inputs = { 5, 10, 20, 50, 100, 200, 500, 1000, 10000 };
-    std::transform( inputs.begin(), inputs.end(), std::back_inserter( fixtures_ ),
-        []( uint32_t input )
-    {
-        return std::make_shared<MultiprecisionFactorialFixture>( input );
-    } );
-}
-#endif
-
-void FixtureRunner::SetFloatingPointEnvironment()
-{
-    int result = std::fesetround( FE_TONEAREST );
-    EXCEPTION_ASSERT( result == 0);
-}
-
 void FixtureRunner::Clear()
 {
     fixture_families_.clear();
 }
 
-void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSettings settings )
+void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> reporter, RunSettings settings )
 {
     BOOST_LOG_TRIVIAL( info ) << "Welcome to OpenCL benchmark.";
 
-    EXCEPTION_ASSERT( settings.minIterations >= 1 );
-    EXCEPTION_ASSERT( settings.maxIterations >= 1 );
+    EXCEPTION_ASSERT( settings.min_iterations >= 1 );
+    EXCEPTION_ASSERT( settings.max_iterations >= 1 );
 
-    SetFloatingPointEnvironment();
-
-    timeWriter->Initialize( platform_list_ );
+    reporter->Initialize( platform_list_ );
 
     Clear();
-    FixturesToRun& fixturesToRun = settings.fixturesToRun;
-    if (fixturesToRun.trivialFactorial)
+    FixturesToRun& fixtures_to_run = settings.fixtures_to_run;
+    if (fixtures_to_run.trivial_factorial)
     {
         CreateTrivialFixtures();
     }
-    if( fixturesToRun.dampedWave2D )
+    if (fixtures_to_run.damped_wave)
     {
         CreateDampedWave2DFixtures<float>();
         CreateDampedWave2DFixtures<double>();
         CreateDampedWave2DFixtures<half_float::half, HalfPrecisionNormalDistribution>();
     }
-    if (fixturesToRun.kochCurve)
+    if (fixtures_to_run.koch_curve)
     {
         CreateKochCurveFixtures<float, cl_float4>();
         CreateKochCurveFixtures<double, cl_double4>();
         //CreateKochCurveFixtures<half_float::half, half_float::half[4]>(); // TODO enable
     }
-    if( fixturesToRun.multibrotSet )
+    if (fixtures_to_run.multibrot_set)
     {
         CreateMultibrotSetFixtures<half_float::half, cl_uchar>();
         CreateMultibrotSetFixtures<float, cl_uchar>();
@@ -500,29 +452,19 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
         CreateMultibrotSetFixtures<float, cl_ushort>();
         CreateMultibrotSetFixtures<double, cl_ushort>();
     }
-#if 0
-    if (fixturesToRun.multibrotSet)
-    {
-        CreateMultibrotSetFixtures();
-    }
-    if (fixturesToRun.multiprecisionFactorial)
-    {
-        CreateMultiprecisionFactorialFixtures();
-    }
-#endif
 
     BOOST_LOG_TRIVIAL( info ) << "We have " << fixture_families_.size() << " fixture families to run";
 
-    for( size_t familyIndex = 0; familyIndex < fixture_families_.size(); ++familyIndex )
+    for( size_t family_index = 0; family_index < fixture_families_.size(); ++family_index )
     {
-        std::shared_ptr<FixtureFamily>& fixtureFamily = fixture_families_.at( familyIndex );
-        std::string fixtureName = fixtureFamily->name;
+        std::shared_ptr<FixtureFamily>& fixture_family = fixture_families_.at( family_index );
+        std::string fixture_name = fixture_family->name;
         FixtureFamilyBenchmark results;
-        results.fixture_family = fixtureFamily;
+        results.fixture_family = fixture_family;
 
-        BOOST_LOG_TRIVIAL( info ) << "Starting fixture family \"" << fixtureName << "\"";
+        BOOST_LOG_TRIVIAL( info ) << "Starting fixture family \"" << fixture_name << "\"";
 
-        for( std::pair<const FixtureId, std::shared_ptr<Fixture>>& fixture_data: fixtureFamily->fixtures )
+        for( std::pair<const FixtureId, std::shared_ptr<Fixture>>& fixture_data: fixture_family->fixtures )
         {
             const FixtureId& fixture_id = fixture_data.first;
             std::shared_ptr<Fixture>& fixture = fixture_data.second;
@@ -533,16 +475,16 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
             try
             {
                 {
-                    std::vector<std::string> requiredExtensions = fixture->GetRequiredExtensions();
-                    std::sort( requiredExtensions.begin(), requiredExtensions.end() );
+                    std::vector<std::string> required_extensions = fixture->GetRequiredExtensions();
+                    std::sort( required_extensions.begin(), required_extensions.end() );
 
-                    std::vector<std::string> haveExtensions = fixture->Device()->Extensions();
-                    std::sort( haveExtensions.begin(), haveExtensions.end() );
+                    std::vector<std::string> have_extensions = fixture->Device()->Extensions();
+                    std::sort( have_extensions.begin(), have_extensions.end() );
 
                     std::vector<std::string> missed_extensions;
                     std::set_difference(
-                        requiredExtensions.cbegin(), requiredExtensions.cend(),
-                        haveExtensions.cbegin(), haveExtensions.cend(),
+                        required_extensions.cbegin(), required_extensions.cend(),
+                        have_extensions.cbegin(), have_extensions.cend(),
                         std::back_inserter( missed_extensions )
                     );
                     if( !missed_extensions.empty() )
@@ -565,25 +507,25 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
                 std::vector<std::unordered_map<OperationStep, Duration>> durations;
 
                 // Warm-up for one iteration to get estimation of execution time
-                std::unordered_map<OperationStep, Duration> warmupResult = fixture->Execute();
-                durations.push_back( warmupResult );
-                Duration totalOperationDuration = std::accumulate( warmupResult.begin(), warmupResult.end(), Duration(),
+                std::unordered_map<OperationStep, Duration> warmup_result = fixture->Execute();
+                durations.push_back( warmup_result );
+                Duration total_operation_duration = std::accumulate( warmup_result.begin(), warmup_result.end(), Duration(),
                     []( Duration acc, const std::pair<OperationStep, Duration>& r )
                 {
                     return acc + r.second;
                 } );
-                uint64_t iteration_count_long = settings.targetFixtureExecutionTime / totalOperationDuration;
+                uint64_t iteration_count_long = settings.target_fixture_execution_time / total_operation_duration;
                 EXCEPTION_ASSERT( iteration_count_long < std::numeric_limits<int>::max() );
                 int iteration_count = static_cast<int>( iteration_count_long );
-                iteration_count = boost::algorithm::clamp( iteration_count, settings.minIterations, settings.maxIterations ) - 1;
+                iteration_count = boost::algorithm::clamp( iteration_count, settings.min_iterations, settings.max_iterations ) - 1;
                 EXCEPTION_ASSERT( iteration_count >= 0 );
 
-                if( settings.verifyResults )
+                if (settings.verify_results)
                 {
                     fixture->VerifyResults();
                 }
 
-                if( settings.storeResults )
+                if (settings.store_results)
                 {
                     fixture->StoreResults();
                 }
@@ -598,7 +540,7 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
             {
                 std::stringstream stream;
                 stream << "Program for fixture \"" <<
-                    fixtureName << "\" failed to build on device \"" <<
+                    fixture_name << "\" failed to build on device \"" <<
                     e.DeviceName() << "\"";
                 BOOST_LOG_TRIVIAL( error ) << stream.str();
                 BOOST_LOG_TRIVIAL( info ) << "Build options: " << e.BuildOptions();
@@ -630,11 +572,11 @@ void FixtureRunner::Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSetti
             results.benchmark.insert( std::make_pair( fixture_id, fixture_results ) );
         }
 
-        timeWriter->AddFixtureFamilyResults( results );
+        reporter->AddFixtureFamilyResults( results );
 
-        BOOST_LOG_TRIVIAL( info ) << "Fixture family \"" << fixtureName << "\" finished successfully.";
+        BOOST_LOG_TRIVIAL( info ) << "Fixture family \"" << fixture_name << "\" finished successfully.";
     }
-    timeWriter->Flush();
+    reporter->Flush();
 
     BOOST_LOG_TRIVIAL( info ) << "Done";
 }

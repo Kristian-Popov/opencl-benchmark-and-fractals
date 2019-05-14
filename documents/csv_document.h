@@ -3,14 +3,14 @@
 #include <fstream>
 #include <vector>
 
-class CSVDocument
+class CsvDocument
 {
 public:
-    CSVDocument( const char* file_name )
+    CsvDocument( const char* file_name )
         : stream_( file_name )
     {}
 
-    CSVDocument( const std::string& file_name )
+    CsvDocument( const std::string& file_name )
         : stream_( file_name )
     {}
 

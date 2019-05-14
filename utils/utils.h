@@ -158,10 +158,12 @@ namespace Utils
         return result;
     }
 
+    // TODO use T as a template argument
     template<typename T4, typename U4>
     T4 StaticCastVector4( const U4& v )
     {
         return T4( {
+            // TODO convert to T instead when mapping between T and T4 is ready.
             static_cast<float>( v.s[0] ),
             static_cast<float>( v.s[1] ),
             static_cast<float>( v.s[2] ),

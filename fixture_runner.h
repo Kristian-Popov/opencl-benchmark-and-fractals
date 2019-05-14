@@ -14,25 +14,24 @@ class FixtureRunner
 public:
     struct FixturesToRun
     {
-        bool trivialFactorial = true;
-        bool dampedWave2D = true;
-        bool kochCurve = true;
-        bool multibrotSet = true;
-        bool multiprecisionFactorial = true;
+        bool trivial_factorial = true;
+        bool damped_wave = true;
+        bool koch_curve = true;
+        bool multibrot_set = true;
     };
 
     struct RunSettings
     {
-        FixturesToRun fixturesToRun;
-        int minIterations = 1;
-        int maxIterations = std::numeric_limits<int>::max();
-        Duration targetFixtureExecutionTime;
-        bool verifyResults = true;
-        bool storeResults = true;
+        FixturesToRun fixtures_to_run;
+        int min_iterations = 1;
+        int max_iterations = std::numeric_limits<int>::max();
+        Duration target_fixture_execution_time;
+        bool verify_results = true;
+        bool store_results = true;
         bool debug_mode = false;
     };
 
-    void Run( std::unique_ptr<BenchmarkReporter> timeWriter, RunSettings settings );
+    void Run( std::unique_ptr<BenchmarkReporter> reporter, RunSettings settings );
 private:
     void Clear();
     void SetFloatingPointEnvironment();
@@ -43,7 +42,6 @@ private:
     void CreateKochCurveFixtures();
     template<typename T, typename P>
     void FixtureRunner::CreateMultibrotSetFixtures();
-    //void CreateMultiprecisionFactorialFixtures();
 
     std::vector<std::shared_ptr<FixtureFamily>> fixture_families_;
     PlatformList platform_list_;

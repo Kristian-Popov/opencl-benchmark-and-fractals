@@ -42,17 +42,19 @@ add_subdirectory(contrib/lodepng)
 # Add main project
 project(OpenCLBenchmarkSuite CXX)
 
-add_library( commonlib
+add_library( commonlib STATIC
     coordinate_formatter.cpp
     coordinate_formatter.h
     data_verification_failed_exception.h
+    fixture_command_line_processor.cpp
+    fixture_command_line_processor.h
     fixture_runner.cpp
     fixture_runner.h
     half_precision_normal_distribution.h
     mapped_opencl_buffer.h
+    opencl_type_traits.h
 
     documents/csv_document.h
-    documents/png_document_builder.h
     documents/svg_document.cpp
     documents/svg_document.h
 
@@ -67,12 +69,10 @@ add_library( commonlib
     fixtures/fixture.h
     fixtures/fixture_family.h
     fixtures/fixture_id.h
-    fixtures/trivial_factorial_opencl_fixture.h
     fixtures/koch_curve_opencl_fixture.h
-
-    fixtures/multibrot/multibrot_opencl_fixture.cpp
-    fixtures/multibrot/multibrot_opencl_fixture.h
-    # fixtures/multiprecision_factorial_fixture.h
+    fixtures/multibrot_opencl_fixture.cpp
+    fixtures/multibrot_opencl_fixture.h
+    fixtures/trivial_factorial_opencl_fixture.h
 
     iterators/sequential_values_iterator.h
     iterators/random_values_iterator.h
@@ -81,10 +81,10 @@ add_library( commonlib
     indicators/duration_indicator.cpp
     indicators/duration_indicator.h
 
+    reporters/benchmark_reporter.h
     reporters/benchmark_results.h
     reporters/json_benchmark_reporter.cpp
     reporters/json_benchmark_reporter.h
-    reporters/benchmark_reporter.h
 )
 
 target_include_directories( commonlib PUBLIC

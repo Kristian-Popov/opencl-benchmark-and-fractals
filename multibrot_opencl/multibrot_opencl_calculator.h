@@ -69,7 +69,7 @@ public:
         }
 
         kernel.set_arg( 0, sizeof( T ), &input_min_conv );
-        kernel.set_arg( 1, sizeof( T ), reinterpret_cast<T( &)[2]>( input_min_conv ) + 1 );
+        kernel.set_arg( 1, sizeof( T ), reinterpret_cast<T(&)[2]>( input_min_conv ) + 1 );
         kernel.set_arg( 2, sizeof( T ), &input_max_conv );
         kernel.set_arg( 3, sizeof( T ), reinterpret_cast<T(&)[2]>( input_max_conv ) + 1 );
         T power_conv = static_cast<T>( power );

@@ -90,10 +90,10 @@ namespace Utils
     long double ChooseConvenientUnit( const std::vector<long double>& values,
         const std::vector<long double>& units )
     {
-        std::vector<long double> convUnits;
-        convUnits.reserve( values.size() );
+        std::vector<long double> conv_units;
+        conv_units.reserve( values.size() );
 
-        std::transform( values.begin(), values.end(), std::back_inserter( convUnits ),
+        std::transform( values.begin(), values.end(), std::back_inserter( conv_units ),
             [&units] (long double value)
             {
                 return ChooseConvenientUnit(value, units);
@@ -101,7 +101,7 @@ namespace Utils
 
         // Count how many times every unit occurs
         std::unordered_map<long double, int> counts;
-        for( long double unit: convUnits )
+        for( long double unit: conv_units )
         {
             ++counts[unit];
         }
@@ -117,7 +117,7 @@ namespace Utils
         const std::string& buildOptions /*= std::string()*/,
         const std::vector<std::string>& extensions /*= std::vector<std::string>()*/ )
     {
-        std::string allSource;
+        std::string combined_source;
         for( const std::string& extension : extensions )
         {
             std::string f;
@@ -134,13 +134,13 @@ namespace Utils
             {
                 f = "#pragma OPENCL EXTENSION %1% : enable\n";
             }
-            allSource += ( boost::format( f ) % extension ).str();
+            combined_source += ( boost::format( f ) % extension ).str();
         }
-        allSource += source;
+        combined_source += source;
 
         // Taken from boost::compute::program::create_with_source() so we have build log
         // left in case of errors
-        const char *source_string = allSource.c_str();
+        const char *source_string = combined_source.c_str();
 
         cl_int error = 0;
         cl_program program_ = clCreateProgramWithSource( context,

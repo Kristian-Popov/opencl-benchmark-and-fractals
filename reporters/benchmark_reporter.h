@@ -13,8 +13,7 @@ class BenchmarkReporter
 public:
     virtual void AddFixtureFamilyResults( const FixtureFamilyBenchmark& results ) = 0;
 
-    virtual void Initialize( const PlatformList& platform_list )
-    {}
+    virtual void Initialize( const PlatformList& platform_list ) {}
 
     /*
         Optional method to flush all contents to output

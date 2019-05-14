@@ -205,8 +205,9 @@ int main( int argc, char** argv )
     {
         using namespace boost::program_options;
         desc.add_options()
-            ( "help", "produce help message" )
-            ( "verbose", "verbose mode (more output is written to the console)" )
+            ( "help,h", "produce help message" )
+            ( "verbose,v", "verbose mode (more output is written to the console)" )
+            ( "version,V", "print version" )
             ( "size,s", value<std::string>(&size_pix)->default_value( std::string( kDefaultSizePix ) ),
                 "image size in pixels, should be given separated by x. Default is 10000x10000 "
                 "(ten thousand by ten thousand pixels)." )
