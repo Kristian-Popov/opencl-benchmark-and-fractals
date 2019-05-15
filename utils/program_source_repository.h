@@ -2,8 +2,7 @@
 
 #include <string>
 
-class ProgramSourceRepository
-{
+class ProgramSourceRepository {
 public:
     static std::string GetOpenCLMathSource();
     static std::string GetKochCurveSource();

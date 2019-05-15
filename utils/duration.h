@@ -5,52 +5,40 @@
 
 #include "nlohmann/json_fwd.hpp"
 
-namespace boost
-{
-    namespace compute
-    {
-        class event;
-    }
+namespace boost {
+namespace compute {
+class event;
 }
+}  // namespace boost
 
-class Duration
-{
+class Duration {
 public:
-    constexpr Duration() noexcept
-        : duration_( InternalType::zero() )
-    {}
+    constexpr Duration() noexcept : duration_(InternalType::zero()) {}
 
-    template<typename D>
-    explicit Duration( D duration )
-        : duration_( std::chrono::duration_cast<InternalType>( duration ) )
-    {
-        if( duration < D::zero() )
-        {
-            throw std::invalid_argument( "Attempt to construct a negative duration." );
+    template <typename D>
+    explicit Duration(D duration) : duration_(std::chrono::duration_cast<InternalType>(duration)) {
+        if (duration < D::zero()) {
+            throw std::invalid_argument("Attempt to construct a negative duration.");
         }
     }
 
-    explicit Duration( const boost::compute::event& event );
+    explicit Duration(const boost::compute::event& event);
 
-    Duration& operator=( const Duration& d )
-    {
+    Duration& operator=(const Duration& d) {
         this->duration_ = d.duration_;
         return *this;
     }
 
-    template<typename D>
-    Duration& operator=( D duration )
-    {
-        if( duration < D::zero() )
-        {
-            throw std::invalid_argument( "Attempt to construct a negative duration." );
+    template <typename D>
+    Duration& operator=(D duration) {
+        if (duration < D::zero()) {
+            throw std::invalid_argument("Attempt to construct a negative duration.");
         }
-        this->duration_ = std::chrono::duration_cast<InternalType>( duration );
+        this->duration_ = std::chrono::duration_cast<InternalType>(duration);
         return *this;
     }
 
-    Duration& operator+=( const Duration& d )
-    {
+    Duration& operator+=(const Duration& d) {
         duration_ += d.duration_;
         return *this;
     }
@@ -63,41 +51,33 @@ public:
         return *this;
     }
 #endif
-    template<typename T>
-    Duration& operator*=( T m )
-    {
-        static_assert( std::is_arithmetic<T>::value, "Duration operator*= second argument is not an arithmetic value." );
+    template <typename T>
+    Duration& operator*=(T m) {
+        static_assert(
+            std::is_arithmetic<T>::value,
+            "Duration operator*= second argument is not an arithmetic value.");
         duration_ *= m;
         return *this;
     }
 
-    template<typename T>
-    Duration& operator/=( T m )
-    {
-        static_assert( std::is_arithmetic<T>::value, "Duration operator/= second argument is not an arithmetic value." );
+    template <typename T>
+    Duration& operator/=(T m) {
+        static_assert(
+            std::is_arithmetic<T>::value,
+            "Duration operator/= second argument is not an arithmetic value.");
         duration_ /= m;
         return *this;
     }
 
     double AsSeconds() const;
 
-    bool operator==( const Duration& rhs ) const noexcept
-    {
-        return duration_ == rhs.duration_;
-    }
+    bool operator==(const Duration& rhs) const noexcept { return duration_ == rhs.duration_; }
 
-    bool operator!=( const Duration& rhs ) const noexcept
-    {
-        return !( *this == rhs );
-    }
+    bool operator!=(const Duration& rhs) const noexcept { return !(*this == rhs); }
 
-    std::chrono::duration<double, std::nano> duration() const noexcept
-    {
-        return duration_;
-    }
+    std::chrono::duration<double, std::nano> duration() const noexcept { return duration_; }
 
-    friend Duration operator+( Duration lhs, Duration rhs )
-    {
+    friend Duration operator+(Duration lhs, Duration rhs) {
         lhs += rhs;
         return lhs;
     }
@@ -108,67 +88,45 @@ public:
         return lhs;
     }
 #endif
-    bool operator<( const Duration& rhs ) const noexcept
-    {
-        return duration_ < rhs.duration_;
-    }
+    bool operator<(const Duration& rhs) const noexcept { return duration_ < rhs.duration_; }
 
-    bool operator<=( const Duration& rhs ) const noexcept
-    {
-        return duration_ <= rhs.duration_;
-    }
+    bool operator<=(const Duration& rhs) const noexcept { return duration_ <= rhs.duration_; }
 
-    bool operator>( const Duration& rhs ) const noexcept
-    {
-        return duration_ > rhs.duration_;
-    }
-    bool operator>=( const Duration& rhs ) const noexcept
-    {
-        return duration_ >= rhs.duration_;
-    }
+    bool operator>(const Duration& rhs) const noexcept { return duration_ > rhs.duration_; }
+    bool operator>=(const Duration& rhs) const noexcept { return duration_ >= rhs.duration_; }
 
-    static const Duration Min() noexcept
-    {
-        // By some reason InternalType::min() duration is negative,
-        // no idea how duration can be below zero
+    static const Duration Min() noexcept {
+        // double::min() duration is negative but duration below zero makes no sense
         // Using zero instead
-        return Duration( InternalType::zero() );
+        return Duration(InternalType::zero());
     }
 
-    static const Duration Max() noexcept
-    {
-        return Duration( InternalType::max() );
-    }
+    static const Duration Max() noexcept { return Duration(InternalType::max()); }
 
-    template<typename T>
-    friend Duration operator*( Duration lhs, T rhs )
-    {
+    template <typename T>
+    friend Duration operator*(Duration lhs, T rhs) {
         lhs *= rhs;
         return lhs;
     }
 
-    template<typename T>
-    friend Duration operator/( Duration lhs, T rhs )
-    {
+    template <typename T>
+    friend Duration operator/(Duration lhs, T rhs) {
         lhs /= rhs;
         return lhs;
     }
 
-    friend double operator/( Duration lhs, Duration rhs )
-    {
-        return lhs.duration_ / rhs.duration_;
-    }
+    friend double operator/(Duration lhs, Duration rhs) { return lhs.duration_ / rhs.duration_; }
 
 private:
     /*
-        Internally duration is stored as double-precision floating point count of nanoseconds
-        OpenCL uses cl_ulong (same as uint64_t - 64-bit usigned integer number).
-        It is perfect to specify duration of the whole operation, but it is not
-        good when divided by very large number (e.g. 9mcs=900 000 ns divided by 1M elements
-        is just 0 ns per element, when using floating point we get approx. 0.9 ns per element,
-        which may bring more useful information).
-        Storing it in nanoseconds improves accurancy greatly, max duration that can be fit
-        without losing accurancy is 52 days, so more than enough.
+    Internally duration is stored as double-precision floating point count of nanoseconds
+    OpenCL uses cl_ulong (same as uint64_t - 64-bit usigned integer number).
+    It is perfect to specify duration of the whole operation, but it is not
+    good when divided by very large number (e.g. 9mcs=900 000 ns divided by 1M elements
+    is just 0 ns per element, when using floating point we get approx. 0.9 ns per element,
+    which may bring more useful information).
+    Storing it in nanoseconds improves accurancy greatly, max duration that can be fit
+    without losing accurancy is 52 days, so more than enough.
     */
     typedef std::chrono::duration<double, std::nano> InternalType;
 
@@ -176,5 +134,5 @@ private:
 };
 
 using nlohmann::json;
-void to_json( json& j, const Duration& p );
-void from_json( const json& j, Duration& p );
+void to_json(json& j, const Duration& p);
+void from_json(const json& j, Duration& p);

@@ -3,14 +3,14 @@
 #include <string>
 
 // Formats coordinates to strings with appropriate padding
-class CoordinateFormatter
-{
+class CoordinateFormatter {
 public:
-    CoordinateFormatter( size_t total_width, size_t total_height );
+    CoordinateFormatter(size_t total_width, size_t total_height);
 
-    std::string Format( size_t coord );
+    std::string Format(size_t coord);
+
 private:
-    static int CalcDigits( size_t coord );
+    static int CalcDigits(size_t coord);
 
     int digits_;
 };

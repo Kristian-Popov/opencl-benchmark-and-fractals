@@ -2,8 +2,7 @@
 
 #include <boost/property_tree/ptree.hpp>
 
-class SvgDocument
-{
+class SvgDocument {
 public:
     SvgDocument();
 
@@ -13,7 +12,8 @@ public:
     void AddLine(long double x1, long double y1, long double x2, long double y2);
     void SetSize(long double width, long double height);
 
-    void BuildAndWriteToDisk( const std::string& filename );
+    void BuildAndWriteToDisk(const std::string& filename);
+
 private:
     boost::property_tree::ptree tree_;
 

@@ -6,8 +6,7 @@
 
 class PlatformInterface;
 
-class DeviceInterface
-{
+class DeviceInterface {
 public:
     virtual std::string Name() = 0;
     virtual std::vector<std::string> Extensions() = 0;

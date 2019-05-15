@@ -1,16 +1,15 @@
 #pragma once
 
+#include "boost/compute.hpp"
 #include "fixtures/fixture.h"
 #include "opencl_type_traits.h"
 #include "program_source_repository.h"
+#include "utils/utils.h"
 
-#include "boost/compute.hpp"
-
-namespace
-{
-    // TODO due to this organization, all these variables classes collide
-    // with other files, isolate them somehow
-    static const char* kKochCurveProgramCode = R"(
+namespace {
+// TODO due to this organization, all these variables classes collide
+// with other files, isolate them somehow
+static const char* kKochCurveProgramCode = R"(
 /*
 Requires a definition:
 - floating point type REAL_T (float, or, if device supports, half and double)
@@ -179,179 +178,156 @@ __kernel void KochSnowflakeKernel(int stop_at_iteration,
 }
 )";
 
-    // TODO support for half precision could be added by creating an alternate data type,
-    // something like half2 and half4
-}
+// TODO support for half precision could be added by creating an alternate data type,
+// something like half2 and half4
+}  // namespace
 
 /*
-    T should be a floating point type (e.g. float, double or half),
-    T4 should be a vector of 4 elements of the same type,
+T should be a floating point type (e.g. float, double or half),
+T4 should be a vector of 4 elements of the same type,
 */
-template<typename T, typename T4>
-class KochCurveOpenClFixture : public Fixture
-{
+template <typename T, typename T4>
+class KochCurveOpenClFixture : public Fixture {
 public:
     explicit KochCurveOpenClFixture(
-        const std::shared_ptr<OpenClDevice>& device,
-        int iterations_count,
-        // Vector of lines. Every line becomes a curve that starts at (l.x; l.y) and ends at (l.z; l.w)
-        const std::vector<T4>& curves,
-        double width, double height,
-        const std::string& fixture_name
-    )
-        : device_( device )
-        , iterations_count_(iterations_count)
-        , width_(width)
-        , height_(height)
-        , curves_(curves)
-        , fixture_name_( fixture_name )
-    {
-        static_assert( sizeof( T4 ) == 4 * sizeof( T ), "Given wrong second template argument to KochCurveOpenClFixture" );
-        EXCEPTION_ASSERT( iterations_count >= 1 && iterations_count <= max_iterations_ );
+        const std::shared_ptr<OpenClDevice>& device, int iterations_count,
+        // Vector of lines. Every line becomes a curve that starts at (l.x; l.y) and ends at (l.z;
+        // l.w)
+        const std::vector<T4>& curves, double width, double height, const std::string& fixture_name)
+        : device_(device),
+          iterations_count_(iterations_count),
+          width_(width),
+          height_(height),
+          curves_(curves),
+          fixture_name_(fixture_name) {
+        static_assert(
+            sizeof(T4) == 4 * sizeof(T),
+            "Given wrong second template argument to KochCurveOpenClFixture");
+        EXCEPTION_ASSERT(iterations_count >= 1 && iterations_count <= max_iterations_);
     }
 
-    virtual void Initialize() override
-    {
+    virtual void Initialize() override {
         // TODO all warnings are disabled by -w, remove this option everywhere
         std::string type_name = OpenClTypeTraits<T>::type_name;
-        std::string compiler_options = ( boost::format(
-            "-DREAL_T=%1% -DREAL_T_2=%2% -DREAL_T_4=%3%" ) %
-            type_name %
-            ( type_name + "2" ) % // TODO replace this with clever preprocessor macros
-            ( type_name + "4" )
-            ).str();
-        std::string source = Utils::CombineStrings( {
-            ProgramSourceRepository::GetKochCurveSource(),
-            kKochCurveProgramCode
-        } );
+        std::string compiler_options =
+            (boost::format("-DREAL_T=%1% -DREAL_T_2=%2% -DREAL_T_4=%3%") % type_name %
+             (type_name + "2") %  // TODO replace this with clever preprocessor macros
+             (type_name + "4"))
+                .str();
+        std::string source = Utils::CombineStrings(
+            {ProgramSourceRepository::GetKochCurveSource(), kKochCurveProgramCode});
 
-        program_ = Utils::BuildProgram( device_->GetContext(), source, compiler_options,
-            GetRequiredExtensions() );
+        program_ = Utils::BuildProgram(
+            device_->GetContext(), source, compiler_options, GetRequiredExtensions());
     }
 
-    virtual std::vector<std::string> GetRequiredExtensions() override
-    {
+    virtual std::vector<std::string> GetRequiredExtensions() override {
         return CollectExtensions<T>();
     }
 
-    std::unordered_map<OperationStep, Duration> Execute() override
-    {
+    std::unordered_map<OperationStep, Duration> Execute() override {
         boost::compute::context& context = device_->GetContext();
         boost::compute::command_queue& queue = device_->GetQueue();
         output_data_.clear();
 
         std::unordered_map<OperationStep, boost::compute::event> events;
 
-        const size_t line_size_in_bytes = 64; // TODO find a better way to calculate this value to avoid wasting memory
-        static_assert( line_size_in_bytes >= sizeof(T4) + 8, "Capacity allocated for one line is not sufficient" );
+        const size_t line_size_in_bytes =
+            64;  // TODO find a better way to calculate this value to avoid wasting memory
+        static_assert(
+            line_size_in_bytes >= sizeof(T4) + 8,
+            "Capacity allocated for one line is not sufficient");
         const size_t line_temp_storage_size_in_bytes = CalcTotalLineCount() * line_size_in_bytes;
-        boost::compute::buffer lines_temp_storage( context, line_temp_storage_size_in_bytes );
+        boost::compute::buffer lines_temp_storage(context, line_temp_storage_size_in_bytes);
         // Precalculation step
         {
-            boost::compute::kernel kernel( program_, "KochCurvePrecalculationKernel" );
-            kernel.set_arg( 0, iterations_count_ );
+            boost::compute::kernel kernel(program_, "KochCurvePrecalculationKernel");
+            kernel.set_arg(0, iterations_count_);
 
-            kernel.set_arg( 1, lines_temp_storage );
-            kernel.set_arg( 2, line_temp_storage_size_in_bytes );
+            kernel.set_arg(1, lines_temp_storage);
+            kernel.set_arg(2, line_temp_storage_size_in_bytes);
 
             // TODO implement parallelization
-            events.insert( {OperationStep::Calculate1,
-                queue.enqueue_1d_range_kernel( kernel, 0, 1, 0 )
-            } );
+            events.insert(
+                {OperationStep::Calculate1, queue.enqueue_1d_range_kernel(kernel, 0, 1, 0)});
         }
 
         // Final step
         // TODO include data copy in benchmark
-        //boost::compute::vector<T4> curves_device_vector( curves_.cbegin(), curves_.cend(), queue );
-        boost::compute::vector<T4> curves_device_vector( curves_.size(), context );
-        boost::compute::copy( curves_.cbegin(), curves_.cend(), curves_device_vector.begin(), queue );
+        // boost::compute::vector<T4> curves_device_vector( curves_.cbegin(), curves_.cend(), queue
+        // );
+        boost::compute::vector<T4> curves_device_vector(curves_.size(), context);
+        boost::compute::copy(curves_.cbegin(), curves_.cend(), curves_device_vector.begin(), queue);
         // TODO avoid initialization on release build and use it on debug build
         size_t result_line_count = CalcLineCount() * curves_.size();
-        boost::compute::vector<T4> result_device_vector( result_line_count, context );
+        boost::compute::vector<T4> result_device_vector(result_line_count, context);
         {
-            boost::compute::kernel kernel( program_, "KochSnowflakeKernel" );
-            kernel.set_arg( 0, iterations_count_ );
+            boost::compute::kernel kernel(program_, "KochSnowflakeKernel");
+            kernel.set_arg(0, iterations_count_);
 
-            kernel.set_arg( 1, curves_device_vector );
-            kernel.set_arg( 2, static_cast<cl_int>( curves_device_vector.size() ) );
+            kernel.set_arg(1, curves_device_vector);
+            kernel.set_arg(2, static_cast<cl_int>(curves_device_vector.size()));
 
-            kernel.set_arg( 3, lines_temp_storage );
-            kernel.set_arg( 4, static_cast<cl_ulong>( line_temp_storage_size_in_bytes ) );
+            kernel.set_arg(3, lines_temp_storage);
+            kernel.set_arg(4, static_cast<cl_ulong>(line_temp_storage_size_in_bytes));
 
-            kernel.set_arg( 5, result_device_vector );
+            kernel.set_arg(5, result_device_vector);
 
-            const unsigned threadsCount = CalcLineCount( iterations_count_ );
-            events.insert( {OperationStep::Calculate2,
-                queue.enqueue_1d_range_kernel( kernel, 0, threadsCount, 0 )
-            } );
+            const unsigned threadsCount = CalcLineCount(iterations_count_);
+            events.insert({OperationStep::Calculate2,
+                           queue.enqueue_1d_range_kernel(kernel, 0, threadsCount, 0)});
         }
 
         // TODO replace with MappedOpenClBuffer
         boost::compute::event event;
         void* output_data_ptr = queue.enqueue_map_buffer_async(
             result_device_vector.get_buffer(), CL_MAP_WRITE, 0,
-            result_device_vector.size() * sizeof(T4),
-            event );
-        events.insert( {OperationStep::MapOutputData, event} );
+            result_device_vector.size() * sizeof(T4), event);
+        events.insert({OperationStep::MapOutputData, event});
         event.wait();
 
-        const T4* output_data_ptr_casted = reinterpret_cast<const T4*>( output_data_ptr );
+        const T4* output_data_ptr_casted = reinterpret_cast<const T4*>(output_data_ptr);
         const T4* end_iterator = output_data_ptr_casted + result_device_vector.size();
-        std::copy( output_data_ptr_casted, end_iterator, std::back_inserter(output_data_) );
+        std::copy(output_data_ptr_casted, end_iterator, std::back_inserter(output_data_));
 
-        boost::compute::event last_event = queue.enqueue_unmap_buffer( result_device_vector.get_buffer(), output_data_ptr );
-        events.insert( {OperationStep::UnmapOutputData, last_event } );
+        boost::compute::event last_event =
+            queue.enqueue_unmap_buffer(result_device_vector.get_buffer(), output_data_ptr);
+        events.insert({OperationStep::UnmapOutputData, last_event});
         last_event.wait();
 
-        return Utils::GetOpenCLEventDurations( events );
+        return Utils::GetOpenCLEventDurations(events);
     }
 
-    virtual void VerifyResults() override
-    {
+    virtual void VerifyResults() override {
         // Verify that all points are within viewport (limited by width and height)
-        auto wrong_point = std::find_if( output_data_.cbegin(), output_data_.cend(),
-            [&]( const T4& line ) -> bool
-        {
-            return !( IsPointInViewport( line.x, line.y ) && IsPointInViewport( line.z, line.w ) );
-        } );
-        if( wrong_point != output_data_.cend() )
-        {
+        auto wrong_point =
+            std::find_if(output_data_.cbegin(), output_data_.cend(), [&](const T4& line) -> bool {
+                return !(IsPointInViewport(line.x, line.y) && IsPointInViewport(line.z, line.w));
+            });
+        if (wrong_point != output_data_.cend()) {
             throw DataVerificationFailedException(
-                ( boost::format( "Result verification has failed for Koch curve fixture. "
-                    "At least one line is outside of viewpoint: %1%." ) %
-                    LineToString( *wrong_point )
-                ).str()
-            );
+                (boost::format("Result verification has failed for Koch curve fixture. "
+                               "At least one line is outside of viewpoint: %1%.") %
+                 LineToString(*wrong_point))
+                    .str());
         }
     }
 
-    std::shared_ptr<DeviceInterface> Device() override
-    {
-        return device_;
-    }
+    std::shared_ptr<DeviceInterface> Device() override { return device_; }
 
-    virtual void StoreResults() override
-    {
+    virtual void StoreResults() override {
         SvgDocument document;
-        document.SetSize( width_, height_ );
-        for( const auto& line : output_data_ )
-        {
-            document.AddLine(
-                line.x,
-                line.y,
-                line.z,
-                line.w
-            );
+        document.SetSize(width_, height_);
+        for (const auto& line : output_data_) {
+            document.AddLine(line.x, line.y, line.z, line.w);
         }
-        const std::string file_name = ( boost::format( "%1%, %2%.svg" ) %
-            fixture_name_ %
-            device_->Name() ).str();
-        document.BuildAndWriteToDisk( file_name );
+        const std::string file_name =
+            (boost::format("%1%, %2%.svg") % fixture_name_ % device_->Name()).str();
+        document.BuildAndWriteToDisk(file_name);
     }
 
-    virtual ~KochCurveOpenClFixture()
-    {
-    }
+    virtual ~KochCurveOpenClFixture() {}
+
 private:
     static const int max_iterations_ = 20;
     const std::shared_ptr<OpenClDevice> device_;
@@ -362,43 +338,26 @@ private:
     double width_, height_;
     const std::string fixture_name_;
 
-    size_t CalcLineCount()
-    {
-        return CalcLineCount( iterations_count_ );
-    }
+    size_t CalcLineCount() { return CalcLineCount(iterations_count_); }
 
-    size_t CalcLineCount( int i )
-    {
+    size_t CalcLineCount(int i) {
         size_t a = 1;
-        return a << ( 2 * i ); // Same as 4 ^ i
+        return a << (2 * i);  // Same as 4 ^ i
     }
 
-    size_t CalcTotalLineCount( int iterCount )
-    {
+    size_t CalcTotalLineCount(int iterCount) {
         size_t result = 0;
-        for (int i = 0; i <= iterCount; ++i)
-        {
-            result += CalcLineCount( i );
+        for (int i = 0; i <= iterCount; ++i) {
+            result += CalcLineCount(i);
         }
         return result;
     }
 
-    size_t CalcTotalLineCount()
-    {
-        return CalcTotalLineCount( iterations_count_ );
+    size_t CalcTotalLineCount() { return CalcTotalLineCount(iterations_count_); }
+
+    std::string LineToString(const T4& line) {
+        return (boost::format("(%1%; %2%) - (%3%; %4%)") % line.x % line.y % line.z % line.w).str();
     }
 
-    std::string LineToString( const T4& line )
-    {
-        return ( boost::format( "(%1%; %2%) - (%3%; %4%)" ) %
-            line.x %
-            line.y %
-            line.z %
-            line.w ).str();
-    }
-
-    bool IsPointInViewport( T x, T y )
-    {
-        return x >= 0 && y >= 0 && x <= width_ && y <= height_;
-    }
+    bool IsPointInViewport(T x, T y) { return x >= 0 && y >= 0 && x <= width_ && y <= height_; }
 };

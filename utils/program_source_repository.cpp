@@ -1,23 +1,23 @@
 #include "program_source_repository.h"
+
 #include "utils.h"
 
-namespace
-{
-    const char* kCommonSource = R"(
+namespace {
+const char* kCommonSource = R"(
 // Some OpenCL implementations don't implement that macro (yikes!)
 #ifndef NULL
 #   define NULL ((void*)0)
 #endif
 )";
 
-    const char* openclMathSource = R"(
+const char* kOpenClMathSource = R"(
 int Pow2ForInt(int x)
 {
     return (x<0) ? 0 : (1<<x);
 }
 )";
 
-    const char* kochCurveSource = R"(
+const char* kKochCurveSource = R"(
 typedef struct Line
 {
     REAL_T_4 coords;
@@ -44,7 +44,7 @@ int CalcGlobalId(int2 ids)
 }
 )";
 
-    const char* globalMemoryPoolSource = R"(
+const char* kGlobalMemoryPoolSource = R"(
 #define GLOBAL_MEMORY_POOL_MAX_SIZE UINT_MAX
 /*
     Memory pool that uses global memory to store data.
@@ -101,23 +101,17 @@ __global volatile uchar* AllocateMemory(struct GlobalMemoryPool* pool, uint size
     return pool->memory_start + start;
 }
 )";
+}  // namespace
+
+std::string ProgramSourceRepository::GetOpenCLMathSource() {
+    return Utils::CombineStrings({kCommonSource, kOpenClMathSource});
 }
 
-std::string ProgramSourceRepository::GetOpenCLMathSource()
-{
-    return Utils::CombineStrings( { kCommonSource, openclMathSource } );
+std::string ProgramSourceRepository::GetKochCurveSource() {
+    return Utils::CombineStrings(
+        {kCommonSource, GetOpenCLMathSource(), GetGlobalMemoryPoolSource(), kKochCurveSource});
 }
 
-std::string ProgramSourceRepository::GetKochCurveSource()
-{
-    return Utils::CombineStrings( { kCommonSource,
-        GetOpenCLMathSource(),
-        GetGlobalMemoryPoolSource(),
-        kochCurveSource
-    } );
-}
-
-std::string ProgramSourceRepository::GetGlobalMemoryPoolSource()
-{
-    return Utils::CombineStrings( { kCommonSource, globalMemoryPoolSource } );
+std::string ProgramSourceRepository::GetGlobalMemoryPoolSource() {
+    return Utils::CombineStrings({kCommonSource, kGlobalMemoryPoolSource});
 }

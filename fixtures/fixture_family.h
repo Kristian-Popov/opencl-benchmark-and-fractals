@@ -1,18 +1,16 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <unordered_map>
 #include <memory>
-
-#include "operation_step.h"
-#include "fixtures/fixture.h"
-#include "fixtures/fixture_id.h"
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "boost/optional.hpp"
+#include "fixtures/fixture.h"
+#include "fixtures/fixture_id.h"
+#include "operation_step.h"
 
-struct FixtureFamily
-{
+struct FixtureFamily {
     std::string name;
     std::unordered_map<FixtureId, std::shared_ptr<Fixture>> fixtures;
     boost::optional<int32_t> element_count;

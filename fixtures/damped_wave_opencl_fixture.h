@@ -3,52 +3,46 @@
 #include "boost/compute.hpp"
 #include "devices/opencl_device.h"
 #include "fixtures/fixture.h"
-#include "iterators/data_source_adaptor.h"
-
 #include "half_precision_fp.h"
+#include "iterators/data_source_adaptor.h"
 
 // TODO get rid of this - non-portable
 //#pragma pack(push, 1)
-template<typename T>
-struct DampedWaveFixtureParameters
-{
+template <typename T>
+struct DampedWaveFixtureParameters {
     T amplitude = 0;
     T damping_ratio = 0;
     T angular_frequency = 0;
     T phase = 0;
     T shift = 0;
 
-    DampedWaveFixtureParameters( T _amplitude, T _damping_ratio, T _angular_frequency, T _phase, T _shift )
-        : amplitude( _amplitude )
-        , damping_ratio( _damping_ratio )
-        , angular_frequency( _angular_frequency )
-        , phase( _phase )
-        , shift( _shift )
-    {
-    }
+    DampedWaveFixtureParameters(
+        T _amplitude, T _damping_ratio, T _angular_frequency, T _phase, T _shift)
+        : amplitude(_amplitude),
+          damping_ratio(_damping_ratio),
+          angular_frequency(_angular_frequency),
+          phase(_phase),
+          shift(_shift) {}
 };
 //#pragma pack(pop)
 
 /*
 param_set.amplitude * exp(-param_set.damping_ratio * t) *
 cos(param_set.angular_frequency * t + param_set.phase);
-    Damped wave fixture
-    ( A1 * exp(-D1 * t) * cos( F1 * t + P1 ) ) + ...
-    Note that this fixture doesn't verify results since we may get very different
-    results in edge values between CPU and OpenCL implementation (it's even
-    compiler dependent).
+Damped wave fixture
+( A1 * exp(-D1 * t) * cos( F1 * t + P1 ) ) + ...
+Note that this fixture doesn't verify results since we may get very different
+results in edge values between CPU and OpenCL implementation (it's even
+compiler dependent).
 */
-template<typename T>
-class DampedWaveOpenClFixture : public Fixture
-{
+template <typename T>
+class DampedWaveOpenClFixture : public Fixture {
 public:
     DampedWaveOpenClFixture(
         const std::shared_ptr<OpenClDevice>& device,
         const std::vector<DampedWaveFixtureParameters<T>>& params,
-        const std::shared_ptr<DataSource<T>>& input_data_source,
-        size_t data_size,
-        const std::string& fixture_name
-    );
+        const std::shared_ptr<DataSource<T>>& input_data_source, size_t data_size,
+        const std::string& fixture_name);
 
     void Initialize() override;
 
@@ -58,10 +52,8 @@ public:
 
     void StoreResults() override;
 
-    std::shared_ptr<DeviceInterface> Device() override
-    {
-        return device_;
-    }
+    std::shared_ptr<DeviceInterface> Device() override { return device_; }
+
 private:
     typedef DampedWaveFixtureParameters<T> Parameters;
 

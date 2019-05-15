@@ -2,21 +2,20 @@
 
 #include <chrono>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "devices/platform_list.h"
 #include "reporters/benchmark_results.h"
 
-class BenchmarkReporter
-{
+class BenchmarkReporter {
 public:
-    virtual void AddFixtureFamilyResults( const FixtureFamilyBenchmark& results ) = 0;
+    virtual void AddFixtureFamilyResults(const FixtureFamilyBenchmark& results) = 0;
 
-    virtual void Initialize( const PlatformList& platform_list ) {}
+    virtual void Initialize(const PlatformList& platform_list) {}
 
     /*
-        Optional method to flush all contents to output
+    Optional method to flush all contents to output
     */
     virtual void Flush() {}
 

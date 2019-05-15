@@ -4,7 +4,6 @@
 #include <memory>
 
 #include "boost/compute.hpp"
-
 #include "devices/opencl_device.h"
 #include "fixtures/fixture.h"
 #include "multibrot_opencl/multibrot_opencl_calculator.h"
@@ -12,18 +11,13 @@
 // TODO add support for color and grayscale result, both 8 and 16 bit
 // may be even floating point pixel formal
 // T is pixel type
-template<typename T, typename P>
-class MultibrotOpenClFixture : public Fixture
-{
+template <typename T, typename P>
+class MultibrotOpenClFixture : public Fixture {
 public:
     MultibrotOpenClFixture(
-        const std::shared_ptr<OpenClDevice>& device,
-        size_t width_pix, size_t height_pix,
-        std::complex<double> input_min,
-        std::complex<double> input_max,
-        double power,
-        const std::string& fixture_name
-    );
+        const std::shared_ptr<OpenClDevice>& device, size_t width_pix, size_t height_pix,
+        std::complex<double> input_min, std::complex<double> input_max, double power,
+        const std::string& fixture_name);
 
     void Initialize() override;
 
@@ -33,10 +27,8 @@ public:
 
     void StoreResults() override;
 
-    std::shared_ptr<DeviceInterface> Device() override
-    {
-        return device_;
-    }
+    std::shared_ptr<DeviceInterface> Device() override { return device_; }
+
 private:
     std::shared_ptr<OpenClDevice> device_;
     size_t width_pix_;

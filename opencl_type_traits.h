@@ -2,9 +2,8 @@
 
 #include "half_precision_fp.h"
 
-template<typename T>
-struct OpenClTypeTraits
-{
+template <typename T>
+struct OpenClTypeTraits {
     static const char* const type_name;
     static const char* const required_extension;
     static const char* const short_description;
@@ -12,7 +11,8 @@ struct OpenClTypeTraits
 };
 
 const char* const OpenClTypeTraits<float>::type_name = "float";
-const char* const OpenClTypeTraits<float>::required_extension = ""; // No extensions needed for single precision arithmetic
+// No extensions needed for single precision arithmetic
+const char* const OpenClTypeTraits<float>::required_extension = "";
 const char* const OpenClTypeTraits<float>::short_description = "single-precision";
 
 const char* const OpenClTypeTraits<double>::type_name = "double";
@@ -24,14 +24,12 @@ const char* const OpenClTypeTraits<half_float::half>::required_extension = "cl_k
 const char* const OpenClTypeTraits<half_float::half>::short_description = "half-precision";
 
 // Collect extensions needed for a given type.
-template<typename T>
-std::vector<std::string> CollectExtensions()
-{
+template <typename T>
+std::vector<std::string> CollectExtensions() {
     std::string required_extension = OpenClTypeTraits<T>::required_extension;
     std::vector<std::string> result;
-    if( !required_extension.empty() )
-    {
-        result.push_back( required_extension );
+    if (!required_extension.empty()) {
+        result.push_back(required_extension);
     }
     return result;
 }

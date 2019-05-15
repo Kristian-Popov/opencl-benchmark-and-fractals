@@ -3,21 +3,20 @@
 #include <chrono>
 #include <memory>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "devices/device_interface.h"
-#include "utils/duration.h"
 #include "operation_step.h"
+#include "utils/duration.h"
 
-class Fixture
-{
+class Fixture {
 public:
     /*
-        Optional method to initialize a fixture.
-        Called exactly once before running a fixture.
-        Memory allocations should be done here to avoid excess memory consumption since many fixtures may be created at once, 
-        but only one of them will be executed at once.
+    Optional method to initialize a fixture.
+    Called exactly once before running a fixture.
+    Memory allocations should be done here to avoid excess memory consumption since many
+    fixtures may be created at once, but only one of them will be executed at once.
     */
     virtual void Initialize() {}
 
@@ -29,27 +28,24 @@ public:
     virtual std::unordered_map<OperationStep, Duration> Execute() = 0;
 
     /*
-        Optional method to finalize a fixture.
-        Called exactly once after running.
+    Optional method to finalize a fixture.
+    Called exactly once after running.
     */
     virtual void Finalize() {}
 
     /*
-        Verify execution results
-        Called exactly once but for every platform/device.
+    Verify execution results
+    Called exactly once but for every platform/device.
     */
     virtual void VerifyResults() {}
 
     virtual std::shared_ptr<DeviceInterface> Device() = 0;
 
-    virtual std::string Algorithm()
-    {
-        return std::string();
-    }
+    virtual std::string Algorithm() { return std::string(); }
 
     /*
-        Store results of fixture to a persistent storage (e.g. graphic file).
-        Every fixture may provide its own method, but it is optional.
+    Store results of fixture to a persistent storage (e.g. graphic file).
+    Every fixture may provide its own method, but it is optional.
     */
     virtual void StoreResults() {}
 

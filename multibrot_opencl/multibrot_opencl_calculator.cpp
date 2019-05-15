@@ -1,12 +1,10 @@
 #include "multibrot_opencl_calculator.h"
 
 #include <boost/format.hpp>
-
 #include <unordered_map>
 
-namespace
-{
-    static const char* kMainProgram = R"(
+namespace {
+static const char* kMainProgram = R"(
 /*
 Requires a definition:
 - REAL_T floating point type (acceptable types are float and, if device supports, half and double),
@@ -193,119 +191,109 @@ __kernel void MultibrotSetKernel(
 }
 )";
 
-    template<typename T>
-    struct TempValueConstants {
-        static const char* opencl_type_name;
-        static const char* required_extension;
-    };
+template <typename T>
+struct TempValueConstants {
+    static const char* opencl_type_name;
+    static const char* required_extension;
+};
 
-    const char* TempValueConstants<half_float::half>::opencl_type_name = "half";
-    const char* TempValueConstants<half_float::half>::required_extension = "cl_khr_fp16";
+const char* TempValueConstants<half_float::half>::opencl_type_name = "half";
+const char* TempValueConstants<half_float::half>::required_extension = "cl_khr_fp16";
 
-    const char* TempValueConstants<float>::opencl_type_name = "float";
-    const char* TempValueConstants<float>::required_extension = "";
+const char* TempValueConstants<float>::opencl_type_name = "float";
+const char* TempValueConstants<float>::required_extension = "";
 
-    const char* TempValueConstants<double>::opencl_type_name = "double";
-    const char* TempValueConstants<double>::required_extension = "cl_khr_fp64";
+const char* TempValueConstants<double>::opencl_type_name = "double";
+const char* TempValueConstants<double>::required_extension = "cl_khr_fp64";
 
-    template<typename P>
-    struct ResultTypeConstants {
-        static const char* result_type_name;
-        static const char* result_max_val_macro;
-        static const int result_max_val;
-        static const bool color_enabled;
-    };
+template <typename P>
+struct ResultTypeConstants {
+    static const char* result_type_name;
+    static const char* result_max_val_macro;
+    static const int result_max_val;
+    static const bool color_enabled;
+};
 
-    // Grayscale 8 bit
-    const char* ResultTypeConstants<cl_uchar>::result_type_name = "uchar";
-    const char* ResultTypeConstants<cl_uchar>::result_max_val_macro = "UCHAR_MAX";
-    const int ResultTypeConstants<cl_uchar>::result_max_val = CL_UCHAR_MAX;
-    const bool ResultTypeConstants<cl_uchar>::color_enabled = false;
+// Grayscale 8 bit
+const char* ResultTypeConstants<cl_uchar>::result_type_name = "uchar";
+const char* ResultTypeConstants<cl_uchar>::result_max_val_macro = "UCHAR_MAX";
+const int ResultTypeConstants<cl_uchar>::result_max_val = CL_UCHAR_MAX;
+const bool ResultTypeConstants<cl_uchar>::color_enabled = false;
 
-    // Grayscale 16 bit
-    const char* ResultTypeConstants<cl_ushort>::result_type_name = "ushort";
-    const char* ResultTypeConstants<cl_ushort>::result_max_val_macro = "USHRT_MAX";
-    const int ResultTypeConstants<cl_ushort>::result_max_val = CL_USHRT_MAX;
-    const bool ResultTypeConstants<cl_ushort>::color_enabled = false;
+// Grayscale 16 bit
+const char* ResultTypeConstants<cl_ushort>::result_type_name = "ushort";
+const char* ResultTypeConstants<cl_ushort>::result_max_val_macro = "USHRT_MAX";
+const int ResultTypeConstants<cl_ushort>::result_max_val = CL_USHRT_MAX;
+const bool ResultTypeConstants<cl_ushort>::color_enabled = false;
 
-    // RGB 8 bit
-    const char* ResultTypeConstants<cl_uchar4>::result_type_name = "uchar4";
-    const char* ResultTypeConstants<cl_uchar4>::result_max_val_macro = "UCHAR_MAX";
-    const int ResultTypeConstants<cl_uchar4>::result_max_val = CL_UCHAR_MAX;
-    const bool ResultTypeConstants<cl_uchar4>::color_enabled = true;
+// RGB 8 bit
+const char* ResultTypeConstants<cl_uchar4>::result_type_name = "uchar4";
+const char* ResultTypeConstants<cl_uchar4>::result_max_val_macro = "UCHAR_MAX";
+const int ResultTypeConstants<cl_uchar4>::result_max_val = CL_UCHAR_MAX;
+const bool ResultTypeConstants<cl_uchar4>::color_enabled = true;
 
-    // RGB 16 bit
-    const char* ResultTypeConstants<cl_ushort4>::result_type_name = "ushort4";
-    const char* ResultTypeConstants<cl_ushort4>::result_max_val_macro = "USHRT_MAX";
-    const int ResultTypeConstants<cl_ushort4>::result_max_val = CL_USHRT_MAX;
-    const bool ResultTypeConstants<cl_ushort4>::color_enabled = true;
-}
+// RGB 16 bit
+const char* ResultTypeConstants<cl_ushort4>::result_type_name = "ushort4";
+const char* ResultTypeConstants<cl_ushort4>::result_max_val_macro = "USHRT_MAX";
+const int ResultTypeConstants<cl_ushort4>::result_max_val = CL_USHRT_MAX;
+const bool ResultTypeConstants<cl_ushort4>::color_enabled = true;
+}  // namespace
 
-template<typename T, typename P>
+template <typename T, typename P>
 MultibrotOpenClCalculator<T, P>::MultibrotOpenClCalculator(
-    const boost::compute::device& device,
-    const boost::compute::context& context,
-    size_t max_width_pix, size_t max_height_pix
-)
-    : device_( device )
-    , context_( context )
-    , queue_( context, device, boost::compute::command_queue::enable_profiling )
-    , max_width_pix_( max_width_pix )
-    , max_height_pix_( max_height_pix )
-    , output_device_vector_( max_width_pix * max_height_pix, context )
-{
+    const boost::compute::device& device, const boost::compute::context& context,
+    size_t max_width_pix, size_t max_height_pix)
+    : device_(device),
+      context_(context),
+      queue_(context, device, boost::compute::command_queue::enable_profiling),
+      max_width_pix_(max_width_pix),
+      max_height_pix_(max_height_pix),
+      output_device_vector_(max_width_pix * max_height_pix, context) {
     BuildKernels();
 }
 
-template<typename T, typename P>
-std::string MultibrotOpenClCalculator<T, P>::PrepareCompilerOptions( const std::string& power_func )
-{
-    return ( boost::format(
-        "-Werror -DREAL_T=%1% -DRESULT_T=%2% -DRESULT_MAX=%3% "
-        "-DPOWER_FUNC=%4% %5% " ) %
-        TempValueConstants<T>::opencl_type_name %
-        ResultTypeConstants<P>::result_type_name %
-        ResultTypeConstants<P>::result_max_val_macro %
-        power_func %
-        ( ResultTypeConstants<P>::color_enabled ? "-DCOLOR_ENABLED" : "" )
-    ).str();
+template <typename T, typename P>
+std::string MultibrotOpenClCalculator<T, P>::PrepareCompilerOptions(const std::string& power_func) {
+    return (boost::format("-Werror -DREAL_T=%1% -DRESULT_T=%2% -DRESULT_MAX=%3% "
+                          "-DPOWER_FUNC=%4% %5% ") %
+            TempValueConstants<T>::opencl_type_name % ResultTypeConstants<P>::result_type_name %
+            ResultTypeConstants<P>::result_max_val_macro % power_func %
+            (ResultTypeConstants<P>::color_enabled ? "-DCOLOR_ENABLED" : ""))
+        .str();
 }
 
-template<typename T, typename P>
-void MultibrotOpenClCalculator<T, P>::BuildKernels()
-{
+template <typename T, typename P>
+void MultibrotOpenClCalculator<T, P>::BuildKernels() {
     // Collecting required extensions
     std::string required_extension = TempValueConstants<T>::required_extension;
     std::vector<std::string> extensions;
-    if( !required_extension.empty() )
-    {
-        extensions.push_back( required_extension );
+    if (!required_extension.empty()) {
+        extensions.push_back(required_extension);
     }
 
     static const std::unordered_map<double /* power */, std::string> kFixedPowerFunctions = {
-        { 1.0, "Power1OfComplex" },
-        { 2.0, "SquareOfComplex" },
-        { 3.0, "CubeOfComplex" },
+        {1.0, "Power1OfComplex"},
+        {2.0, "SquareOfComplex"},
+        {3.0, "CubeOfComplex"},
     };
 
-    for( const auto& d: kFixedPowerFunctions )
-    {
-        specialized_kernels_.emplace( d.first,
-            Utils::BuildKernel( "MultibrotSetKernel", context_, kMainProgram,
-                PrepareCompilerOptions( d.second ), extensions )
-        );
+    for (const auto& d : kFixedPowerFunctions) {
+        specialized_kernels_.emplace(
+            d.first, Utils::BuildKernel(
+                         "MultibrotSetKernel", context_, kMainProgram,
+                         PrepareCompilerOptions(d.second), extensions));
     }
 
-    universal_kernel_ = Utils::BuildKernel( "MultibrotSetKernel", context_, kMainProgram,
-        PrepareCompilerOptions( "UniversalPowerOfComplex" ), extensions );
+    universal_kernel_ = Utils::BuildKernel(
+        "MultibrotSetKernel", context_, kMainProgram,
+        PrepareCompilerOptions("UniversalPowerOfComplex"), extensions);
 }
 
-template<typename T, typename P>
+template <typename T, typename P>
 void MultibrotOpenClCalculator<T, P>::ExecutePrecalculateChecks(
-    size_t width_pix, size_t height_pix, int max_iterations )
-{
-    EXCEPTION_ASSERT( width_pix <= max_width_pix_ );
-    EXCEPTION_ASSERT( height_pix <= max_height_pix_ );
+    size_t width_pix, size_t height_pix, int max_iterations) {
+    EXCEPTION_ASSERT(width_pix <= max_width_pix_);
+    EXCEPTION_ASSERT(height_pix <= max_height_pix_);
     // Verify that given max iterations is valid for given pixel bit depth
-    EXCEPTION_ASSERT( max_iterations <= ResultTypeConstants<P>::result_max_val );
+    EXCEPTION_ASSERT(max_iterations <= ResultTypeConstants<P>::result_max_val);
 }
