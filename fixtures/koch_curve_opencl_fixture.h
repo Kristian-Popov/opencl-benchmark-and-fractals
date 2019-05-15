@@ -225,15 +225,15 @@ public:
         return CollectExtensions<T>();
     }
 
-    std::unordered_map<OperationStep, Duration> Execute() override {
+    std::unordered_map<std::string, Duration> Execute() override {
         boost::compute::context& context = device_->GetContext();
         boost::compute::command_queue& queue = device_->GetQueue();
         output_data_.clear();
 
-        std::unordered_map<OperationStep, boost::compute::event> events;
+        std::unordered_map<std::string, boost::compute::event> events;
 
-        const size_t line_size_in_bytes =
-            64;  // TODO find a better way to calculate this value to avoid wasting memory
+        // TODO find a better way to calculate this value to avoid wasting memory
+        const size_t line_size_in_bytes = 64;
         static_assert(
             line_size_in_bytes >= sizeof(T4) + 8,
             "Capacity allocated for one line is not sufficient");
@@ -248,8 +248,7 @@ public:
             kernel.set_arg(2, line_temp_storage_size_in_bytes);
 
             // TODO implement parallelization
-            events.insert(
-                {OperationStep::Calculate1, queue.enqueue_1d_range_kernel(kernel, 0, 1, 0)});
+            events.insert({"Calculating, step 1", queue.enqueue_1d_range_kernel(kernel, 0, 1, 0)});
         }
 
         // Final step
@@ -274,8 +273,8 @@ public:
             kernel.set_arg(5, result_device_vector);
 
             const unsigned threadsCount = CalcLineCount(iterations_count_);
-            events.insert({OperationStep::Calculate2,
-                           queue.enqueue_1d_range_kernel(kernel, 0, threadsCount, 0)});
+            events.insert(
+                {"Calculating, step 2", queue.enqueue_1d_range_kernel(kernel, 0, threadsCount, 0)});
         }
 
         // TODO replace with MappedOpenClBuffer
@@ -283,7 +282,7 @@ public:
         void* output_data_ptr = queue.enqueue_map_buffer_async(
             result_device_vector.get_buffer(), CL_MAP_WRITE, 0,
             result_device_vector.size() * sizeof(T4), event);
-        events.insert({OperationStep::MapOutputData, event});
+        events.insert({"Map output data", event});
         event.wait();
 
         const T4* output_data_ptr_casted = reinterpret_cast<const T4*>(output_data_ptr);
@@ -292,7 +291,7 @@ public:
 
         boost::compute::event last_event =
             queue.enqueue_unmap_buffer(result_device_vector.get_buffer(), output_data_ptr);
-        events.insert({OperationStep::UnmapOutputData, last_event});
+        events.insert({"Unmap output data", last_event});
         last_event.wait();
 
         return Utils::GetOpenCLEventDurations(events);

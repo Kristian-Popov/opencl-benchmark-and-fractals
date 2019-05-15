@@ -7,11 +7,10 @@
 #include "boost/optional.hpp"
 #include "fixtures/fixture_family.h"
 #include "fixtures/fixture_id.h"
-#include "operation_step.h"
 #include "utils/duration.h"
 
 struct FixtureBenchmark {
-    std::vector<std::unordered_map<OperationStep, Duration>> durations;
+    std::vector<std::unordered_map<std::string, Duration>> durations;
     boost::optional<std::string> failure_reason;
 };
 

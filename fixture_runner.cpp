@@ -26,7 +26,6 @@
 #include "half_precision_normal_distribution.h"
 #include "iterators/random_values_iterator.h"
 #include "iterators/sequential_values_iterator.h"
-#include "operation_step.h"
 #include "program_build_failed_exception.h"
 #include "utils/duration.h"
 
@@ -414,14 +413,14 @@ void FixtureRunner::Run(std::unique_ptr<BenchmarkReporter> reporter, RunSettings
 
                 fixture->Initialize();
 
-                std::vector<std::unordered_map<OperationStep, Duration>> durations;
+                std::vector<std::unordered_map<std::string, Duration>> durations;
 
                 // Warm-up for one iteration to get estimation of execution time
-                std::unordered_map<OperationStep, Duration> warmup_result = fixture->Execute();
+                std::unordered_map<std::string, Duration> warmup_result = fixture->Execute();
                 durations.push_back(warmup_result);
                 Duration total_operation_duration = std::accumulate(
                     warmup_result.begin(), warmup_result.end(), Duration(),
-                    [](Duration acc, const std::pair<OperationStep, Duration>& r) {
+                    [](Duration acc, const std::pair<std::string, Duration>& r) {
                         return acc + r.second;
                     });
                 uint64_t iteration_count_long =

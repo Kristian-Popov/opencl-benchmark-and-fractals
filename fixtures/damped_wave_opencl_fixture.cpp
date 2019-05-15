@@ -76,23 +76,23 @@ std::vector<std::string> DampedWaveOpenClFixture<T>::GetRequiredExtensions() {
 }
 
 template <typename T>
-std::unordered_map<OperationStep, Duration> DampedWaveOpenClFixture<T>::Execute() {
+std::unordered_map<std::string, Duration> DampedWaveOpenClFixture<T>::Execute() {
     boost::compute::context& context = device_->GetContext();
     boost::compute::command_queue& queue = device_->GetQueue();
-    std::unordered_map<OperationStep, boost::compute::event> events;
+    std::unordered_map<std::string, boost::compute::event> events;
 
     // create a vector on the device
     // TODO do not create it every iteration
     boost::compute::vector<T> input_device_vector(input_data_.size(), context);
 
     // copy data from the host to the device
-    events.insert({OperationStep::CopyInputDataToDevice1,
+    events.insert({"Copying input data",
                    boost::compute::copy_async(
                        input_data_.begin(), input_data_.end(), input_device_vector.begin(), queue)
                        .get_event()});
 
     boost::compute::vector<Parameters> input_params_vector(params_.size(), context);
-    events.insert({OperationStep::CopyInputDataToDevice2,
+    events.insert({"Copying parameters",
                    boost::compute::copy_async(
                        params_.begin(), params_.end(), input_params_vector.begin(), queue)
                        .get_event()});
@@ -105,15 +105,15 @@ std::unordered_map<OperationStep, Duration> DampedWaveOpenClFixture<T>::Execute(
     kernel_.set_arg(2, static_cast<cl_int>(params_.size()));
     kernel_.set_arg(3, output_device_vector);
 
-    events.insert({OperationStep::Calculate1,
-                   queue.enqueue_1d_range_kernel(kernel_, 0, input_data_.size(), 0)});
+    events.insert(
+        {"Calculating", queue.enqueue_1d_range_kernel(kernel_, 0, input_data_.size(), 0)});
 
     output_data_.resize(input_data_.size());
     boost::compute::event last_event =
         boost::compute::copy_async(
             output_device_vector.begin(), output_device_vector.end(), output_data_.begin(), queue)
             .get_event();
-    events.insert({OperationStep::CopyOutputDataFromDevice1, last_event});
+    events.insert({"Copying output data", last_event});
 
     last_event.wait();
 

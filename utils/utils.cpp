@@ -149,10 +149,10 @@ cl_double4 CombineTwoDouble2Vectors(const cl_double2& a, const cl_double2& b) {
     return {a.x, a.y, b.x, b.y};
 }
 
-std::unordered_map<OperationStep, Duration> GetOpenCLEventDurations(
-    const std::unordered_map<OperationStep, boost::compute::event>& events) {
-    std::unordered_map<OperationStep, Duration> result;
-    for (const std::pair<OperationStep, boost::compute::event>& p : events) {
+std::unordered_map<std::string, Duration> GetOpenCLEventDurations(
+    const std::unordered_map<std::string, boost::compute::event>& events) {
+    std::unordered_map<std::string, Duration> result;
+    for (const std::pair<std::string, boost::compute::event>& p : events) {
         result.emplace(p.first, Duration(p.second));
     }
     return result;

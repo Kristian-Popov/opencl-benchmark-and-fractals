@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "devices/device_interface.h"
-#include "operation_step.h"
 #include "utils/duration.h"
 
 class Fixture {
@@ -25,7 +24,7 @@ public:
     */
     virtual std::vector<std::string> GetRequiredExtensions() = 0;
 
-    virtual std::unordered_map<OperationStep, Duration> Execute() = 0;
+    virtual std::unordered_map<std::string /* Step description */, Duration> Execute() = 0;
 
     /*
     Optional method to finalize a fixture.

@@ -8,7 +8,6 @@
 #include "boost/optional.hpp"
 #include "fixtures/fixture.h"
 #include "fixtures/fixture_id.h"
-#include "operation_step.h"
 
 struct FixtureFamily {
     std::string name;

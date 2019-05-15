@@ -5,13 +5,11 @@ project(utils)
 add_library( utils
     duration.cpp
     utils.cpp
-    operation_step.cpp
     program_source_repository.cpp
     program_build_failed_exception.cpp
 
     duration.h
     utils.h
-    operation_step.h
     half_precision_fp.h
     program_source_repository.h
     program_build_failed_exception.h

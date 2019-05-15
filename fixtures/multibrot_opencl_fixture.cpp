@@ -44,7 +44,7 @@ std::vector<std::string> MultibrotOpenClFixture<T, P>::GetRequiredExtensions() {
 }
 
 template <typename T, typename P>
-std::unordered_map<OperationStep, Duration> MultibrotOpenClFixture<T, P>::Execute() {
+std::unordered_map<std::string, Duration> MultibrotOpenClFixture<T, P>::Execute() {
     boost::compute::event calc_event;
     auto copy_future = calculator_->Calculate(
         input_min_, input_max_, width_pix_, height_pix_, power_,
@@ -52,9 +52,9 @@ std::unordered_map<OperationStep, Duration> MultibrotOpenClFixture<T, P>::Execut
 
     copy_future.wait();
 
-    std::unordered_map<OperationStep, boost::compute::event> events;
-    events.emplace(OperationStep::Calculate1, calc_event);
-    events.emplace(OperationStep::CopyOutputDataFromDevice1, copy_future.get_event());
+    std::unordered_map<std::string, boost::compute::event> events;
+    events.emplace("Calculating", calc_event);
+    events.emplace("Copying output data", copy_future.get_event());
 
     return Utils::GetOpenCLEventDurations(events);
 }

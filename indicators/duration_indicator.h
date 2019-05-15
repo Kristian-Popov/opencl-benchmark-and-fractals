@@ -14,9 +14,9 @@ public:
 
 private:
     struct FixtureCalculatedData {
-        std::unordered_map<OperationStep, Duration> step_durations;
-        std::unordered_map<OperationStep, Duration> step_min_durations;
-        std::unordered_map<OperationStep, Duration> step_max_durations;
+        std::unordered_map<std::string, Duration> step_durations;
+        std::unordered_map<std::string, Duration> step_min_durations;
+        std::unordered_map<std::string, Duration> step_max_durations;
         std::size_t iteration_count;
         // Is not serialized, is just a temporary solution to check if duration is empty
         // TODO check in some better way?

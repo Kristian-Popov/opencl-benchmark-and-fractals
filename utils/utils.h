@@ -16,7 +16,6 @@
 #include "boost/compute.hpp"
 #include "duration.h"
 #include "half_precision_fp.h"
-#include "operation_step.h"
 
 namespace Utils {
 std::string ReadFile(const std::string& fileName);
@@ -123,8 +122,8 @@ boost::compute::program BuildProgram(
     const std::string& buildOptions = std::string(),
     const std::vector<std::string>& extensions = std::vector<std::string>());
 
-std::unordered_map<OperationStep, Duration> GetOpenCLEventDurations(
-    const std::unordered_map<OperationStep, boost::compute::event>& events);
+std::unordered_map<std::string, Duration> GetOpenCLEventDurations(
+    const std::unordered_map<std::string, boost::compute::event>& events);
 
 std::string CombineStrings(
     const std::vector<std::string>& strings, const std::string& delimiter = "\n");

@@ -50,28 +50,26 @@ public:
         return std::vector<std::string>();  // This fixture doesn't require any special extensions
     }
 
-    std::unordered_map<OperationStep, Duration> Execute() override {
+    std::unordered_map<std::string, Duration> Execute() override {
         boost::compute::context& context = device_->GetContext();
         boost::compute::command_queue& queue = device_->GetQueue();
 
-        std::unordered_map<OperationStep, boost::compute::event> events;
+        std::unordered_map<std::string, boost::compute::event> events;
 
         // create a vector on the device
         boost::compute::vector<int> input_device_vector(data_size_, context);
 
         // copy data from the host to the device
-        events.insert(
-            {OperationStep::CopyInputDataToDevice1,
-             boost::compute::copy_async(
-                 input_data_.begin(), input_data_.end(), input_device_vector.begin(), queue)
-                 .get_event()});
+        events.insert({"Copying input data", boost::compute::copy_async(
+                                                 input_data_.begin(), input_data_.end(),
+                                                 input_device_vector.begin(), queue)
+                                                 .get_event()});
 
         boost::compute::vector<unsigned long long> output_device_vector(data_size_, context);
         kernel_.set_arg(0, input_device_vector);
         kernel_.set_arg(1, output_device_vector);
 
-        events.insert(
-            {OperationStep::Calculate1, queue.enqueue_1d_range_kernel(kernel_, 0, data_size_, 0)});
+        events.insert({"Calculating", queue.enqueue_1d_range_kernel(kernel_, 0, data_size_, 0)});
 
         output_data_.resize(data_size_);
         boost::compute::event last_event =
@@ -79,7 +77,7 @@ public:
                 output_device_vector.begin(), output_device_vector.end(), output_data_.begin(),
                 queue)
                 .get_event();
-        events.insert({OperationStep::CopyOutputDataFromDevice1, last_event});
+        events.insert({"Copying output data", last_event});
 
         last_event.wait();
 

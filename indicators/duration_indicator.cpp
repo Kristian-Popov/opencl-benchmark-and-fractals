@@ -54,16 +54,14 @@ void DurationIndicator::SerializeValue(nlohmann::json& tree) {
     if (calculated_.iteration_count == 1) {
         // We have a single duration
         for (auto& step_data : calculated_.step_durations) {
-            const std::string step_name = OperationStepIds::Get(step_data.first);
-            tree[step_name] = step_data.second;
+            tree[step_data.first] = step_data.second;
         }
     } else if (calculated_.iteration_count > 1) {
         // We have a duration range
         for (auto& step_data : calculated_.step_durations) {
-            const std::string step_name = OperationStepIds::Get(step_data.first);
-            tree[step_name]["avg"] = step_data.second;
-            tree[step_name]["min"] = calculated_.step_min_durations.at(step_data.first);
-            tree[step_name]["max"] = calculated_.step_max_durations.at(step_data.first);
+            tree[step_data.first]["avg"] = step_data.second;
+            tree[step_data.first]["min"] = calculated_.step_min_durations.at(step_data.first);
+            tree[step_data.first]["max"] = calculated_.step_max_durations.at(step_data.first);
         }
     }
 }
