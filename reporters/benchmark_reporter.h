@@ -8,6 +8,7 @@
 #include "devices/platform_list.h"
 #include "reporters/benchmark_results.h"
 
+namespace kpv {
 class BenchmarkReporter {
 public:
     virtual void AddFixtureFamilyResults(const FixtureFamilyBenchmark& results) = 0;
@@ -21,3 +22,4 @@ public:
 
     virtual ~BenchmarkReporter() noexcept {}
 };
+}  // namespace kpv

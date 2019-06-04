@@ -50,7 +50,7 @@ public:
         return std::vector<std::string>();  // This fixture doesn't require any special extensions
     }
 
-    std::unordered_map<std::string, Duration> Execute() override {
+    std::unordered_map<std::string, Duration> Execute(const RuntimeParams& params) override {
         boost::compute::context& context = device_->GetContext();
         boost::compute::command_queue& queue = device_->GetQueue();
 

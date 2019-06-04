@@ -23,7 +23,19 @@ std::string ReadFile(const std::string& fileName);
 template <typename T>
 std::string VectorToString(const std::vector<T>& v, const std::string& delimiter = ", ") {
     std::stringstream result;
-    std::copy(v.begin(), v.end(), std::ostream_iterator<T>(result, delimiter.c_str()));
+    auto iter1 = v.cbegin();
+    auto iter2 = iter1;
+    ++iter2;
+    for (; iter1 != v.cend(); ++iter1) {
+        result << *iter1;
+        if (iter2 != v.cend()) {
+            result << delimiter;
+            ++iter2;
+        }
+    }
+    // It could be easily implemented as
+    // std::copy(v.begin(), v.end(), std::ostream_joiner<T>(result, delimiter.c_str()));
+    // But this requires ostream_joiner which is at a moment of writing in std::experimental
     return result.str();
 }
 
@@ -162,6 +174,21 @@ std::string SerializeNumber(T val) {
     stream << std::setprecision(precision) << std::fixed << val;
     return stream.str();
 }
+
+// Gathers all keys in a multimap-like object into a vector and returns it.
+// TODO add unit tests for this
+// TODO rework to return std::set instead?
+template <typename C>
+std::vector<typename C::key_type> GetKeyListFromMultimap(const C& map) {
+    std::vector<typename C::key_type> result;
+    for (const auto& p : map) {
+        if (result.empty() || (result.back() != p.first)) {
+            result.push_back(p.first);
+        }
+    }
+    return result;
+}
+
 }  // namespace Utils
 
 #define EXCEPTION_ASSERT(expr)                                     \

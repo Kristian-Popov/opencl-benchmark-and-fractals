@@ -225,7 +225,7 @@ public:
         return CollectExtensions<T>();
     }
 
-    std::unordered_map<std::string, Duration> Execute() override {
+    std::unordered_map<std::string, Duration> Execute(const RuntimeParams& params) override {
         boost::compute::context& context = device_->GetContext();
         boost::compute::command_queue& queue = device_->GetQueue();
         output_data_.clear();

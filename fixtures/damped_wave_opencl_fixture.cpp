@@ -76,7 +76,8 @@ std::vector<std::string> DampedWaveOpenClFixture<T>::GetRequiredExtensions() {
 }
 
 template <typename T>
-std::unordered_map<std::string, Duration> DampedWaveOpenClFixture<T>::Execute() {
+std::unordered_map<std::string, Duration> DampedWaveOpenClFixture<T>::Execute(
+    const RuntimeParams& params) {
     boost::compute::context& context = device_->GetContext();
     boost::compute::command_queue& queue = device_->GetQueue();
     std::unordered_map<std::string, boost::compute::event> events;

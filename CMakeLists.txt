@@ -46,13 +46,15 @@ add_library( commonlib STATIC
     coordinate_formatter.cpp
     coordinate_formatter.h
     data_verification_failed_exception.h
-    fixture_command_line_processor.cpp
-    fixture_command_line_processor.h
-    fixture_runner.cpp
+    fixture_autoregistrar.h
+    fixture_register_macros.h
+    fixture_registry.h
+    command_line_processor.h
     fixture_runner.h
     half_precision_normal_distribution.h
     mapped_opencl_buffer.h
     opencl_type_traits.h
+    run_settings.h
 
     documents/csv_document.h
     documents/svg_document.cpp
@@ -78,12 +80,10 @@ add_library( commonlib STATIC
     iterators/random_values_iterator.h
     iterators/data_source.h
 
-    indicators/duration_indicator.cpp
     indicators/duration_indicator.h
 
     reporters/benchmark_reporter.h
     reporters/benchmark_results.h
-    reporters/json_benchmark_reporter.cpp
     reporters/json_benchmark_reporter.h
 )
 

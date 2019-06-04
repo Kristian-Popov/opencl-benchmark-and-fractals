@@ -44,7 +44,8 @@ std::vector<std::string> MultibrotOpenClFixture<T, P>::GetRequiredExtensions() {
 }
 
 template <typename T, typename P>
-std::unordered_map<std::string, Duration> MultibrotOpenClFixture<T, P>::Execute() {
+std::unordered_map<std::string, Duration> MultibrotOpenClFixture<T, P>::Execute(
+    const RuntimeParams& params) {
     boost::compute::event calc_event;
     auto copy_future = calculator_->Calculate(
         input_min_, input_max_, width_pix_, height_pix_, power_,

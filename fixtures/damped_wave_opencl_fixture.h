@@ -48,7 +48,7 @@ public:
 
     std::vector<std::string> GetRequiredExtensions() override;
 
-    std::unordered_map<std::string, Duration> Execute() override;
+    std::unordered_map<std::string, Duration> Execute(const RuntimeParams& params) override;
 
     void StoreResults() override;
 

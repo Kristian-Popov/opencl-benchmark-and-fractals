@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KPV_FIXTURES_FIXTURE_PROCESSOR_H_
+#define KPV_FIXTURES_FIXTURE_PROCESSOR_H_
 
 #include <chrono>
 #include <memory>
@@ -11,6 +12,10 @@
 
 class Fixture {
 public:
+    struct RuntimeParams {
+        std::string additional_params;
+    };
+
     /*
     Optional method to initialize a fixture.
     Called exactly once before running a fixture.
@@ -24,7 +29,8 @@ public:
     */
     virtual std::vector<std::string> GetRequiredExtensions() = 0;
 
-    virtual std::unordered_map<std::string /* Step description */, Duration> Execute() = 0;
+    virtual std::unordered_map<std::string /* Step description */, Duration> Execute(
+        const RuntimeParams& params) = 0;
 
     /*
     Optional method to finalize a fixture.
@@ -50,3 +56,5 @@ public:
 
     virtual ~Fixture() noexcept {}
 };
+
+#endif  // KPV_FIXTURES_FIXTURE_PROCESSOR_H_
